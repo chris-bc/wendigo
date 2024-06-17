@@ -33,7 +33,7 @@ struct WendigoApp {
     Wendigo_TextInput* hex_input;
     Widget* widget;
     VariableItemList* var_item_list;
-    UART_TerminalUart* uart;
+    Wendigo_Uart* uart;
 
     int setup_selected_menu_index;
     int setup_selected_option_index[SETUP_MENU_ITEMS];

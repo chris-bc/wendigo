@@ -1,7 +1,7 @@
 #include "wendigo_app_i.h"
 #include "wendigo_uart.h"
 
-struct UART_TerminalUart {
+struct Wendigo_Uart {
     WendigoApp* app;
     FuriThread* rx_thread;
     FuriStreamBuffer* rx_stream;
@@ -16,7 +16,7 @@ typedef enum {
 } WorkerEvtFlags;
 
 void uart_terminal_uart_set_handle_rx_data_cb(
-    UART_TerminalUart* uart,
+    Wendigo_Uart* uart,
     void (*handle_rx_data_cb)(uint8_t* buf, size_t len, void* context)) {
     furi_assert(uart);
     uart->handle_rx_data_cb = handle_rx_data_cb;
@@ -28,7 +28,7 @@ void uart_terminal_uart_on_irq_cb(
     FuriHalSerialHandle* handle,
     FuriHalSerialRxEvent event,
     void* context) {
-    UART_TerminalUart* uart = (UART_TerminalUart*)context;
+    Wendigo_Uart* uart = (Wendigo_Uart*)context;
 
     if(event == FuriHalSerialRxEventData) {
         uint8_t data = furi_hal_serial_async_rx(handle);
@@ -38,7 +38,7 @@ void uart_terminal_uart_on_irq_cb(
 }
 
 static int32_t uart_worker(void* context) {
-    UART_TerminalUart* uart = (void*)context;
+    Wendigo_Uart* uart = (void*)context;
 
     while(1) {
         uint32_t events =
@@ -58,17 +58,17 @@ static int32_t uart_worker(void* context) {
     return 0;
 }
 
-void uart_terminal_uart_tx(UART_TerminalUart* uart, uint8_t* data, size_t len) {
+void uart_terminal_uart_tx(Wendigo_Uart* uart, uint8_t* data, size_t len) {
     furi_hal_serial_tx(uart->serial_handle, data, len);
 }
 
-UART_TerminalUart* uart_terminal_uart_init(WendigoApp* app) {
-    UART_TerminalUart* uart = malloc(sizeof(UART_TerminalUart));
+Wendigo_Uart* uart_terminal_uart_init(WendigoApp* app) {
+    Wendigo_Uart* uart = malloc(sizeof(Wendigo_Uart));
     uart->app = app;
     // Init all rx stream and thread early to avoid crashes
     uart->rx_stream = furi_stream_buffer_alloc(RX_BUF_SIZE, 1);
     uart->rx_thread = furi_thread_alloc();
-    furi_thread_set_name(uart->rx_thread, "UART_TerminalUartRxThread");
+    furi_thread_set_name(uart->rx_thread, "Wendigo_UartRxThread");
     furi_thread_set_stack_size(uart->rx_thread, 1024);
     furi_thread_set_context(uart->rx_thread, uart);
     furi_thread_set_callback(uart->rx_thread, uart_worker);
@@ -88,7 +88,7 @@ UART_TerminalUart* uart_terminal_uart_init(WendigoApp* app) {
     return uart;
 }
 
-void uart_terminal_uart_free(UART_TerminalUart* uart) {
+void uart_terminal_uart_free(Wendigo_Uart* uart) {
     furi_assert(uart);
 
     furi_hal_serial_async_rx_stop(uart->serial_handle);
