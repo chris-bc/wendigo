@@ -1,6 +1,6 @@
 #include "../wendigo_app_i.h"
 
-void uart_terminal_console_output_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
+void wendigo_console_output_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
     furi_assert(context);
     WendigoApp* app = context;
     FuriString* new_str = furi_string_alloc();
@@ -44,7 +44,7 @@ static uint8_t hex_char_to_byte(const char c) {
     return 0;
 }
 
-void uart_terminal_scene_console_output_on_enter(void* context) {
+void wendigo_scene_console_output_on_enter(void* context) {
     WendigoApp* app = context;
 
     TextBox* text_box = app->text_box;
@@ -79,12 +79,12 @@ void uart_terminal_scene_console_output_on_enter(void* context) {
     // Set starting text - for "View Log", this will just be what was already in the text box store
     text_box_set_text(app->text_box, furi_string_get_cstr(app->text_box_store));
 
-    scene_manager_set_scene_state(app->scene_manager, UART_TerminalSceneConsoleOutput, 0);
+    scene_manager_set_scene_state(app->scene_manager, WendigoSceneConsoleOutput, 0);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewConsoleOutput);
 
     // Register callback to receive data
     wendigo_uart_set_handle_rx_data_cb(
-        app->uart, uart_terminal_console_output_handle_rx_data_cb); // setup callback for rx thread
+        app->uart, wendigo_console_output_handle_rx_data_cb); // setup callback for rx thread
 
     if(app->hex_mode) {
         // Send binary packet
@@ -127,7 +127,7 @@ void uart_terminal_scene_console_output_on_enter(void* context) {
     }
 }
 
-bool uart_terminal_scene_console_output_on_event(void* context, SceneManagerEvent event) {
+bool wendigo_scene_console_output_on_event(void* context, SceneManagerEvent event) {
     WendigoApp* app = context;
 
     bool consumed = false;
@@ -142,7 +142,7 @@ bool uart_terminal_scene_console_output_on_event(void* context, SceneManagerEven
     return consumed;
 }
 
-void uart_terminal_scene_console_output_on_exit(void* context) {
+void wendigo_scene_console_output_on_exit(void* context) {
     WendigoApp* app = context;
 
     // Unregister rx callback

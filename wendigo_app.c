@@ -77,7 +77,7 @@ WendigoApp* wendigo_app_alloc() {
 
     app->setup_selected_option_index[BAUDRATE_ITEM_IDX] = DEFAULT_BAUDRATE_OPT_IDX;
 
-    scene_manager_next_scene(app->scene_manager, UART_TerminalSceneStart);
+    scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
 
     return app;
 }

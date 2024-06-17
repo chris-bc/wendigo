@@ -1,13 +1,13 @@
 #include "../wendigo_app_i.h"
 
-void uart_terminal_scene_help_widget_callback(GuiButtonType result, InputType type, void* context) {
+void wendigo_scene_help_widget_callback(GuiButtonType result, InputType type, void* context) {
     WendigoApp* app = context;
     if(type == InputTypeShort) {
         view_dispatcher_send_custom_event(app->view_dispatcher, result);
     }
 }
 
-void uart_terminal_scene_help_on_enter(void* context) {
+void wendigo_scene_help_on_enter(void* context) {
     WendigoApp* app = context;
 
     FuriString* temp_str;
@@ -43,7 +43,7 @@ void uart_terminal_scene_help_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewHelp);
 }
 
-bool uart_terminal_scene_help_on_event(void* context, SceneManagerEvent event) {
+bool wendigo_scene_help_on_event(void* context, SceneManagerEvent event) {
     WendigoApp* app = context;
     bool consumed = false;
     UNUSED(app);
@@ -51,7 +51,7 @@ bool uart_terminal_scene_help_on_event(void* context, SceneManagerEvent event) {
     return consumed;
 }
 
-void uart_terminal_scene_help_on_exit(void* context) {
+void wendigo_scene_help_on_exit(void* context) {
     WendigoApp* app = context;
     // Clear views
     widget_reset(app->widget);

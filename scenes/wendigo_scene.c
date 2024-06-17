@@ -26,5 +26,5 @@ const SceneManagerHandlers wendigo_scene_handlers = {
     .on_enter_handlers = wendigo_scene_on_enter_handlers,
     .on_event_handlers = wendigo_scene_on_event_handlers,
     .on_exit_handlers = wendigo_scene_on_exit_handlers,
-    .scene_num = UART_TerminalSceneNum,
+    .scene_num = WendigoSceneNum,
 };

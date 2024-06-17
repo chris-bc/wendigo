@@ -43,7 +43,7 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
 
-static void uart_terminal_scene_start_var_list_enter_callback(void* context, uint32_t index) {
+static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
     WendigoApp* app = context;
 
@@ -91,7 +91,7 @@ static void uart_terminal_scene_start_var_list_enter_callback(void* context, uin
     }
 }
 
-static void uart_terminal_scene_start_var_list_change_callback(VariableItem* item) {
+static void wendigo_scene_start_var_list_change_callback(VariableItem* item) {
     furi_assert(item);
 
     WendigoApp* app = variable_item_get_context(item);
@@ -105,7 +105,7 @@ static void uart_terminal_scene_start_var_list_change_callback(VariableItem* ite
     app->selected_option_index[app->selected_menu_index] = option_index;
 }
 
-void uart_terminal_scene_start_on_enter(void* context) {
+void wendigo_scene_start_on_enter(void* context) {
     WendigoApp* app = context;
     VariableItemList* var_item_list = app->var_item_list;
 
@@ -114,7 +114,7 @@ void uart_terminal_scene_start_on_enter(void* context) {
     }
 
     variable_item_list_set_enter_callback(
-        var_item_list, uart_terminal_scene_start_var_list_enter_callback, app);
+        var_item_list, wendigo_scene_start_var_list_enter_callback, app);
 
     VariableItem* item;
     menu_items_num = 0;
@@ -132,7 +132,7 @@ void uart_terminal_scene_start_on_enter(void* context) {
                 var_item_list,
                 items[i].item_string,
                 items[i].num_options_menu,
-                uart_terminal_scene_start_var_list_change_callback,
+                wendigo_scene_start_var_list_change_callback,
                 app);
             variable_item_set_current_value_index(item, app->selected_option_index[i]);
             variable_item_set_current_value_text(
@@ -144,12 +144,12 @@ void uart_terminal_scene_start_on_enter(void* context) {
     }
 
     variable_item_list_set_selected_item(
-        var_item_list, scene_manager_get_scene_state(app->scene_manager, UART_TerminalSceneStart));
+        var_item_list, scene_manager_get_scene_state(app->scene_manager, WendigoSceneStart));
 
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
 }
 
-bool uart_terminal_scene_start_on_event(void* context, SceneManagerEvent event) {
+bool wendigo_scene_start_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
     WendigoApp* app = context;
     bool consumed = false;
@@ -157,24 +157,24 @@ bool uart_terminal_scene_start_on_event(void* context, SceneManagerEvent event) 
     if(event.type == SceneManagerEventTypeCustom) {
         if(event.event == Wendigo_EventSetup) {
             scene_manager_set_scene_state(
-                app->scene_manager, UART_TerminalSceneStart, app->selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, UART_TerminalSceneSetup);
+                app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+            scene_manager_next_scene(app->scene_manager, WendigoSceneSetup);
         } else if(event.event == Wendigo_EventStartKeyboardText) {
             scene_manager_set_scene_state(
-                app->scene_manager, UART_TerminalSceneStart, app->selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, UART_TerminalSceneTextInput);
+                app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+            scene_manager_next_scene(app->scene_manager, WendigoSceneTextInput);
         } else if(event.event == Wendigo_EventStartKeyboardHex) {
             scene_manager_set_scene_state(
-                app->scene_manager, UART_TerminalSceneStart, app->selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, UART_TerminalSceneHexInput);
+                app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+            scene_manager_next_scene(app->scene_manager, WendigoSceneHexInput);
         } else if(event.event == Wendigo_EventStartConsole) {
             scene_manager_set_scene_state(
-                app->scene_manager, UART_TerminalSceneStart, app->selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, UART_TerminalSceneConsoleOutput);
+                app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+            scene_manager_next_scene(app->scene_manager, WendigoSceneConsoleOutput);
         } else if(event.event == Wendigo_EventStartHelp) {
             scene_manager_set_scene_state(
-                app->scene_manager, UART_TerminalSceneStart, app->selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, UART_TerminalSceneHelp);
+                app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+            scene_manager_next_scene(app->scene_manager, WendigoSceneHelp);
         }
         consumed = true;
     } else if(event.type == SceneManagerEventTypeTick) {
@@ -185,7 +185,7 @@ bool uart_terminal_scene_start_on_event(void* context, SceneManagerEvent event) 
     return consumed;
 }
 
-void uart_terminal_scene_start_on_exit(void* context) {
+void wendigo_scene_start_on_exit(void* context) {
     WendigoApp* app = context;
     variable_item_list_reset(app->var_item_list);
 }

@@ -3,11 +3,11 @@
 #include <gui/scene_manager.h>
 
 // Generate scene id and total number
-#define ADD_SCENE(prefix, name, id) UART_TerminalScene##id,
+#define ADD_SCENE(prefix, name, id) WendigoScene##id,
 typedef enum {
 #include "wendigo_scene_config.h"
-    UART_TerminalSceneNum,
-} UART_TerminalScene;
+    WendigoSceneNum,
+} WendigoScene;
 #undef ADD_SCENE
 
 extern const SceneManagerHandlers wendigo_scene_handlers;

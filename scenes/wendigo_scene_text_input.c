@@ -1,12 +1,12 @@
 #include "../wendigo_app_i.h"
 
-void uart_terminal_scene_text_input_callback(void* context) {
+void wendigo_scene_text_input_callback(void* context) {
     WendigoApp* app = context;
 
     view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
 }
 
-void uart_terminal_scene_text_input_on_enter(void* context) {
+void wendigo_scene_text_input_on_enter(void* context) {
     WendigoApp* app = context;
 
     if(false == app->is_custom_tx_string) {
@@ -34,7 +34,7 @@ void uart_terminal_scene_text_input_on_enter(void* context) {
     }
     text_input_set_result_callback(
         text_input,
-        uart_terminal_scene_text_input_callback,
+        wendigo_scene_text_input_callback,
         app,
         app->text_input_store,
         WENDIGO_TEXT_INPUT_STORE_SIZE,
@@ -45,7 +45,7 @@ void uart_terminal_scene_text_input_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewTextInput);
 }
 
-bool uart_terminal_scene_text_input_on_event(void* context, SceneManagerEvent event) {
+bool wendigo_scene_text_input_on_event(void* context, SceneManagerEvent event) {
     WendigoApp* app = context;
     bool consumed = false;
 
@@ -53,7 +53,7 @@ bool uart_terminal_scene_text_input_on_event(void* context, SceneManagerEvent ev
         if(event.event == Wendigo_EventStartConsole) {
             // Point to custom string to send
             app->selected_tx_string = app->text_input_store;
-            scene_manager_next_scene(app->scene_manager, UART_TerminalSceneConsoleOutput);
+            scene_manager_next_scene(app->scene_manager, WendigoSceneConsoleOutput);
             consumed = true;
         }
     }
@@ -61,7 +61,7 @@ bool uart_terminal_scene_text_input_on_event(void* context, SceneManagerEvent ev
     return consumed;
 }
 
-void uart_terminal_scene_text_input_on_exit(void* context) {
+void wendigo_scene_text_input_on_exit(void* context) {
     WendigoApp* app = context;
 
     text_input_reset(app->text_input);

@@ -18,7 +18,7 @@ static const Wendigo_Setup_Item items[SETUP_MENU_ITEMS] = {
     {"HEX mode", 2, {"OFF", "ON"}},
 };
 
-static void uart_terminal_scene_setup_var_list_enter_callback(void* context, uint32_t index) {
+static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
     WendigoApp* app = context;
 
@@ -30,7 +30,7 @@ static void uart_terminal_scene_setup_var_list_enter_callback(void* context, uin
     app->setup_selected_menu_index = index;
 }
 
-static void uart_terminal_scene_setup_var_list_change_callback(VariableItem* item) {
+static void wendigo_scene_setup_var_list_change_callback(VariableItem* item) {
     furi_assert(item);
 
     WendigoApp* app = variable_item_get_context(item);
@@ -66,12 +66,12 @@ static void uart_terminal_scene_setup_var_list_change_callback(VariableItem* ite
     }
 }
 
-void uart_terminal_scene_setup_on_enter(void* context) {
+void wendigo_scene_setup_on_enter(void* context) {
     WendigoApp* app = context;
     VariableItemList* var_item_list = app->var_item_list;
 
     variable_item_list_set_enter_callback(
-        var_item_list, uart_terminal_scene_setup_var_list_enter_callback, app);
+        var_item_list, wendigo_scene_setup_var_list_enter_callback, app);
 
     VariableItem* item;
     for(int i = 0; i < SETUP_MENU_ITEMS; ++i) {
@@ -79,7 +79,7 @@ void uart_terminal_scene_setup_on_enter(void* context) {
             var_item_list,
             items[i].item_string,
             items[i].num_options_menu,
-            uart_terminal_scene_setup_var_list_change_callback,
+            wendigo_scene_setup_var_list_change_callback,
             app);
         variable_item_set_current_value_index(item, app->setup_selected_option_index[i]);
         variable_item_set_current_value_text(
@@ -87,12 +87,12 @@ void uart_terminal_scene_setup_on_enter(void* context) {
     }
 
     variable_item_list_set_selected_item(
-        var_item_list, scene_manager_get_scene_state(app->scene_manager, UART_TerminalSceneSetup));
+        var_item_list, scene_manager_get_scene_state(app->scene_manager, WendigoSceneSetup));
 
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
 }
 
-bool uart_terminal_scene_setup_on_event(void* context, SceneManagerEvent event) {
+bool wendigo_scene_setup_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
     WendigoApp* app = context;
     bool consumed = false;
@@ -108,7 +108,7 @@ bool uart_terminal_scene_setup_on_event(void* context, SceneManagerEvent event) 
     return consumed;
 }
 
-void uart_terminal_scene_setup_on_exit(void* context) {
+void wendigo_scene_setup_on_exit(void* context) {
     WendigoApp* app = context;
     variable_item_list_reset(app->var_item_list);
 }
