@@ -100,14 +100,14 @@ static char get_selected_char(Wendigo_TextInputModel* model) {
     return get_row(model->selected_row)[model->selected_column].text;
 }
 
-static void uart_hex_input_backspace_cb(Wendigo_TextInputModel* model) {
+static void wendigo_hex_input_backspace_cb(Wendigo_TextInputModel* model) {
     uint8_t text_length = model->clear_default_text ? 1 : strlen(model->text_buffer);
     if(text_length > 0) {
         model->text_buffer[text_length - 1] = 0;
     }
 }
 
-static void uart_hex_input_view_draw_callback(Canvas* canvas, void* _model) {
+static void wendigo_hex_input_view_draw_callback(Canvas* canvas, void* _model) {
     Wendigo_TextInputModel* model = _model;
     uint8_t needed_string_width = canvas_width(canvas) - 8;
     uint8_t start_pos = 4;
@@ -212,8 +212,8 @@ static void uart_hex_input_view_draw_callback(Canvas* canvas, void* _model) {
     }
 }
 
-static void uart_hex_input_handle_up(Wendigo_TextInput* uart_text_input, Wendigo_TextInputModel* model) {
-    UNUSED(uart_text_input);
+static void wendigo_hex_input_handle_up(Wendigo_TextInput* wendigo_text_input, Wendigo_TextInputModel* model) {
+    UNUSED(wendigo_text_input);
     if(model->selected_row > 0) {
         model->selected_row--;
         if(model->selected_column > get_row_size(model->selected_row) - 6) {
@@ -223,8 +223,8 @@ static void uart_hex_input_handle_up(Wendigo_TextInput* uart_text_input, Wendigo
 }
 
 static void
-    uart_hex_input_handle_down(Wendigo_TextInput* uart_text_input, Wendigo_TextInputModel* model) {
-    UNUSED(uart_text_input);
+    wendigo_hex_input_handle_down(Wendigo_TextInput* wendigo_text_input, Wendigo_TextInputModel* model) {
+    UNUSED(wendigo_text_input);
     if(model->selected_row < keyboard_row_count - 1) {
         model->selected_row++;
         if(model->selected_column > get_row_size(model->selected_row) - 4) {
@@ -234,8 +234,8 @@ static void
 }
 
 static void
-    uart_hex_input_handle_left(Wendigo_TextInput* uart_text_input, Wendigo_TextInputModel* model) {
-    UNUSED(uart_text_input);
+    wendigo_hex_input_handle_left(Wendigo_TextInput* wendigo_text_input, Wendigo_TextInputModel* model) {
+    UNUSED(wendigo_text_input);
     if(model->selected_column > 0) {
         model->selected_column--;
     } else {
@@ -244,8 +244,8 @@ static void
 }
 
 static void
-    uart_hex_input_handle_right(Wendigo_TextInput* uart_text_input, Wendigo_TextInputModel* model) {
-    UNUSED(uart_text_input);
+    wendigo_hex_input_handle_right(Wendigo_TextInput* wendigo_text_input, Wendigo_TextInputModel* model) {
+    UNUSED(wendigo_text_input);
     if(model->selected_column < get_row_size(model->selected_row) - 1) {
         model->selected_column++;
     } else {
@@ -253,8 +253,8 @@ static void
     }
 }
 
-static void uart_hex_input_handle_ok(
-    Wendigo_TextInput* uart_text_input,
+static void wendigo_hex_input_handle_ok(
+    Wendigo_TextInput* wendigo_text_input,
     Wendigo_TextInputModel* model,
     bool shift) {
     UNUSED(shift);
@@ -266,12 +266,12 @@ static void uart_hex_input_handle_ok(
            (!model->validator_callback(
                model->text_buffer, model->validator_text, model->validator_callback_context))) {
             model->valadator_message_visible = true;
-            furi_timer_start(uart_text_input->timer, furi_kernel_get_tick_frequency() * 4);
+            furi_timer_start(wendigo_text_input->timer, furi_kernel_get_tick_frequency() * 4);
         } else if(model->callback != 0 && text_length > 0) {
             model->callback(model->callback_context);
         }
     } else if(selected == BACKSPACE_KEY) {
-        uart_hex_input_backspace_cb(model);
+        wendigo_hex_input_backspace_cb(model);
     } else {
         if(model->clear_default_text) {
             text_length = 0;
@@ -284,14 +284,14 @@ static void uart_hex_input_handle_ok(
     model->clear_default_text = false;
 }
 
-static bool uart_hex_input_view_input_callback(InputEvent* event, void* context) {
-    Wendigo_TextInput* uart_text_input = context;
-    furi_assert(uart_text_input);
+static bool wendigo_hex_input_view_input_callback(InputEvent* event, void* context) {
+    Wendigo_TextInput* wendigo_text_input = context;
+    furi_assert(wendigo_text_input);
 
     bool consumed = false;
 
     // Acquire model
-    Wendigo_TextInputModel* model = view_get_model(uart_text_input->view);
+    Wendigo_TextInputModel* model = view_get_model(wendigo_text_input->view);
 
     if((!(event->type == InputTypePress) && !(event->type == InputTypeRelease)) &&
        model->valadator_message_visible) {
@@ -301,19 +301,19 @@ static bool uart_hex_input_view_input_callback(InputEvent* event, void* context)
         consumed = true;
         switch(event->key) {
         case InputKeyUp:
-            uart_hex_input_handle_up(uart_text_input, model);
+            wendigo_hex_input_handle_up(wendigo_text_input, model);
             break;
         case InputKeyDown:
-            uart_hex_input_handle_down(uart_text_input, model);
+            wendigo_hex_input_handle_down(wendigo_text_input, model);
             break;
         case InputKeyLeft:
-            uart_hex_input_handle_left(uart_text_input, model);
+            wendigo_hex_input_handle_left(wendigo_text_input, model);
             break;
         case InputKeyRight:
-            uart_hex_input_handle_right(uart_text_input, model);
+            wendigo_hex_input_handle_right(wendigo_text_input, model);
             break;
         case InputKeyOk:
-            uart_hex_input_handle_ok(uart_text_input, model, false);
+            wendigo_hex_input_handle_ok(wendigo_text_input, model, false);
             break;
         default:
             consumed = false;
@@ -323,22 +323,22 @@ static bool uart_hex_input_view_input_callback(InputEvent* event, void* context)
         consumed = true;
         switch(event->key) {
         case InputKeyUp:
-            uart_hex_input_handle_up(uart_text_input, model);
+            wendigo_hex_input_handle_up(wendigo_text_input, model);
             break;
         case InputKeyDown:
-            uart_hex_input_handle_down(uart_text_input, model);
+            wendigo_hex_input_handle_down(wendigo_text_input, model);
             break;
         case InputKeyLeft:
-            uart_hex_input_handle_left(uart_text_input, model);
+            wendigo_hex_input_handle_left(wendigo_text_input, model);
             break;
         case InputKeyRight:
-            uart_hex_input_handle_right(uart_text_input, model);
+            wendigo_hex_input_handle_right(wendigo_text_input, model);
             break;
         case InputKeyOk:
-            uart_hex_input_handle_ok(uart_text_input, model, true);
+            wendigo_hex_input_handle_ok(wendigo_text_input, model, true);
             break;
         case InputKeyBack:
-            uart_hex_input_backspace_cb(model);
+            wendigo_hex_input_backspace_cb(model);
             break;
         default:
             consumed = false;
@@ -348,19 +348,19 @@ static bool uart_hex_input_view_input_callback(InputEvent* event, void* context)
         consumed = true;
         switch(event->key) {
         case InputKeyUp:
-            uart_hex_input_handle_up(uart_text_input, model);
+            wendigo_hex_input_handle_up(wendigo_text_input, model);
             break;
         case InputKeyDown:
-            uart_hex_input_handle_down(uart_text_input, model);
+            wendigo_hex_input_handle_down(wendigo_text_input, model);
             break;
         case InputKeyLeft:
-            uart_hex_input_handle_left(uart_text_input, model);
+            wendigo_hex_input_handle_left(wendigo_text_input, model);
             break;
         case InputKeyRight:
-            uart_hex_input_handle_right(uart_text_input, model);
+            wendigo_hex_input_handle_right(wendigo_text_input, model);
             break;
         case InputKeyBack:
-            uart_hex_input_backspace_cb(model);
+            wendigo_hex_input_backspace_cb(model);
             break;
         default:
             consumed = false;
@@ -369,66 +369,66 @@ static bool uart_hex_input_view_input_callback(InputEvent* event, void* context)
     }
 
     // Commit model
-    view_commit_model(uart_text_input->view, consumed);
+    view_commit_model(wendigo_text_input->view, consumed);
 
     return consumed;
 }
 
-void uart_hex_input_timer_callback(void* context) {
+void wendigo_hex_input_timer_callback(void* context) {
     furi_assert(context);
-    Wendigo_TextInput* uart_text_input = context;
+    Wendigo_TextInput* wendigo_text_input = context;
 
     with_view_model(
-        uart_text_input->view,
+        wendigo_text_input->view,
         Wendigo_TextInputModel * model,
         { model->valadator_message_visible = false; },
         true);
 }
 
-Wendigo_TextInput* uart_hex_input_alloc() {
-    Wendigo_TextInput* uart_text_input = malloc(sizeof(Wendigo_TextInput));
-    uart_text_input->view = view_alloc();
-    view_set_context(uart_text_input->view, uart_text_input);
-    view_allocate_model(uart_text_input->view, ViewModelTypeLocking, sizeof(Wendigo_TextInputModel));
-    view_set_draw_callback(uart_text_input->view, uart_hex_input_view_draw_callback);
-    view_set_input_callback(uart_text_input->view, uart_hex_input_view_input_callback);
+Wendigo_TextInput* wendigo_hex_input_alloc() {
+    Wendigo_TextInput* wendigo_text_input = malloc(sizeof(Wendigo_TextInput));
+    wendigo_text_input->view = view_alloc();
+    view_set_context(wendigo_text_input->view, wendigo_text_input);
+    view_allocate_model(wendigo_text_input->view, ViewModelTypeLocking, sizeof(Wendigo_TextInputModel));
+    view_set_draw_callback(wendigo_text_input->view, wendigo_hex_input_view_draw_callback);
+    view_set_input_callback(wendigo_text_input->view, wendigo_hex_input_view_input_callback);
 
-    uart_text_input->timer =
-        furi_timer_alloc(uart_hex_input_timer_callback, FuriTimerTypeOnce, uart_text_input);
+    wendigo_text_input->timer =
+        furi_timer_alloc(wendigo_hex_input_timer_callback, FuriTimerTypeOnce, wendigo_text_input);
 
     with_view_model(
-        uart_text_input->view,
+        wendigo_text_input->view,
         Wendigo_TextInputModel * model,
         { model->validator_text = furi_string_alloc(); },
         false);
 
-    uart_text_input_reset(uart_text_input);
+    wendigo_text_input_reset(wendigo_text_input);
 
-    return uart_text_input;
+    return wendigo_text_input;
 }
 
-void uart_hex_input_free(Wendigo_TextInput* uart_text_input) {
-    furi_assert(uart_text_input);
+void wendigo_hex_input_free(Wendigo_TextInput* wendigo_text_input) {
+    furi_assert(wendigo_text_input);
     with_view_model(
-        uart_text_input->view,
+        wendigo_text_input->view,
         Wendigo_TextInputModel * model,
         { furi_string_free(model->validator_text); },
         false);
 
     // Send stop command
-    furi_timer_stop(uart_text_input->timer);
+    furi_timer_stop(wendigo_text_input->timer);
     // Release allocated memory
-    furi_timer_free(uart_text_input->timer);
+    furi_timer_free(wendigo_text_input->timer);
 
-    view_free(uart_text_input->view);
+    view_free(wendigo_text_input->view);
 
-    free(uart_text_input);
+    free(wendigo_text_input);
 }
 
-void uart_hex_input_reset(Wendigo_TextInput* uart_text_input) {
-    furi_assert(uart_text_input);
+void wendigo_hex_input_reset(Wendigo_TextInput* wendigo_text_input) {
+    furi_assert(wendigo_text_input);
     with_view_model(
-        uart_text_input->view,
+        wendigo_text_input->view,
         Wendigo_TextInputModel * model,
         {
             model->text_buffer_size = 0;
@@ -448,20 +448,20 @@ void uart_hex_input_reset(Wendigo_TextInput* uart_text_input) {
         true);
 }
 
-View* uart_hex_input_get_view(Wendigo_TextInput* uart_text_input) {
-    furi_assert(uart_text_input);
-    return uart_text_input->view;
+View* wendigo_hex_input_get_view(Wendigo_TextInput* wendigo_text_input) {
+    furi_assert(wendigo_text_input);
+    return wendigo_text_input->view;
 }
 
-void uart_hex_input_set_result_callback(
-    Wendigo_TextInput* uart_text_input,
+void wendigo_hex_input_set_result_callback(
+    Wendigo_TextInput* wendigo_text_input,
     Wendigo_TextInputCallback callback,
     void* callback_context,
     char* text_buffer,
     size_t text_buffer_size,
     bool clear_default_text) {
     with_view_model(
-        uart_text_input->view,
+        wendigo_text_input->view,
         Wendigo_TextInputModel * model,
         {
             model->callback = callback;
@@ -478,12 +478,12 @@ void uart_hex_input_set_result_callback(
         true);
 }
 
-void uart_hex_input_set_validator(
-    Wendigo_TextInput* uart_text_input,
+void wendigo_hex_input_set_validator(
+    Wendigo_TextInput* wendigo_text_input,
     Wendigo_TextInputValidatorCallback callback,
     void* callback_context) {
     with_view_model(
-        uart_text_input->view,
+        wendigo_text_input->view,
         Wendigo_TextInputModel * model,
         {
             model->validator_callback = callback;
@@ -493,27 +493,27 @@ void uart_hex_input_set_validator(
 }
 
 Wendigo_TextInputValidatorCallback
-    uart_hex_input_get_validator_callback(Wendigo_TextInput* uart_text_input) {
+    wendigo_hex_input_get_validator_callback(Wendigo_TextInput* wendigo_text_input) {
     Wendigo_TextInputValidatorCallback validator_callback = NULL;
     with_view_model(
-        uart_text_input->view,
+        wendigo_text_input->view,
         Wendigo_TextInputModel * model,
         { validator_callback = model->validator_callback; },
         false);
     return validator_callback;
 }
 
-void* uart_hex_input_get_validator_callback_context(Wendigo_TextInput* uart_text_input) {
+void* wendigo_hex_input_get_validator_callback_context(Wendigo_TextInput* wendigo_text_input) {
     void* validator_callback_context = NULL;
     with_view_model(
-        uart_text_input->view,
+        wendigo_text_input->view,
         Wendigo_TextInputModel * model,
         { validator_callback_context = model->validator_callback_context; },
         false);
     return validator_callback_context;
 }
 
-void uart_hex_input_set_header_text(Wendigo_TextInput* uart_text_input, const char* text) {
+void wendigo_hex_input_set_header_text(Wendigo_TextInput* wendigo_text_input, const char* text) {
     with_view_model(
-        uart_text_input->view, Wendigo_TextInputModel * model, { model->header = text; }, true);
+        wendigo_text_input->view, Wendigo_TextInputModel * model, { model->header = text; }, true);
 }

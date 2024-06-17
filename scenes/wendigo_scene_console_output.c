@@ -65,10 +65,10 @@ void uart_terminal_scene_console_output_on_enter(void* context) {
     }
 
     if(need_reinit) {
-        uart_terminal_uart_free(app->uart);
+        wendigo_uart_free(app->uart);
         app->BAUDRATE = app->NEW_BAUDRATE;
         app->uart_ch = app->new_uart_ch;
-        app->uart = uart_terminal_uart_init(app);
+        app->uart = wendigo_uart_init(app);
     }
 
     if(app->is_command) {
@@ -83,7 +83,7 @@ void uart_terminal_scene_console_output_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewConsoleOutput);
 
     // Register callback to receive data
-    uart_terminal_uart_set_handle_rx_data_cb(
+    wendigo_uart_set_handle_rx_data_cb(
         app->uart, uart_terminal_console_output_handle_rx_data_cb); // setup callback for rx thread
 
     if(app->hex_mode) {
@@ -96,7 +96,7 @@ void uart_terminal_scene_console_output_on_enter(void* context) {
                 byte |= (hex_char_to_byte(*str) << ((1 - digit_num) * 4));
 
                 if(++digit_num == 2) {
-                    uart_terminal_uart_tx(app->uart, &byte, 1);
+                    wendigo_uart_tx(app->uart, &byte, 1);
                     digit_num = 0;
                     byte = 0;
                 }
@@ -104,24 +104,24 @@ void uart_terminal_scene_console_output_on_enter(void* context) {
             }
 
             if(digit_num) {
-                uart_terminal_uart_tx(app->uart, &byte, 1);
+                wendigo_uart_tx(app->uart, &byte, 1);
             }
         }
     } else {
         // Send command with CR+LF or newline '\n'
         if(app->is_command && app->selected_tx_string) {
             if(app->TERMINAL_MODE == 1) {
-                uart_terminal_uart_tx(
+                wendigo_uart_tx(
                     app->uart,
                     (uint8_t*)(app->selected_tx_string),
                     strlen(app->selected_tx_string));
-                uart_terminal_uart_tx(app->uart, (uint8_t*)("\r\n"), 2);
+                wendigo_uart_tx(app->uart, (uint8_t*)("\r\n"), 2);
             } else {
-                uart_terminal_uart_tx(
+                wendigo_uart_tx(
                     app->uart,
                     (uint8_t*)(app->selected_tx_string),
                     strlen(app->selected_tx_string));
-                uart_terminal_uart_tx(app->uart, (uint8_t*)("\n"), 1);
+                wendigo_uart_tx(app->uart, (uint8_t*)("\n"), 1);
             }
         }
     }
@@ -146,5 +146,5 @@ void uart_terminal_scene_console_output_on_exit(void* context) {
     WendigoApp* app = context;
 
     // Unregister rx callback
-    uart_terminal_uart_set_handle_rx_data_cb(app->uart, NULL);
+    wendigo_uart_set_handle_rx_data_cb(app->uart, NULL);
 }

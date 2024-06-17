@@ -4,40 +4,40 @@
 #include <furi_hal.h>
 #include <expansion/expansion.h>
 
-static bool uart_terminal_app_custom_event_callback(void* context, uint32_t event) {
+static bool wendigo_app_custom_event_callback(void* context, uint32_t event) {
     furi_assert(context);
     WendigoApp* app = context;
     return scene_manager_handle_custom_event(app->scene_manager, event);
 }
 
-static bool uart_terminal_app_back_event_callback(void* context) {
+static bool wendigo_app_back_event_callback(void* context) {
     furi_assert(context);
     WendigoApp* app = context;
     return scene_manager_handle_back_event(app->scene_manager);
 }
 
-static void uart_terminal_app_tick_event_callback(void* context) {
+static void wendigo_app_tick_event_callback(void* context) {
     furi_assert(context);
     WendigoApp* app = context;
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
-WendigoApp* uart_terminal_app_alloc() {
+WendigoApp* wendigo_app_alloc() {
     WendigoApp* app = malloc(sizeof(WendigoApp));
 
     app->gui = furi_record_open(RECORD_GUI);
 
     app->view_dispatcher = view_dispatcher_alloc();
-    app->scene_manager = scene_manager_alloc(&uart_terminal_scene_handlers, app);
+    app->scene_manager = scene_manager_alloc(&wendigo_scene_handlers, app);
     view_dispatcher_enable_queue(app->view_dispatcher);
     view_dispatcher_set_event_callback_context(app->view_dispatcher, app);
 
     view_dispatcher_set_custom_event_callback(
-        app->view_dispatcher, uart_terminal_app_custom_event_callback);
+        app->view_dispatcher, wendigo_app_custom_event_callback);
     view_dispatcher_set_navigation_event_callback(
-        app->view_dispatcher, uart_terminal_app_back_event_callback);
+        app->view_dispatcher, wendigo_app_back_event_callback);
     view_dispatcher_set_tick_event_callback(
-        app->view_dispatcher, uart_terminal_app_tick_event_callback, 100);
+        app->view_dispatcher, wendigo_app_tick_event_callback, 100);
 
     view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
 
@@ -69,11 +69,11 @@ WendigoApp* uart_terminal_app_alloc() {
     view_dispatcher_add_view(
         app->view_dispatcher, WendigoAppViewTextInput, text_input_get_view(app->text_input));
 
-    app->hex_input = uart_hex_input_alloc();
+    app->hex_input = wendigo_hex_input_alloc();
     view_dispatcher_add_view(
         app->view_dispatcher,
         WendigoAppViewHexInput,
-        uart_hex_input_get_view(app->hex_input));
+        wendigo_hex_input_get_view(app->hex_input));
 
     app->setup_selected_option_index[BAUDRATE_ITEM_IDX] = DEFAULT_BAUDRATE_OPT_IDX;
 
@@ -82,7 +82,7 @@ WendigoApp* uart_terminal_app_alloc() {
     return app;
 }
 
-void uart_terminal_app_free(WendigoApp* app) {
+void wendigo_app_free(WendigoApp* app) {
     furi_assert(app);
 
     // Views
@@ -97,13 +97,13 @@ void uart_terminal_app_free(WendigoApp* app) {
     text_box_free(app->text_box);
     furi_string_free(app->text_box_store);
     text_input_free(app->text_input);
-    uart_hex_input_free(app->hex_input);
+    wendigo_hex_input_free(app->hex_input);
 
     // View dispatcher
     view_dispatcher_free(app->view_dispatcher);
     scene_manager_free(app->scene_manager);
 
-    uart_terminal_uart_free(app->uart);
+    wendigo_uart_free(app->uart);
 
     // Close records
     furi_record_close(RECORD_GUI);
@@ -111,19 +111,19 @@ void uart_terminal_app_free(WendigoApp* app) {
     free(app);
 }
 
-int32_t uart_terminal_app(void* p) {
+int32_t wendigo_app(void* p) {
     UNUSED(p);
     // Disable expansion protocol to avoid interference with UART Handle
     Expansion* expansion = furi_record_open(RECORD_EXPANSION);
     expansion_disable(expansion);
 
-    WendigoApp* uart_terminal_app = uart_terminal_app_alloc();
+    WendigoApp* wendigo_app = wendigo_app_alloc();
 
-    uart_terminal_app->uart = uart_terminal_uart_init(uart_terminal_app);
+    wendigo_app->uart = wendigo_uart_init(wendigo_app);
 
-    view_dispatcher_run(uart_terminal_app->view_dispatcher);
+    view_dispatcher_run(wendigo_app->view_dispatcher);
 
-    uart_terminal_app_free(uart_terminal_app);
+    wendigo_app_free(wendigo_app);
 
     // Return previous state of expansion
     expansion_enable(expansion);

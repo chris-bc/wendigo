@@ -6,10 +6,10 @@ typedef struct {
     const char* item_string;
     int num_options_menu;
     const char* options_menu[MAX_OPTIONS];
-} UART_Terminal_Setup_Item;
+} Wendigo_Setup_Item;
 
 // SETUP_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
-static const UART_Terminal_Setup_Item items[SETUP_MENU_ITEMS] = {
+static const Wendigo_Setup_Item items[SETUP_MENU_ITEMS] = {
     {"UART Pins", 2, {"13,14", "15,16"}},
     {"Baudrate", 25, {"75",     "110",    "150",    "300",   "600",    "1200",   "1800",
                       "2400",   "4800",   "7200",   "9600",  "14400",  "19200",  "31250",
@@ -23,7 +23,7 @@ static void uart_terminal_scene_setup_var_list_enter_callback(void* context, uin
     WendigoApp* app = context;
 
     furi_assert(index < SETUP_MENU_ITEMS);
-    const UART_Terminal_Setup_Item* item = &items[index];
+    const Wendigo_Setup_Item* item = &items[index];
 
     const int selected_option_index = app->setup_selected_option_index[index];
     furi_assert(selected_option_index < item->num_options_menu);
@@ -36,7 +36,7 @@ static void uart_terminal_scene_setup_var_list_change_callback(VariableItem* ite
     WendigoApp* app = variable_item_get_context(item);
     furi_assert(app);
 
-    const UART_Terminal_Setup_Item* menu_item = &items[app->setup_selected_menu_index];
+    const Wendigo_Setup_Item* menu_item = &items[app->setup_selected_menu_index];
     uint8_t item_index = variable_item_get_current_value_index(item);
     furi_assert(item_index < menu_item->num_options_menu);
     variable_item_set_current_value_text(item, menu_item->options_menu[item_index]);

@@ -14,7 +14,7 @@ void uart_terminal_scene_help_on_enter(void* context) {
     temp_str = furi_string_alloc();
     furi_string_printf(
         temp_str,
-        "\nUART terminal for Flipper\n\nI'm in github: cool4uma\n\nThis app is a modified\nWiFi Marauder companion,\nThanks 0xchocolate(github)\nfor great code and app.\n\n");
+        "\nWendigo for Flipper\n\nI'm in github: cool4uma\n\nThis app is a modified\nWiFi Marauder companion,\nThanks 0xchocolate(github)\nfor great code and app.\n\n");
     furi_string_cat_printf(temp_str, "Press BACK to return\n");
 
     widget_add_text_box_element(
@@ -35,7 +35,7 @@ void uart_terminal_scene_help_on_enter(void* context) {
         14,
         AlignCenter,
         AlignBottom,
-        "\e#\e!         UART Terminal            \e!\n",
+        "\e#\e!         WENDIGO            \e!\n",
         false);
     widget_add_text_scroll_element(app->widget, 0, 16, 128, 50, furi_string_get_cstr(temp_str));
     furi_string_free(temp_str);

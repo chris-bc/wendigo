@@ -21,12 +21,12 @@ typedef struct {
     int num_options_menu;
     ActionType action;
     ModeMask mode_mask;
-} UART_TerminalItem;
+} WendigoItem;
 
 static const char at_str[] = "AT";
 
 // NUM_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
-static const UART_TerminalItem items[START_MENU_ITEMS] = {
+static const WendigoItem items[START_MENU_ITEMS] = {
     {"Setup", {""}, 1, OPEN_SETUP, BOTH_MODES},
     {"Open port", {""}, 1, OPEN_PORT, BOTH_MODES},
     {"Send packet", {""}, 1, SEND_CMD, HEX_MODE},
@@ -50,7 +50,7 @@ static void uart_terminal_scene_start_var_list_enter_callback(void* context, uin
     furi_assert(index < menu_items_num);
     uint8_t item_index = item_indexes[index];
     furi_assert(item_index < START_MENU_ITEMS);
-    const UART_TerminalItem* item = &items[item_index];
+    const WendigoItem* item = &items[item_index];
 
     const int selected_option_index = app->selected_option_index[index];
     furi_assert(selected_option_index < item->num_options_menu);
@@ -98,7 +98,7 @@ static void uart_terminal_scene_start_var_list_change_callback(VariableItem* ite
     furi_assert(app);
 
     uint8_t item_index = item_indexes[app->selected_menu_index];
-    const UART_TerminalItem* menu_item = &items[item_index];
+    const WendigoItem* menu_item = &items[item_index];
     uint8_t option_index = variable_item_get_current_value_index(item);
     furi_assert(option_index < menu_item->num_options_menu);
     variable_item_set_current_value_text(item, menu_item->options_menu[option_index]);
