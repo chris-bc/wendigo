@@ -1,14 +1,14 @@
-#include "../uart_terminal_app_i.h"
+#include "../wendigo_app_i.h"
 
 void uart_terminal_scene_help_widget_callback(GuiButtonType result, InputType type, void* context) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     if(type == InputTypeShort) {
         view_dispatcher_send_custom_event(app->view_dispatcher, result);
     }
 }
 
 void uart_terminal_scene_help_on_enter(void* context) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
 
     FuriString* temp_str;
     temp_str = furi_string_alloc();
@@ -40,11 +40,11 @@ void uart_terminal_scene_help_on_enter(void* context) {
     widget_add_text_scroll_element(app->widget, 0, 16, 128, 50, furi_string_get_cstr(temp_str));
     furi_string_free(temp_str);
 
-    view_dispatcher_switch_to_view(app->view_dispatcher, UART_TerminalAppViewHelp);
+    view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewHelp);
 }
 
 bool uart_terminal_scene_help_on_event(void* context, SceneManagerEvent event) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     bool consumed = false;
     UNUSED(app);
     UNUSED(event);
@@ -52,7 +52,7 @@ bool uart_terminal_scene_help_on_event(void* context, SceneManagerEvent event) {
 }
 
 void uart_terminal_scene_help_on_exit(void* context) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     // Clear views
     widget_reset(app->widget);
 }

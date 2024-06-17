@@ -1,19 +1,19 @@
-#include "../uart_terminal_app_i.h"
+#include "../wendigo_app_i.h"
 
 void uart_terminal_scene_text_input_callback(void* context) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
 
     view_dispatcher_send_custom_event(app->view_dispatcher, UART_TerminalEventStartConsole);
 }
 
 void uart_terminal_scene_text_input_on_enter(void* context) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
 
     if(false == app->is_custom_tx_string) {
         // Fill text input with selected string so that user can add to it
         size_t length = strlen(app->selected_tx_string);
-        furi_assert(length < UART_TERMINAL_TEXT_INPUT_STORE_SIZE);
-        bzero(app->text_input_store, UART_TERMINAL_TEXT_INPUT_STORE_SIZE);
+        furi_assert(length < WENDIGO_TEXT_INPUT_STORE_SIZE);
+        bzero(app->text_input_store, WENDIGO_TEXT_INPUT_STORE_SIZE);
         strncpy(app->text_input_store, app->selected_tx_string, length);
 
         // Add space - because flipper keyboard currently doesn't have a space
@@ -37,16 +37,16 @@ void uart_terminal_scene_text_input_on_enter(void* context) {
         uart_terminal_scene_text_input_callback,
         app,
         app->text_input_store,
-        UART_TERMINAL_TEXT_INPUT_STORE_SIZE,
+        WENDIGO_TEXT_INPUT_STORE_SIZE,
         false);
 
     text_input_add_illegal_symbols(text_input);
 
-    view_dispatcher_switch_to_view(app->view_dispatcher, UART_TerminalAppViewTextInput);
+    view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewTextInput);
 }
 
 bool uart_terminal_scene_text_input_on_event(void* context, SceneManagerEvent event) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
@@ -62,7 +62,7 @@ bool uart_terminal_scene_text_input_on_event(void* context, SceneManagerEvent ev
 }
 
 void uart_terminal_scene_text_input_on_exit(void* context) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
 
     text_input_reset(app->text_input);
 }

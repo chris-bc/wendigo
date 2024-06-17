@@ -1,4 +1,4 @@
-#include "../uart_terminal_app_i.h"
+#include "../wendigo_app_i.h"
 
 // Command action type
 typedef enum {
@@ -25,7 +25,7 @@ typedef struct {
 
 static const char at_str[] = "AT";
 
-// NUM_MENU_ITEMS defined in uart_terminal_app_i.h - if you add an entry here, increment it!
+// NUM_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
 static const UART_TerminalItem items[START_MENU_ITEMS] = {
     {"Setup", {""}, 1, OPEN_SETUP, BOTH_MODES},
     {"Open port", {""}, 1, OPEN_PORT, BOTH_MODES},
@@ -45,7 +45,7 @@ static uint8_t item_indexes[START_MENU_ITEMS] = {0};
 
 static void uart_terminal_scene_start_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
 
     furi_assert(index < menu_items_num);
     uint8_t item_index = item_indexes[index];
@@ -94,7 +94,7 @@ static void uart_terminal_scene_start_var_list_enter_callback(void* context, uin
 static void uart_terminal_scene_start_var_list_change_callback(VariableItem* item) {
     furi_assert(item);
 
-    UART_TerminalApp* app = variable_item_get_context(item);
+    WendigoApp* app = variable_item_get_context(item);
     furi_assert(app);
 
     uint8_t item_index = item_indexes[app->selected_menu_index];
@@ -106,7 +106,7 @@ static void uart_terminal_scene_start_var_list_change_callback(VariableItem* ite
 }
 
 void uart_terminal_scene_start_on_enter(void* context) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     VariableItemList* var_item_list = app->var_item_list;
 
     for(int i = 0; i < START_MENU_ITEMS; ++i) {
@@ -146,12 +146,12 @@ void uart_terminal_scene_start_on_enter(void* context) {
     variable_item_list_set_selected_item(
         var_item_list, scene_manager_get_scene_state(app->scene_manager, UART_TerminalSceneStart));
 
-    view_dispatcher_switch_to_view(app->view_dispatcher, UART_TerminalAppViewVarItemList);
+    view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
 }
 
 bool uart_terminal_scene_start_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
@@ -186,6 +186,6 @@ bool uart_terminal_scene_start_on_event(void* context, SceneManagerEvent event) 
 }
 
 void uart_terminal_scene_start_on_exit(void* context) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     variable_item_list_reset(app->var_item_list);
 }

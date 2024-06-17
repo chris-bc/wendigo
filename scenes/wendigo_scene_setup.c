@@ -1,4 +1,4 @@
-#include "../uart_terminal_app_i.h"
+#include "../wendigo_app_i.h"
 
 #define MAX_OPTIONS 25
 
@@ -8,7 +8,7 @@ typedef struct {
     const char* options_menu[MAX_OPTIONS];
 } UART_Terminal_Setup_Item;
 
-// SETUP_MENU_ITEMS defined in uart_terminal_app_i.h - if you add an entry here, increment it!
+// SETUP_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
 static const UART_Terminal_Setup_Item items[SETUP_MENU_ITEMS] = {
     {"UART Pins", 2, {"13,14", "15,16"}},
     {"Baudrate", 25, {"75",     "110",    "150",    "300",   "600",    "1200",   "1800",
@@ -20,7 +20,7 @@ static const UART_Terminal_Setup_Item items[SETUP_MENU_ITEMS] = {
 
 static void uart_terminal_scene_setup_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
 
     furi_assert(index < SETUP_MENU_ITEMS);
     const UART_Terminal_Setup_Item* item = &items[index];
@@ -33,7 +33,7 @@ static void uart_terminal_scene_setup_var_list_enter_callback(void* context, uin
 static void uart_terminal_scene_setup_var_list_change_callback(VariableItem* item) {
     furi_assert(item);
 
-    UART_TerminalApp* app = variable_item_get_context(item);
+    WendigoApp* app = variable_item_get_context(item);
     furi_assert(app);
 
     const UART_Terminal_Setup_Item* menu_item = &items[app->setup_selected_menu_index];
@@ -67,7 +67,7 @@ static void uart_terminal_scene_setup_var_list_change_callback(VariableItem* ite
 }
 
 void uart_terminal_scene_setup_on_enter(void* context) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     VariableItemList* var_item_list = app->var_item_list;
 
     variable_item_list_set_enter_callback(
@@ -89,12 +89,12 @@ void uart_terminal_scene_setup_on_enter(void* context) {
     variable_item_list_set_selected_item(
         var_item_list, scene_manager_get_scene_state(app->scene_manager, UART_TerminalSceneSetup));
 
-    view_dispatcher_switch_to_view(app->view_dispatcher, UART_TerminalAppViewVarItemList);
+    view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
 }
 
 bool uart_terminal_scene_setup_on_event(void* context, SceneManagerEvent event) {
     UNUSED(context);
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
@@ -109,6 +109,6 @@ bool uart_terminal_scene_setup_on_event(void* context, SceneManagerEvent event) 
 }
 
 void uart_terminal_scene_setup_on_exit(void* context) {
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     variable_item_list_reset(app->var_item_list);
 }

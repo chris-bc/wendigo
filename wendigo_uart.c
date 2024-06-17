@@ -1,8 +1,8 @@
-#include "uart_terminal_app_i.h"
-#include "uart_terminal_uart.h"
+#include "wendigo_app_i.h"
+#include "wendigo_uart.h"
 
 struct UART_TerminalUart {
-    UART_TerminalApp* app;
+    WendigoApp* app;
     FuriThread* rx_thread;
     FuriStreamBuffer* rx_stream;
     uint8_t rx_buf[RX_BUF_SIZE + 1];
@@ -62,7 +62,7 @@ void uart_terminal_uart_tx(UART_TerminalUart* uart, uint8_t* data, size_t len) {
     furi_hal_serial_tx(uart->serial_handle, data, len);
 }
 
-UART_TerminalUart* uart_terminal_uart_init(UART_TerminalApp* app) {
+UART_TerminalUart* uart_terminal_uart_init(WendigoApp* app) {
     UART_TerminalUart* uart = malloc(sizeof(UART_TerminalUart));
     uart->app = app;
     // Init all rx stream and thread early to avoid crashes

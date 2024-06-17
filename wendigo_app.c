@@ -1,4 +1,4 @@
-#include "uart_terminal_app_i.h"
+#include "wendigo_app_i.h"
 
 #include <furi.h>
 #include <furi_hal.h>
@@ -6,24 +6,24 @@
 
 static bool uart_terminal_app_custom_event_callback(void* context, uint32_t event) {
     furi_assert(context);
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     return scene_manager_handle_custom_event(app->scene_manager, event);
 }
 
 static bool uart_terminal_app_back_event_callback(void* context) {
     furi_assert(context);
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     return scene_manager_handle_back_event(app->scene_manager);
 }
 
 static void uart_terminal_app_tick_event_callback(void* context) {
     furi_assert(context);
-    UART_TerminalApp* app = context;
+    WendigoApp* app = context;
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
-UART_TerminalApp* uart_terminal_app_alloc() {
-    UART_TerminalApp* app = malloc(sizeof(UART_TerminalApp));
+WendigoApp* uart_terminal_app_alloc() {
+    WendigoApp* app = malloc(sizeof(WendigoApp));
 
     app->gui = furi_record_open(RECORD_GUI);
 
@@ -44,7 +44,7 @@ UART_TerminalApp* uart_terminal_app_alloc() {
     app->var_item_list = variable_item_list_alloc();
     view_dispatcher_add_view(
         app->view_dispatcher,
-        UART_TerminalAppViewVarItemList,
+        WendigoAppViewVarItemList,
         variable_item_list_get_view(app->var_item_list));
 
     for(int i = 0; i < START_MENU_ITEMS; ++i) {
@@ -57,22 +57,22 @@ UART_TerminalApp* uart_terminal_app_alloc() {
 
     app->widget = widget_alloc();
     view_dispatcher_add_view(
-        app->view_dispatcher, UART_TerminalAppViewHelp, widget_get_view(app->widget));
+        app->view_dispatcher, WendigoAppViewHelp, widget_get_view(app->widget));
 
     app->text_box = text_box_alloc();
     view_dispatcher_add_view(
-        app->view_dispatcher, UART_TerminalAppViewConsoleOutput, text_box_get_view(app->text_box));
+        app->view_dispatcher, WendigoAppViewConsoleOutput, text_box_get_view(app->text_box));
     app->text_box_store = furi_string_alloc();
-    furi_string_reserve(app->text_box_store, UART_TERMINAL_TEXT_BOX_STORE_SIZE);
+    furi_string_reserve(app->text_box_store, WENDIGO_TEXT_BOX_STORE_SIZE);
 
     app->text_input = text_input_alloc();
     view_dispatcher_add_view(
-        app->view_dispatcher, UART_TerminalAppViewTextInput, text_input_get_view(app->text_input));
+        app->view_dispatcher, WendigoAppViewTextInput, text_input_get_view(app->text_input));
 
     app->hex_input = uart_hex_input_alloc();
     view_dispatcher_add_view(
         app->view_dispatcher,
-        UART_TerminalAppViewHexInput,
+        WendigoAppViewHexInput,
         uart_hex_input_get_view(app->hex_input));
 
     app->setup_selected_option_index[BAUDRATE_ITEM_IDX] = DEFAULT_BAUDRATE_OPT_IDX;
@@ -82,15 +82,15 @@ UART_TerminalApp* uart_terminal_app_alloc() {
     return app;
 }
 
-void uart_terminal_app_free(UART_TerminalApp* app) {
+void uart_terminal_app_free(WendigoApp* app) {
     furi_assert(app);
 
     // Views
-    view_dispatcher_remove_view(app->view_dispatcher, UART_TerminalAppViewVarItemList);
-    view_dispatcher_remove_view(app->view_dispatcher, UART_TerminalAppViewHelp);
-    view_dispatcher_remove_view(app->view_dispatcher, UART_TerminalAppViewConsoleOutput);
-    view_dispatcher_remove_view(app->view_dispatcher, UART_TerminalAppViewTextInput);
-    view_dispatcher_remove_view(app->view_dispatcher, UART_TerminalAppViewHexInput);
+    view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewVarItemList);
+    view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewHelp);
+    view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewConsoleOutput);
+    view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewTextInput);
+    view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewHexInput);
 
     variable_item_list_free(app->var_item_list);
     widget_free(app->widget);
@@ -117,7 +117,7 @@ int32_t uart_terminal_app(void* p) {
     Expansion* expansion = furi_record_open(RECORD_EXPANSION);
     expansion_disable(expansion);
 
-    UART_TerminalApp* uart_terminal_app = uart_terminal_app_alloc();
+    WendigoApp* uart_terminal_app = uart_terminal_app_alloc();
 
     uart_terminal_app->uart = uart_terminal_uart_init(uart_terminal_app);
 

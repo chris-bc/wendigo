@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-typedef struct UART_TerminalApp UART_TerminalApp;
+typedef struct WendigoApp WendigoApp;
 
 #ifdef __cplusplus
 }
