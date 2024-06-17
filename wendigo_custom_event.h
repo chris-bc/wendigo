@@ -1,10 +1,10 @@
 #pragma once
 
 typedef enum {
-    UART_TerminalEventRefreshConsoleOutput = 0,
-    UART_TerminalEventSetup,
-    UART_TerminalEventStartConsole,
-    UART_TerminalEventStartKeyboardText,
-    UART_TerminalEventStartKeyboardHex,
-    UART_TerminalEventStartHelp,
-} UART_TerminalCustomEvent;
+    Wendigo_EventRefreshConsoleOutput = 0,
+    Wendigo_EventSetup,
+    Wendigo_EventStartConsole,
+    Wendigo_EventStartKeyboardText,
+    Wendigo_EventStartKeyboardHex,
+    Wendigo_EventStartHelp,
+} Wendigo_CustomEvent;

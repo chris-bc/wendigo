@@ -61,7 +61,7 @@ static void uart_terminal_scene_start_var_list_enter_callback(void* context, uin
 
     switch(item->action) {
     case OPEN_SETUP:
-        view_dispatcher_send_custom_event(app->view_dispatcher, UART_TerminalEventSetup);
+        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventSetup);
         return;
     case SEND_AT_CMD:
     case SEND_CMD:
@@ -74,17 +74,17 @@ static void uart_terminal_scene_start_var_list_enter_callback(void* context, uin
 
         if(app->hex_mode) {
             view_dispatcher_send_custom_event(
-                app->view_dispatcher, UART_TerminalEventStartKeyboardHex);
+                app->view_dispatcher, Wendigo_EventStartKeyboardHex);
         } else {
             view_dispatcher_send_custom_event(
-                app->view_dispatcher, UART_TerminalEventStartKeyboardText);
+                app->view_dispatcher, Wendigo_EventStartKeyboardText);
         }
         return;
     case OPEN_PORT:
-        view_dispatcher_send_custom_event(app->view_dispatcher, UART_TerminalEventStartConsole);
+        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
         return;
     case OPEN_HELP:
-        view_dispatcher_send_custom_event(app->view_dispatcher, UART_TerminalEventStartHelp);
+        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartHelp);
         return;
     default:
         return;
@@ -155,23 +155,23 @@ bool uart_terminal_scene_start_on_event(void* context, SceneManagerEvent event) 
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
-        if(event.event == UART_TerminalEventSetup) {
+        if(event.event == Wendigo_EventSetup) {
             scene_manager_set_scene_state(
                 app->scene_manager, UART_TerminalSceneStart, app->selected_menu_index);
             scene_manager_next_scene(app->scene_manager, UART_TerminalSceneSetup);
-        } else if(event.event == UART_TerminalEventStartKeyboardText) {
+        } else if(event.event == Wendigo_EventStartKeyboardText) {
             scene_manager_set_scene_state(
                 app->scene_manager, UART_TerminalSceneStart, app->selected_menu_index);
             scene_manager_next_scene(app->scene_manager, UART_TerminalSceneTextInput);
-        } else if(event.event == UART_TerminalEventStartKeyboardHex) {
+        } else if(event.event == Wendigo_EventStartKeyboardHex) {
             scene_manager_set_scene_state(
                 app->scene_manager, UART_TerminalSceneStart, app->selected_menu_index);
             scene_manager_next_scene(app->scene_manager, UART_TerminalSceneHexInput);
-        } else if(event.event == UART_TerminalEventStartConsole) {
+        } else if(event.event == Wendigo_EventStartConsole) {
             scene_manager_set_scene_state(
                 app->scene_manager, UART_TerminalSceneStart, app->selected_menu_index);
             scene_manager_next_scene(app->scene_manager, UART_TerminalSceneConsoleOutput);
-        } else if(event.event == UART_TerminalEventStartHelp) {
+        } else if(event.event == Wendigo_EventStartHelp) {
             scene_manager_set_scene_state(
                 app->scene_manager, UART_TerminalSceneStart, app->selected_menu_index);
             scene_manager_next_scene(app->scene_manager, UART_TerminalSceneHelp);

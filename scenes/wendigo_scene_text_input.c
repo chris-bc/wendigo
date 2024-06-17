@@ -3,7 +3,7 @@
 void uart_terminal_scene_text_input_callback(void* context) {
     WendigoApp* app = context;
 
-    view_dispatcher_send_custom_event(app->view_dispatcher, UART_TerminalEventStartConsole);
+    view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
 }
 
 void uart_terminal_scene_text_input_on_enter(void* context) {
@@ -50,7 +50,7 @@ bool uart_terminal_scene_text_input_on_event(void* context, SceneManagerEvent ev
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
-        if(event.event == UART_TerminalEventStartConsole) {
+        if(event.event == Wendigo_EventStartConsole) {
             // Point to custom string to send
             app->selected_tx_string = app->text_input_store;
             scene_manager_next_scene(app->scene_manager, UART_TerminalSceneConsoleOutput);
