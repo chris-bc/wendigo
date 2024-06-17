@@ -12,7 +12,7 @@
 #include <gui/modules/widget.h>
 #include <gui/modules/variable_item_list.h>
 #include <gui/modules/text_input.h>
-#include "uart_hex_input.h"
+#include "wendigo_hex_input.h"
 
 #define START_MENU_ITEMS (7)
 #define SETUP_MENU_ITEMS (3)
