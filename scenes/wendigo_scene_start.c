@@ -1,43 +1,13 @@
 #include "../wendigo_app_i.h"
 
-// Command action type
-typedef enum {
-    NO_ACTION = 0,
-    OPEN_SETUP,
-    OPEN_PORT,
-    SEND_CMD,
-    SEND_AT_CMD,
-    SEND_FAST_CMD,
-    OPEN_HELP
-} ActionType;
-// Command availability in different modes
-typedef enum { OFF = 0, TEXT_MODE = 1, HEX_MODE = 2, BOTH_MODES = 3 } ModeMask;
-
-#define MAX_OPTIONS (8)
-
-typedef struct {
-    const char* item_string;
-    const char* options_menu[MAX_OPTIONS];
-    int num_options_menu;
-    ActionType action;
-    ModeMask mode_mask;
-} WendigoItem;
-
-static const char at_str[] = "AT";
-
 // NUM_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
 static const WendigoItem items[START_MENU_ITEMS] = {
     {"Setup", {""}, 1, OPEN_SETUP, BOTH_MODES},
-    {"Open port", {""}, 1, OPEN_PORT, BOTH_MODES},
-    {"Send packet", {""}, 1, SEND_CMD, HEX_MODE},
-    {"Send command", {""}, 1, SEND_CMD, TEXT_MODE},
-    {"Send AT command", {""}, 1, SEND_AT_CMD, TEXT_MODE},
-    {"Fast cmd",
-     {"help", "uptime", "date", "df -h", "ps", "dmesg", "reboot", "poweroff"},
-     8,
-     SEND_FAST_CMD,
-     TEXT_MODE},
-    {"Help", {""}, 1, OPEN_HELP, BOTH_MODES},
+    {"Scan", {"Start", "Stop", "Status"}, 3, OPEN_SCAN, TEXT_MODE},
+    {"Devices", {""}, 1, LIST_DEVICES, BOTH_MODES},
+    {"Selected Devices", {""}, 1, LIST_DEVICES, BOTH_MODES},
+    {"Track Selected", {""}, 1, TRACK_DEVICES, TEXT_MODE},
+    {"Help", {"About"}, 1, OPEN_HELP, TEXT_MODE},
 };
 
 static uint8_t menu_items_num = 0;
@@ -63,14 +33,9 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
     case OPEN_SETUP:
         view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventSetup);
         return;
-    case SEND_AT_CMD:
-    case SEND_CMD:
-    case SEND_FAST_CMD:
+    case OPEN_SCAN:
+    case LIST_DEVICES:
         app->is_command = true;
-
-        if(item->action == SEND_AT_CMD) {
-            app->selected_tx_string = at_str;
-        }
 
         if(app->hex_mode) {
             view_dispatcher_send_custom_event(
@@ -80,7 +45,7 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
                 app->view_dispatcher, Wendigo_EventStartKeyboardText);
         }
         return;
-    case OPEN_PORT:
+    case TRACK_DEVICES:
         view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
         return;
     case OPEN_HELP:

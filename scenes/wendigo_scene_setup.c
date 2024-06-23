@@ -1,7 +1,5 @@
 #include "../wendigo_app_i.h"
 
-#define MAX_OPTIONS 25
-
 typedef struct {
     const char* item_string;
     int num_options_menu;

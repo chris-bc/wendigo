@@ -2,12 +2,15 @@
 
 ### Menu
 * Setup
-    * Start Scanning
-    * Stop Scanning
     * Enable BLE
     * Enable BD
     * Enable WiFi
     * Channels
+    * MAC Address
+* Scan
+    * Start
+    * Stop
+    * Status
 * Devices
     * List of discovered devices
         * Name
@@ -22,3 +25,4 @@
         * As above
 * Track selected devices
     * RSSI metrics
+* About

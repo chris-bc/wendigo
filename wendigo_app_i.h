@@ -14,11 +14,33 @@
 #include <gui/modules/text_input.h>
 #include "wendigo_hex_input.h"
 
-#define START_MENU_ITEMS (7)
+#define START_MENU_ITEMS (6)
 #define SETUP_MENU_ITEMS (3)
+
+#define MAX_OPTIONS (25)
 
 #define WENDIGO_TEXT_BOX_STORE_SIZE (4096)
 #define WENDIGO_TEXT_INPUT_STORE_SIZE (512)
+
+// Command action type
+typedef enum {
+    NO_ACTION = 0,
+    OPEN_SETUP,
+    OPEN_SCAN,
+    LIST_DEVICES,
+    TRACK_DEVICES,
+    OPEN_HELP
+} ActionType;
+// Command availability in different modes
+typedef enum { OFF = 0, TEXT_MODE = 1, HEX_MODE = 2, BOTH_MODES = 3 } ModeMask;
+
+typedef struct {
+    const char* item_string;
+    const char* options_menu[MAX_OPTIONS];
+    int num_options_menu;
+    ActionType action;
+    ModeMask mode_mask;
+} WendigoItem;
 
 struct WendigoApp {
     Gui* gui;
