@@ -12,6 +12,7 @@
 #include <gui/modules/widget.h>
 #include <gui/modules/variable_item_list.h>
 #include <gui/modules/text_input.h>
+#include <gui/modules/byte_input.h>
 #include "wendigo_hex_input.h"
 
 #define START_MENU_ITEMS (6)
@@ -56,6 +57,7 @@ struct WendigoApp {
     Widget* widget;
     VariableItemList* var_item_list;
     Wendigo_Uart* uart;
+    ByteInput *setup_mac;
 
     int setup_selected_menu_index;
     int setup_selected_option_index[SETUP_MENU_ITEMS];
@@ -79,4 +81,5 @@ typedef enum {
     WendigoAppViewTextInput,
     WendigoAppViewHexInput,
     WendigoAppViewHelp,
+    WendigoAppViewSetupMAC,
 } WendigoAppView;
