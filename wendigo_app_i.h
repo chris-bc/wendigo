@@ -15,9 +15,9 @@
 #include "wendigo_hex_input.h"
 
 #define START_MENU_ITEMS (6)
-#define SETUP_MENU_ITEMS (3)
+#define SETUP_MENU_ITEMS (5)
 
-#define MAX_OPTIONS (25)
+#define MAX_OPTIONS (14)
 
 #define WENDIGO_TEXT_BOX_STORE_SIZE (4096)
 #define WENDIGO_TEXT_INPUT_STORE_SIZE (512)

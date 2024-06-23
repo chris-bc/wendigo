@@ -1,19 +1,13 @@
 #include "../wendigo_app_i.h"
 
-typedef struct {
-    const char* item_string;
-    int num_options_menu;
-    const char* options_menu[MAX_OPTIONS];
-} Wendigo_Setup_Item;
-
 // SETUP_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
-static const Wendigo_Setup_Item items[SETUP_MENU_ITEMS] = {
-    {"UART Pins", 2, {"13,14", "15,16"}},
-    {"Baudrate", 25, {"75",     "110",    "150",    "300",   "600",    "1200",   "1800",
-                      "2400",   "4800",   "7200",   "9600",  "14400",  "19200",  "31250",
-                      "38400",  "56000",  "57600",  "76800", "115200", "128000", "230400",
-                      "250000", "256000", "460800", "921600"}},
-    {"HEX mode", 2, {"OFF", "ON"}},
+static const WendigoItem items[SETUP_MENU_ITEMS] = {
+    //     {"Setup", {""}, 1, OPEN_SETUP, BOTH_MODES},
+    {"BLE", {"On", "Off"}, 2, NO_ACTION, OFF},
+    {"BT Classic", {"On", "Off"}, 2, NO_ACTION, OFF},
+    {"WiFi", {"On", "Off"}, 2, NO_ACTION, OFF},
+    {"Channel", {"Hop", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"}, 14, NO_ACTION, OFF},
+    {"MAC Address", {"Set", "Get"}, 2, NO_ACTION, OFF},
 };
 
 static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t index) {
@@ -21,7 +15,7 @@ static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t 
     WendigoApp* app = context;
 
     furi_assert(index < SETUP_MENU_ITEMS);
-    const Wendigo_Setup_Item* item = &items[index];
+    const WendigoItem* item = &items[index];
 
     const int selected_option_index = app->setup_selected_option_index[index];
     furi_assert(selected_option_index < item->num_options_menu);
@@ -34,7 +28,7 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem* item) {
     WendigoApp* app = variable_item_get_context(item);
     furi_assert(app);
 
-    const Wendigo_Setup_Item* menu_item = &items[app->setup_selected_menu_index];
+    const WendigoItem* menu_item = &items[app->setup_selected_menu_index];
     uint8_t item_index = variable_item_get_current_value_index(item);
     furi_assert(item_index < menu_item->num_options_menu);
     variable_item_set_current_value_text(item, menu_item->options_menu[item_index]);
