@@ -17,8 +17,9 @@
 
 #define START_MENU_ITEMS (6)
 #define SETUP_MENU_ITEMS (5)
+#define SETUP_CHANNEL_MENU_ITEMS (13)
 
-#define MAX_OPTIONS (14)
+#define MAX_OPTIONS (3)
 
 #define WENDIGO_TEXT_BOX_STORE_SIZE (4096)
 #define WENDIGO_TEXT_INPUT_STORE_SIZE (512)
@@ -82,4 +83,5 @@ typedef enum {
     WendigoAppViewHexInput,
     WendigoAppViewHelp,
     WendigoAppViewSetupMAC,
+    WendigoAppViewSetupChannel,
 } WendigoAppView;

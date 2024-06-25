@@ -6,6 +6,11 @@
     * Enable BD
     * Enable WiFi
     * Channels
+        * All
+        * Selected
+            * 1: On, Off
+            * 2: On, Off
+            * 3: etc.
     * MAC Address
 * Scan
     * Start
