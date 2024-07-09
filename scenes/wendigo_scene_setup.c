@@ -40,29 +40,6 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem* item) {
     furi_assert(item_index < menu_item->num_options_menu);
     variable_item_set_current_value_text(item, menu_item->options_menu[item_index]);
     app->setup_selected_option_index[app->setup_selected_menu_index] = item_index;
-
-    // UART Pins
-    if(app->setup_selected_menu_index == UART_PINS_ITEM_IDX) {
-        app->new_uart_ch = item_index > 0;
-    }
-
-    // BaudRate
-    if(app->setup_selected_menu_index == BAUDRATE_ITEM_IDX) {
-        app->NEW_BAUDRATE = atoi(menu_item->options_menu[item_index]);
-    }
-
-    // HEX mode
-    if(app->setup_selected_menu_index == HEX_MODE_ITEM_IDX) {
-        bool new_mode = item_index > 0;
-        if(app->hex_mode != new_mode) {
-            app->hex_mode = new_mode;
-            app->text_input_store[0] = '\0';
-            app->selected_menu_index = 0;
-            for(int i = 0; i < START_MENU_ITEMS; ++i) {
-                app->selected_option_index[i] = 0;
-            }
-        }
-    }
 }
 
 void wendigo_scene_setup_on_enter(void* context) {

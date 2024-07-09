@@ -13,6 +13,7 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
 
+/* Callback invoked when the action button is pressed on a menu item */
 static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
     WendigoApp* app = context;
@@ -56,6 +57,7 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
     }
 }
 
+/* Callback invoked when a menu option is changed */
 static void wendigo_scene_start_var_list_change_callback(VariableItem* item) {
     furi_assert(item);
 
@@ -70,6 +72,7 @@ static void wendigo_scene_start_var_list_change_callback(VariableItem* item) {
     app->selected_option_index[app->selected_menu_index] = option_index;
 }
 
+/* Callback invoked when the view is launched */
 void wendigo_scene_start_on_enter(void* context) {
     WendigoApp* app = context;
     VariableItemList* var_item_list = app->var_item_list;

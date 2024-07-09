@@ -36,6 +36,24 @@ typedef enum {
 // Command availability in different modes
 typedef enum { OFF = 0, TEXT_MODE = 1, HEX_MODE = 2, BOTH_MODES = 3 } ModeMask;
 
+/* Bitmask for channel selection */
+typedef enum {
+    CH_1 = 1,
+    CH_2 = 2,
+    CH_3 = 4,
+    CH_4 = 8,
+    CH_5 = 16,
+    CH_6 = 32,
+    CH_7 = 64,
+    CH_8 = 128,
+    CH_9 = 256,
+    CH_10 = 512,
+    CH_11 = 1024,
+    CH_12 = 2048,
+    CH_13 = 4096
+} ChannelMask;
+static const uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1];
+
 typedef struct {
     const char* item_string;
     const char* options_menu[MAX_OPTIONS];
@@ -74,6 +92,8 @@ struct WendigoApp {
     int BAUDRATE;
     int NEW_BAUDRATE;
     int TERMINAL_MODE; //1=AT mode, 0=other mode
+
+    uint16_t channel_mask;
 };
 
 typedef enum {
