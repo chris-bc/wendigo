@@ -2,12 +2,18 @@
 
 // SETUP_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
 static const WendigoItem items[SETUP_MENU_ITEMS] = {
-    {"BLE", {"On", "Off"}, 2, NO_ACTION, OFF},
-    {"BT Classic", {"On", "Off"}, 2, NO_ACTION, OFF},
-    {"WiFi", {"On", "Off"}, 2, NO_ACTION, OFF},
+    {"BLE", {"On", "Off", "MAC"}, 3, NO_ACTION, OFF},
+    {"BT Classic", {"On", "Off", "MAC"}, 3, NO_ACTION, OFF},
+    {"WiFi", {"On", "Off", "MAC"}, 3, NO_ACTION, OFF},
     {"Channel", {"All", "Selected"}, 2, OPEN_SETUP, OFF},
-    {"MAC Address", {"Set", "Get"}, 2, NO_ACTION, OFF},
+    // YAGNI: Remove mode_mask from the data model
 };
+
+#define CH_ALL (0)
+#define CH_SELECTED (1)
+#define RADIO_ON (0)
+#define RADIO_OFF (1)
+#define RADIO_MAC (2)
 
 static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
@@ -20,13 +26,48 @@ static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t 
     furi_assert(selected_option_index < item->num_options_menu);
     app->setup_selected_menu_index = index;
 
-    // TODO: if index == SETUP_MAC_IDX
-    //          display view
-    //          if selected_option_index == OPTION_MAC_SET 
-    //              // Is there a way to make it mutable/immutable?
-    // if index == SETUP_CHANNEL_IDX
-    //      if selected_option_index == OPTION_CHANNEL_SELECTED
-    //          // start scene_setup_channel
+    switch (item->action) {
+        case OPEN_SETUP:
+            // TODO: If value is "Selected" display channels view
+            //       Otherwise select all channels
+            if (selected_option_index == CH_ALL) {
+                /* Select all channels */
+                // YAGNI: Consider retaining selected channel status instead of overwriting the selection here
+                //        to allow quickly switching between all and a common subset. Not that useful, but a little...
+                for (int i = 1; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
+                    /* Bitwise OR to ensure each channel is included in the mask */
+                    app->channel_mask |= CH_MASK[i];
+                }
+            } else {
+                /* Display channel selected view */
+                view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventSetup);
+            }
+            break;
+        default:
+            /* Note: Additional check required here if additional menu items are added with 3 or more options.
+                     At the moment we can assume that if selected option is RADIO_MAC we're displaying a MAC,
+                     that may not always be the case
+            */
+            // TODO: enabled/disable BT, BLE, WiFi
+
+            if (selected_option_index == RADIO_MAC) {
+                // Configure byte_input's value and mutability based on item->item_string
+                uint8_t mac[NUM_MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xac};
+                if (!(strncmp(item->item_string, "BLE", 3) && strncmp(item->item_string, "BT", 2))) {
+                    // Display (immutable?) bluetooth MAC
+                    // Fetch MAC
+                    memcpy(app->mac_bytes, mac, NUM_MAC_BYTES);
+                } else if (!strncmp(item->item_string, "WiFi", 4)) {
+                    // Display mutable WiFi MAC
+                    // Fetch MAC
+                    memcpy(app->mac_bytes, mac, NUM_MAC_BYTES);
+                } else {
+                    // TODO: Panic
+                }
+                view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventMAC);
+            }
+            break;
+    }
 }
 
 static void wendigo_scene_setup_var_list_change_callback(VariableItem* item) {
@@ -74,6 +115,14 @@ bool wendigo_scene_setup_on_event(void* context, SceneManagerEvent event) {
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
+        if (event.event == Wendigo_EventSetup) {
+            /* Save scene state */
+            scene_manager_set_scene_state(app->scene_manager, WendigoSceneSetup, app->selected_menu_index);
+            scene_manager_next_scene(app->scene_manager, WendigoSceneSetupChannel);
+        } else if (event.event == Wendigo_EventMAC) {
+            scene_manager_set_scene_state(app->scene_manager, WendigoSceneSetup, app->selected_menu_index);
+            scene_manager_next_scene(app->scene_manager, WendigoSceneSetupMAC);
+        }
         consumed = true;
     } else if(event.type == SceneManagerEventTypeTick) {
         app->setup_selected_menu_index =

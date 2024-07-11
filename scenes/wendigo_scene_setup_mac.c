@@ -26,8 +26,19 @@ void wendigo_scene_setup_mac_changed_callback(void *context) {
 }
 
 void wendigo_scene_setup_mac_on_enter(void *context) {
-    //
-    UNUSED(context);
+    WendigoApp *app = context;
+    ByteInput *mac_input = app->setup_mac;
+    
+    byte_input_set_header_text(mac_input, "MAC Address");
+    byte_input_set_result_callback(
+        mac_input,
+        wendigo_scene_setup_mac_input_callback,
+        wendigo_scene_setup_mac_changed_callback,
+        app,
+        app->mac_bytes,
+        NUM_MAC_BYTES
+    );
+    view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewSetupMAC);
 }
 
 bool wendigo_scene_setup_mac_on_event(void *context, SceneManagerEvent event) {
