@@ -13,6 +13,7 @@
 #include <gui/modules/variable_item_list.h>
 #include <gui/modules/text_input.h>
 #include <gui/modules/byte_input.h>
+#include <gui/modules/popup.h>
 #include "wendigo_hex_input.h"
 
 #define START_MENU_ITEMS (6)
@@ -80,6 +81,7 @@ struct WendigoApp {
     VariableItemList* var_item_list;
     Wendigo_Uart* uart;
     ByteInput *setup_mac;
+    Popup *popup;                       // Avoid continual allocation and freeing of Popup by initialising at launch
     uint8_t mac_bytes[NUM_MAC_BYTES];
 
     int setup_selected_menu_index;
@@ -108,4 +110,5 @@ typedef enum {
     WendigoAppViewHelp,
     WendigoAppViewSetupMAC,
     WendigoAppViewSetupChannel,
+    WendigoAppViewPopup,
 } WendigoAppView;

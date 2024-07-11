@@ -88,6 +88,10 @@ WendigoApp* wendigo_app_alloc() {
     app->setup_mac = byte_input_alloc();
     view_dispatcher_add_view(app->view_dispatcher, WendigoAppViewSetupMAC, byte_input_get_view(app->setup_mac));
 
+    /* Initialise the popup */
+    app->popup = popup_alloc();
+    view_dispatcher_add_view(app->view_dispatcher, WendigoAppViewPopup, popup_get_view(app->popup));
+
     app->setup_selected_option_index[BAUDRATE_ITEM_IDX] = DEFAULT_BAUDRATE_OPT_IDX;
 
     scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
@@ -105,6 +109,7 @@ void wendigo_app_free(WendigoApp* app) {
     view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewTextInput);
     view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewHexInput);
     view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewSetupMAC);
+    view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewPopup);
 
     variable_item_list_free(app->var_item_list);
     widget_free(app->widget);
@@ -113,6 +118,7 @@ void wendigo_app_free(WendigoApp* app) {
     text_input_free(app->text_input);
     wendigo_hex_input_free(app->hex_input);
     byte_input_free(app->setup_mac);
+    popup_free(app->popup);
 
     // View dispatcher
     view_dispatcher_free(app->view_dispatcher);
