@@ -55,12 +55,14 @@ static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t 
                 uint8_t mac[NUM_MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xac};
                 if (!(strncmp(item->item_string, "BLE", 3) && strncmp(item->item_string, "BT", 2))) {
                     // Display (immutable?) bluetooth MAC
-                    // Fetch MAC
+                    // TODO: Fetch MAC
                     memcpy(app->mac_bytes, mac, NUM_MAC_BYTES);
+                    app->mac_interface = IF_BLUETOOTH;
                 } else if (!strncmp(item->item_string, "WiFi", 4)) {
                     // Display mutable WiFi MAC
-                    // Fetch MAC
+                    // TODO: Fetch MAC
                     memcpy(app->mac_bytes, mac, NUM_MAC_BYTES);
+                    app->mac_interface = IF_WIFI;
                 } else {
                     // TODO: Panic
                 }

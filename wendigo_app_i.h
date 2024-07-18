@@ -40,23 +40,13 @@ typedef enum {
 // Command availability in different modes
 typedef enum { OFF = 0, TEXT_MODE = 1, HEX_MODE = 2, BOTH_MODES = 3 } ModeMask;
 
-/* Bitmask for channel selection */
-typedef enum {
-    CH_1 = 1,
-    CH_2 = 2,
-    CH_3 = 4,
-    CH_4 = 8,
-    CH_5 = 16,
-    CH_6 = 32,
-    CH_7 = 64,
-    CH_8 = 128,
-    CH_9 = 256,
-    CH_10 = 512,
-    CH_11 = 1024,
-    CH_12 = 2048,
-    CH_13 = 4096
-} ChannelMask;
+/* Bitmask for channel selection - Initialised in wendigo_app.c */
 static const uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1];
+/* Interface types - One for each interface with a MAC */
+typedef enum {
+    IF_WIFI,
+    IF_BLUETOOTH,
+} InterfaceType;
 
 typedef struct {
     const char* item_string;
@@ -83,6 +73,7 @@ struct WendigoApp {
     ByteInput *setup_mac;
     Popup *popup;                       // Avoid continual allocation and freeing of Popup by initialising at launch
     uint8_t mac_bytes[NUM_MAC_BYTES];
+    InterfaceType mac_interface;        // What interface is mac_bytes representing?
 
     int setup_selected_menu_index;
     int setup_selected_option_index[SETUP_MENU_ITEMS];
