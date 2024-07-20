@@ -127,7 +127,7 @@ bool wendigo_scene_setup_mac_on_event(void *context, SceneManagerEvent event) {
     //
     UNUSED(context);
     UNUSED(event);
-    return true;
+    return false;
 }
 
 void wendigo_scene_setup_mac_on_exit(void *context) {
