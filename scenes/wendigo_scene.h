@@ -29,7 +29,6 @@ extern const SceneManagerHandlers wendigo_scene_handlers;
 #undef ADD_SCENE
 
 #define UART_PINS_ITEM_IDX (0)
-#define BAUDRATE_ITEM_IDX (1)
 #define HEX_MODE_ITEM_IDX (2)
 
 #define DEFAULT_BAUDRATE_OPT_IDX (18)

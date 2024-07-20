@@ -92,8 +92,6 @@ WendigoApp* wendigo_app_alloc() {
     app->popup = popup_alloc();
     view_dispatcher_add_view(app->view_dispatcher, WendigoAppViewPopup, popup_get_view(app->popup));
 
-    app->setup_selected_option_index[BAUDRATE_ITEM_IDX] = DEFAULT_BAUDRATE_OPT_IDX;
-
     scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
 
     return app;

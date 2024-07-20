@@ -91,6 +91,8 @@ void wendigo_scene_setup_on_enter(void* context) {
 
     variable_item_list_set_enter_callback(
         var_item_list, wendigo_scene_setup_var_list_enter_callback, app);
+    
+    variable_item_list_reset(var_item_list); 
 
     VariableItem* item;
     for(int i = 0; i < SETUP_MENU_ITEMS; ++i) {
@@ -119,10 +121,10 @@ bool wendigo_scene_setup_on_event(void* context, SceneManagerEvent event) {
     if(event.type == SceneManagerEventTypeCustom) {
         if (event.event == Wendigo_EventSetup) {
             /* Save scene state */
-            scene_manager_set_scene_state(app->scene_manager, WendigoSceneSetup, app->selected_menu_index);
+            scene_manager_set_scene_state(app->scene_manager, WendigoSceneSetup, app->setup_selected_menu_index);
             scene_manager_next_scene(app->scene_manager, WendigoSceneSetupChannel);
         } else if (event.event == Wendigo_EventMAC) {
-            scene_manager_set_scene_state(app->scene_manager, WendigoSceneSetup, app->selected_menu_index);
+            scene_manager_set_scene_state(app->scene_manager, WendigoSceneSetup, app->setup_selected_menu_index);
             scene_manager_next_scene(app->scene_manager, WendigoSceneSetupMAC);
         }
         consumed = true;
