@@ -7,6 +7,10 @@
 /* Local buffer for use of the view */
 uint8_t view_bytes[NUM_MAC_BYTES];
 
+/* Strings for popups */
+char popup_header_text[IF_MAX_LEN + 11] = "";
+char popup_text[IF_MAX_LEN + 50] = "";
+
 /* Convert an array of byteCount uint8_ts into a colon-separated string of bytes.
    strBytes must be initialised with sufficient space to hold the output string.
    For a MAC this is 18 bytes. In general it is 3 * byteCount */
@@ -22,6 +26,11 @@ void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes) {
     p_out[-1] = 0;
 }
 
+void wendigo_scene_setup_mac_popup_callback(void *context) {
+    WendigoApp *app = (WendigoApp *)context;
+    scene_manager_previous_scene(app->scene_manager);
+}
+
 void wendigo_scene_setup_mac_input_callback(void *context) {
     // If MAC has changed
     //   If immutable
@@ -33,8 +42,6 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
     /* Did the user change the MAC? */
     if (memcmp(view_bytes, app->mac_bytes, NUM_MAC_BYTES)) {
         char result_if_text[IF_MAX_LEN] = "";
-        char popup_header_text[IF_MAX_LEN + 11] = "";
-        char popup_text[IF_MAX_LEN + 50] = "";
         /* MAC was changed - was that allowed? */
         /* Set interface string for popups */
         switch (app->mac_interface) {
@@ -81,23 +88,23 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
         popup_set_header(
             app->popup,
             popup_header_text,
-            1,
-            1,
+            64,
+            3,
             AlignCenter,
             AlignTop
         );
         popup_set_text(
             app->popup,
             popup_text,
-            4,
-            4,
+            64,
+            22,
             AlignCenter,
-            AlignBottom
+            AlignTop
         );
         popup_set_icon(app->popup, -1, -1, NULL);
-        popup_set_timeout(app->popup, 2000); // 2 secondsn
+        popup_set_timeout(app->popup, 3000); // 3 secondsn
         popup_enable_timeout(app->popup);
-        //popup_set_callback(app->popup, NULL);
+        popup_set_callback(app->popup, wendigo_scene_setup_mac_popup_callback);
         popup_set_context(app->popup, app);
     
         view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
