@@ -101,6 +101,9 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
         popup_set_context(app->popup, app);
     
         view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
+    } else {
+        // Should this also be run after the popup?
+        scene_manager_handle_back_event(app->scene_manager);
     }
 }
 
