@@ -14,7 +14,7 @@ void wendigo_scene_help_on_enter(void* context) {
     temp_str = furi_string_alloc();
     furi_string_printf(
         temp_str,
-        "\nWendigo for Flipper\n\nI'm in github: cool4uma\n\nThis app is a modified\nWiFi Marauder companion,\nThanks 0xchocolate(github)\nfor great code and app.\n\n");
+        "           Wendigo for Flipper\n\nFind me on GitHub @chris-bc\n\nThis general-purpose sniffer\n    allows you to monitor BT,\nBLE and WiFi radios, alerting\nyou when the signal strength\nof devices of interest changes.\n\n   This allows for rudimentary\n        device tracking, with a\n         \"homing\" feature to be\n            developed over time.\n\n          This app is based on\n    @cool4uma's handy UART\n        Terminal, which in turn\n                  borrows from\n      @0xchocolate's fabulous\n                  Marauder app.\n\n  We all stand on the shoulders\n    of those who came before!\n\n");
     furi_string_cat_printf(temp_str, "Press BACK to return\n");
 
     widget_add_text_box_element(
