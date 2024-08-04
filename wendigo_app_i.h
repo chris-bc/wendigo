@@ -54,29 +54,29 @@ typedef enum {
 } InterfaceType;
 
 typedef struct {
-    const char *item_string;
-    const char *options_menu[MAX_OPTIONS];
+    const char* item_string;
+    const char* options_menu[MAX_OPTIONS];
     int num_options_menu;
     ActionType action;
     ModeMask mode_mask;
 } WendigoItem;
 
 struct WendigoApp {
-    Gui *gui;
-    ViewDispatcher *view_dispatcher;
-    SceneManager *scene_manager;
+    Gui* gui;
+    ViewDispatcher* view_dispatcher;
+    SceneManager* scene_manager;
 
     char text_input_store[WENDIGO_TEXT_INPUT_STORE_SIZE + 1];
-    FuriString *text_box_store;
+    FuriString* text_box_store;
     size_t text_box_store_strlen;
-    TextBox *text_box;
-    TextInput *text_input;
-    Wendigo_TextInput *hex_input;
-    Widget *widget;
-    VariableItemList *var_item_list;
-    Wendigo_Uart *uart;
-    ByteInput *setup_mac;
-    Popup *popup; // Avoid continual allocation and freeing of Popup by initialising at launch
+    TextBox* text_box;
+    TextInput* text_input;
+    Wendigo_TextInput* hex_input;
+    Widget* widget;
+    VariableItemList* var_item_list;
+    Wendigo_Uart* uart;
+    ByteInput* setup_mac;
+    Popup* popup; // Avoid continual allocation and freeing of Popup by initialising at launch
     uint8_t mac_bytes[NUM_MAC_BYTES];
     InterfaceType mac_interface; // What interface is mac_bytes representing?
 
@@ -84,7 +84,7 @@ struct WendigoApp {
     int setup_selected_option_index[SETUP_MENU_ITEMS];
     int selected_menu_index;
     int selected_option_index[START_MENU_ITEMS];
-    const char *selected_tx_string;
+    const char* selected_tx_string;
 
     bool is_command;
     bool is_custom_tx_string;
