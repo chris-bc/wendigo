@@ -3,9 +3,7 @@
 #include <furi.h>
 #include <furi_hal.h>
 #include <expansion/expansion.h>
-
-static const uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1] =
-    {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+#include <math.h>
 
 static bool wendigo_app_custom_event_callback(void* context, uint32_t event) {
     furi_assert(context);
@@ -58,10 +56,16 @@ WendigoApp* wendigo_app_alloc() {
         app->setup_selected_option_index[i] = 0;
     }
 
+    /* Initialise the channel bitmasks */
+    app->CH_MASK[0] = 0;
+    for(int i = 1; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
+        app->CH_MASK[i] = pow(2, i - 1);
+    }
+
     /* Default to enabling all channels */
     for(int i = 0; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
         /* Bitwise - Add current channel to app->channel_mask */
-        app->channel_mask = app->channel_mask | CH_MASK[i];
+        app->channel_mask = app->channel_mask | app->CH_MASK[i];
     }
 
     app->widget = widget_alloc();

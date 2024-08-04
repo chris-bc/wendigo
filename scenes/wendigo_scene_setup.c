@@ -36,7 +36,7 @@ static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t 
             //        to allow quickly switching between all and a common subset. Not that useful, but a little...
             for(int i = 1; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
                 /* Bitwise OR to ensure each channel is included in the mask */
-                app->channel_mask |= CH_MASK[i];
+                app->channel_mask |= app->CH_MASK[i];
             }
         } else {
             /* Display channel selected view */

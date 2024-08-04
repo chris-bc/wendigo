@@ -45,8 +45,6 @@ typedef enum {
     BOTH_MODES = 3
 } ModeMask;
 
-/* Bitmask for channel selection - Initialised in wendigo_app.c */
-static const uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1];
 /* Interface types - One for each interface with a MAC */
 typedef enum {
     IF_WIFI,
@@ -96,6 +94,7 @@ struct WendigoApp {
     int TERMINAL_MODE; //1=AT mode, 0=other mode
 
     uint16_t channel_mask;
+    uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1];
 };
 
 typedef enum {

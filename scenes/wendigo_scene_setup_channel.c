@@ -49,13 +49,13 @@ static void wendigo_scene_setup_channel_var_list_change_callback(VariableItem* i
 
     /* Store selected channel state */
     if(item_index == CH_ON) {
-        app->channel_mask = app->channel_mask | CH_MASK[selected_menu_index + 1];
+        app->channel_mask = app->channel_mask | app->CH_MASK[selected_menu_index + 1];
     } else {
         /* Eck. This got less elegant.
            If channel currently ON, disable it by subtracting that channel's bit value */
-        if((app->channel_mask & CH_MASK[selected_menu_index + 1]) ==
-           CH_MASK[selected_menu_index + 1]) {
-            app->channel_mask -= CH_MASK[selected_menu_index + 1];
+        if((app->channel_mask & app->CH_MASK[selected_menu_index + 1]) ==
+           app->CH_MASK[selected_menu_index + 1]) {
+            app->channel_mask -= app->CH_MASK[selected_menu_index + 1];
         }
     }
 }
@@ -80,7 +80,7 @@ void wendigo_scene_setup_channel_on_enter(void* context) {
            I'd rather use the ternary operator but this is more readable and I think they'll be
            optimised down to the same code */
         uint16_t ch_value;
-        if((app->channel_mask & CH_MASK[i + 1]) == CH_MASK[i + 1]) {
+        if((app->channel_mask & app->CH_MASK[i + 1]) == app->CH_MASK[i + 1]) {
             ch_value = CH_ON;
         } else {
             ch_value = CH_OFF;
