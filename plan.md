@@ -38,7 +38,6 @@
     * Settings should still be available to view, but read-only
     * Use an app->settings_locked flag
 * Stop scan -> enable setup
-* Is there a way to prevent byte_input (MAC) from being editable? Or not display the keyboard?
 
 #### THEN commence work on esp32-wendigo
 * Perform sufficient initialisation of all radios to be able to get/set MACs
