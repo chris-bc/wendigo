@@ -36,7 +36,6 @@
 * Channel view needs to position selected menu item - remains on the 4th row
 * BT, BLE and WiFi on/off selections mapped to app variables
 * Get/Set MAC leave until ESP32 app further along
-* Update About page
 * Start scan -> disable setup
     * Settings should still be available to view, but read-only
     * Use an app->settings_locked flag
