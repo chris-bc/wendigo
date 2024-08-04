@@ -2,7 +2,6 @@
 #include "wendigo_text_input.h"
 #include <gui/elements.h>
 #include "wendigo_icons.h"
-#include <assets_icons.h>
 #include "wendigo_app_i.h"
 #include <furi.h>
 
