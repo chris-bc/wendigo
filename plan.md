@@ -33,8 +33,6 @@
 * About
 
 ### Next steps
-* Retain selected channels when "all" is selected
-  * Remove processing of enter when "all" is selected - just set a flag on app
 * BT, BLE and WiFi on/off selections mapped to app variables
 * Get/Set MAC leave until ESP32 app further along
 * Start scan -> disable setup

@@ -67,6 +67,8 @@ WendigoApp* wendigo_app_alloc() {
         /* Bitwise - Add current channel to app->channel_mask */
         app->channel_mask = app->channel_mask | app->CH_MASK[i];
     }
+    /* Also set CH_MASK_ALL */
+    app->channel_mask = app->channel_mask | CH_MASK_ALL;
 
     app->widget = widget_alloc();
     view_dispatcher_add_view(
