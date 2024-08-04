@@ -26,7 +26,7 @@ static void wendigo_scene_setup_var_list_enter_callback(void *context, uint32_t 
     furi_assert(selected_option_index < item->num_options_menu);
     app->setup_selected_menu_index = index;
 
-    switch(item->action) {
+    switch (item->action) {
     case OPEN_SETUP:
         // TODO: If value is "Selected" display channels view
         //       Otherwise select all channels
@@ -34,7 +34,7 @@ static void wendigo_scene_setup_var_list_enter_callback(void *context, uint32_t 
             /* Select all channels */
             // YAGNI: Consider retaining selected channel status instead of overwriting the selection here
             //        to allow quickly switching between all and a common subset. Not that useful, but a little...
-            for(int i = 1; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
+            for (int i = 1; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
                 /* Bitwise OR to ensure each channel is included in the mask */
                 app->channel_mask |= CH_MASK[i];
             }
@@ -94,7 +94,7 @@ void wendigo_scene_setup_on_enter(void *context) {
 
     variable_item_list_reset(var_item_list);
     VariableItem *item;
-    for(int i = 0; i < SETUP_MENU_ITEMS; ++i) {
+    for (int i = 0; i < SETUP_MENU_ITEMS; ++i) {
         item = variable_item_list_add(
             var_item_list,
             items[i].item_string,

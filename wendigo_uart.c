@@ -37,7 +37,7 @@ void wendigo_uart_on_irq_cb(FuriHalSerialHandle *handle, FuriHalSerialRxEvent ev
 static int32_t wendigo_worker(void *context) {
     Wendigo_Uart *uart = (void *)context;
 
-    while(1) {
+    while (1) {
         uint32_t events =
             furi_thread_flags_wait(WORKER_ALL_RX_EVENTS, FuriFlagWaitAny, FuriWaitForever);
         furi_check((events & FuriFlagError) == 0);

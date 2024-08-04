@@ -68,7 +68,7 @@ static const Wendigo_TextInputKey keyboard_keys_row_2[] = {
 static uint8_t get_row_size(uint8_t row_index) {
     uint8_t row_size = 0;
 
-    switch(row_index + 1) {
+    switch (row_index + 1) {
     case 1:
         row_size = sizeof(keyboard_keys_row_1) / sizeof(Wendigo_TextInputKey);
         break;
@@ -83,7 +83,7 @@ static uint8_t get_row_size(uint8_t row_index) {
 static const Wendigo_TextInputKey *get_row(uint8_t row_index) {
     const Wendigo_TextInputKey *row = NULL;
 
-    switch(row_index + 1) {
+    switch (row_index + 1) {
     case 1:
         row = keyboard_keys_row_1;
         break;
@@ -125,7 +125,7 @@ static void wendigo_hex_input_view_draw_callback(Canvas *canvas, void *_model) {
         needed_string_width -= 8;
     }
 
-    while(text != 0 && canvas_string_width(canvas, text) > needed_string_width) {
+    while (text != 0 && canvas_string_width(canvas, text) > needed_string_width) {
         text++;
     }
 
@@ -303,7 +303,7 @@ static bool wendigo_hex_input_view_input_callback(InputEvent *event, void *conte
         consumed = true;
     } else if (event->type == InputTypeShort) {
         consumed = true;
-        switch(event->key) {
+        switch (event->key) {
         case InputKeyUp:
             wendigo_hex_input_handle_up(wendigo_text_input, model);
             break;
@@ -325,7 +325,7 @@ static bool wendigo_hex_input_view_input_callback(InputEvent *event, void *conte
         }
     } else if (event->type == InputTypeLong) {
         consumed = true;
-        switch(event->key) {
+        switch (event->key) {
         case InputKeyUp:
             wendigo_hex_input_handle_up(wendigo_text_input, model);
             break;
@@ -350,7 +350,7 @@ static bool wendigo_hex_input_view_input_callback(InputEvent *event, void *conte
         }
     } else if (event->type == InputTypeRepeat) {
         consumed = true;
-        switch(event->key) {
+        switch (event->key) {
         case InputKeyUp:
             wendigo_hex_input_handle_up(wendigo_text_input, model);
             break;

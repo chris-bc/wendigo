@@ -69,7 +69,7 @@ void wendigo_scene_setup_channel_on_enter(void *context) {
 
     VariableItem *item;
     UNUSED(item);
-    for(int i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
+    for (int i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
         item = variable_item_list_add(
             var_item_list,
             items[i].item_string,

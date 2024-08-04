@@ -271,7 +271,7 @@ static void wendigo_text_input_view_draw_callback(Canvas *canvas, void *_model) 
         needed_string_width -= 8;
     }
 
-    while(text != 0 && canvas_string_width(canvas, text) > needed_string_width) {
+    while (text != 0 && canvas_string_width(canvas, text) > needed_string_width) {
         text++;
     }
 
