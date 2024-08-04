@@ -23,6 +23,19 @@ static void wendigo_app_tick_event_callback(void* context) {
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
+/* Initialise app->interfaces - Default all radios to on */
+void wendigo_interface_init(WendigoApp* app) {
+    for(int i = 0; i < IF_COUNT; ++i) {
+        app->interfaces[i].active = true;
+    }
+    // TODO: Retrieve actual MAC
+    const uint8_t mac_wifi[NUM_MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xac};
+    const uint8_t mac_bt[NUM_MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xaf};
+    memcpy(app->interfaces[IF_WIFI].mac_bytes, mac_wifi, NUM_MAC_BYTES);
+    memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, mac_bt, NUM_MAC_BYTES);
+    memcpy(app->interfaces[IF_BLE].mac_bytes, mac_bt, NUM_MAC_BYTES);
+}
+
 WendigoApp* wendigo_app_alloc() {
     WendigoApp* app = malloc(sizeof(WendigoApp));
 
@@ -69,6 +82,9 @@ WendigoApp* wendigo_app_alloc() {
     }
     /* Also set CH_MASK_ALL */
     app->channel_mask = app->channel_mask | CH_MASK_ALL;
+
+    /* Initialise and enable all interfaces */
+    wendigo_interface_init(app);
 
     app->widget = widget_alloc();
     view_dispatcher_add_view(

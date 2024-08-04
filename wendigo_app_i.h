@@ -46,11 +46,19 @@ typedef enum {
     BOTH_MODES = 3
 } ModeMask;
 
-/* Interface types - One for each interface with a MAC */
+/* Interface types - One for each radio that be enabled/disabled */
 typedef enum {
-    IF_WIFI,
-    IF_BLUETOOTH,
+    IF_WIFI = 0,
+    IF_BT_CLASSIC = 1,
+    IF_BLE = 2,
+    IF_COUNT = 3
 } InterfaceType;
+
+/* Interface struct to encapsulate MAC and radio state */
+typedef struct {
+    uint8_t mac_bytes[NUM_MAC_BYTES];
+    bool active;
+} WendigoRadio;
 
 typedef struct {
     const char* item_string;
@@ -76,8 +84,8 @@ struct WendigoApp {
     Wendigo_Uart* uart;
     ByteInput* setup_mac;
     Popup* popup; // Avoid continual allocation and freeing of Popup by initialising at launch
-    uint8_t mac_bytes[NUM_MAC_BYTES];
-    InterfaceType mac_interface; // What interface is mac_bytes representing?
+    WendigoRadio interfaces[IF_COUNT];
+    InterfaceType active_interface;
 
     int setup_selected_menu_index;
     int setup_selected_option_index[SETUP_MENU_ITEMS];

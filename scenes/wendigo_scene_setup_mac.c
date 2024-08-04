@@ -1,10 +1,7 @@
 #include "../wendigo_app_i.h"
 
-#define BLUETOOTH_MAC_IS_MUTABLE (false)
-#define WIFI_MAC_IS_MUTABLE      (true)
-#define IF_MAX_LEN \
-    (10) /* Maximum length of an
-                  interface string ("WiFi", "Bluetooth", etc.) */
+/* Maximum length of an interface string ("WiFi", "Bluetooth", etc.) */
+#define IF_MAX_LEN (10)
 
 /* Local buffer for use of the view */
 uint8_t view_bytes[NUM_MAC_BYTES];
@@ -35,23 +32,29 @@ void wendigo_scene_setup_mac_popup_callback(void* context) {
 
 void wendigo_scene_setup_mac_input_callback(void* context) {
     // If MAC has changed
-    //   If immutable
-    //     Popup saying it can't be changed
-    //   else
     //     Popup indicating success or failure
     WendigoApp* app = context;
 
     /* Did the user change the MAC? */
-    if(memcmp(view_bytes, app->mac_bytes, NUM_MAC_BYTES)) {
+    if(memcmp(view_bytes, app->interfaces[app->active_interface].mac_bytes, NUM_MAC_BYTES)) {
         char result_if_text[IF_MAX_LEN] = "";
-        /* MAC was changed - was that allowed? */
-        /* Set interface string for popups */
-        switch(app->mac_interface) {
-        case IF_BLUETOOTH:
+        /* MAC was changed - Update ESP32's MAC */
+        /* Also set interface string for popups */
+        bool mac_changed = false;
+        switch(app->active_interface) {
+        case IF_BT_CLASSIC:
+        case IF_BLE:
             strcpy(result_if_text, "Bluetooth");
+            // TODO: Set bluetooth MAC
+            mac_changed = true;
             break;
         case IF_WIFI:
             strcpy(result_if_text, "WiFi");
+            // TODO: Set WiFi MAC
+            mac_changed = true;
+            break;
+        case IF_COUNT:
+            // Do nothing
             break;
         }
         snprintf(
@@ -59,50 +62,38 @@ void wendigo_scene_setup_mac_input_callback(void* context) {
             strlen("Update  MAC") + strlen(result_if_text) + 1,
             "Update %s MAC",
             result_if_text);
-        /* Is the MAC mutable? */
-        if((app->mac_interface == IF_BLUETOOTH && BLUETOOTH_MAC_IS_MUTABLE) ||
-           (app->mac_interface == IF_WIFI && WIFI_MAC_IS_MUTABLE)) {
-            /* MAC is mutable. Update the relevant MAC */
-            memcpy(app->mac_bytes, view_bytes, NUM_MAC_BYTES);
-            bool success = true;
-            switch(app->mac_interface) {
-            case IF_BLUETOOTH:
-                // TODO: Update BT MAC
+        /* Was the MAC changed successfully? */
+        if(mac_changed) {
+            /* Record the new MAC in app->interfaces */
+            switch(app->active_interface) {
+            case IF_BT_CLASSIC:
+            case IF_BLE:
+                memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, view_bytes, NUM_MAC_BYTES);
+                memcpy(app->interfaces[IF_BLE].mac_bytes, view_bytes, NUM_MAC_BYTES);
                 break;
             case IF_WIFI:
-                // TODO: Update WiFi MAC
-                // success = blah blah blah
+                memcpy(app->interfaces[IF_WIFI].mac_bytes, view_bytes, NUM_MAC_BYTES);
                 break;
+            default:
+                // Do nothing
             }
-            /* Build popup text */
-            if(success) {
-                /* Success popup */
-                snprintf(
-                    popup_text,
-                    strlen(result_if_text) + strlen(" MAC Updated!") + 1,
-                    "%s MAC Updated!",
-                    result_if_text);
-            } else {
-                /* Failure popup */
-                snprintf(
-                    popup_text,
-                    strlen(result_if_text) + strlen("Failed to Update  MAC!") + 1,
-                    "Failed to Update %s MAC!",
-                    result_if_text);
-            }
-        } else {
-            /* Immutable MAC was changed. Display error popup */
             snprintf(
                 popup_text,
-                strlen(result_if_text) + strlen(" MAC Cannot be changed!") + 1,
-                "%s MAC cannot be changed!",
+                strlen(result_if_text) + strlen(" MAC Updated!") + 1,
+                "%s MAC Updated!",
+                result_if_text);
+        } else {
+            snprintf(
+                popup_text,
+                strlen(result_if_text) + strlen("Failed to Update  MAC!") + 1,
+                "Failed to Update %s MAC!",
                 result_if_text);
         }
         /* Configure popup */
         popup_set_header(app->popup, popup_header_text, 64, 3, AlignCenter, AlignTop);
         popup_set_text(app->popup, popup_text, 64, 22, AlignCenter, AlignTop);
         popup_set_icon(app->popup, -1, -1, NULL);
-        popup_set_timeout(app->popup, 3000); // 3 secondsn
+        popup_set_timeout(app->popup, 2000); // 3 secondsn
         popup_enable_timeout(app->popup);
         popup_set_callback(app->popup, wendigo_scene_setup_mac_popup_callback);
         popup_set_context(app->popup, app);
@@ -119,7 +110,7 @@ void wendigo_scene_setup_mac_on_enter(void* context) {
     ByteInput* mac_input = app->setup_mac;
 
     /* Copy app->mac_bytes into a temp array for modification by the view */
-    memcpy(view_bytes, app->mac_bytes, NUM_MAC_BYTES);
+    memcpy(view_bytes, app->interfaces[app->active_interface].mac_bytes, NUM_MAC_BYTES);
 
     byte_input_set_header_text(mac_input, "MAC Address");
     byte_input_set_result_callback(
