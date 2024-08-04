@@ -68,7 +68,6 @@ void wendigo_scene_setup_channel_on_enter(void* context) {
         var_item_list, wendigo_scene_setup_channel_var_list_enter_callback, app);
 
     VariableItem* item;
-    UNUSED(item);
     for(int i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
         item = variable_item_list_add(
             var_item_list,
