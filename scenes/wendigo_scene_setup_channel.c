@@ -88,6 +88,7 @@ void wendigo_scene_setup_channel_on_enter(void* context) {
         variable_item_set_current_value_index(item, ch_value);
         variable_item_set_current_value_text(item, items[i].options_menu[ch_value]);
     }
+    variable_item_list_set_selected_item(var_item_list, 0);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
 }
 
