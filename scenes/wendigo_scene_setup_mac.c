@@ -105,6 +105,14 @@ void wendigo_scene_setup_mac_input_callback(void* context) {
     }
 }
 
+void wendigo_scene_setup_mac_changed_callback(void* context) {
+    WendigoApp* app = context;
+    /* Overwrite the change if the MAC isn't mutable */
+    if(!app->interfaces[app->active_interface].mutable) {
+        memcpy(view_bytes, app->interfaces[app->active_interface].mac_bytes, NUM_MAC_BYTES);
+    }
+}
+
 void wendigo_scene_setup_mac_on_enter(void* context) {
     WendigoApp* app = context;
     ByteInput* mac_input = app->setup_mac;
@@ -114,7 +122,12 @@ void wendigo_scene_setup_mac_on_enter(void* context) {
 
     byte_input_set_header_text(mac_input, "MAC Address");
     byte_input_set_result_callback(
-        mac_input, wendigo_scene_setup_mac_input_callback, NULL, app, view_bytes, NUM_MAC_BYTES);
+        mac_input,
+        wendigo_scene_setup_mac_input_callback,
+        wendigo_scene_setup_mac_changed_callback,
+        app,
+        view_bytes,
+        NUM_MAC_BYTES);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewSetupMAC);
 }
 

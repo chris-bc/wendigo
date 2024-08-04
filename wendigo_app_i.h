@@ -58,6 +58,7 @@ typedef enum {
 typedef struct {
     uint8_t mac_bytes[NUM_MAC_BYTES];
     bool active;
+    bool mutable;
 } WendigoRadio;
 
 typedef struct {
