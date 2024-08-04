@@ -4,28 +4,29 @@
 #include <furi_hal.h>
 #include <expansion/expansion.h>
 
-static const uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1] = {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+static const uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1] =
+    {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
 
-static bool wendigo_app_custom_event_callback(void* context, uint32_t event) {
+static bool wendigo_app_custom_event_callback(void *context, uint32_t event) {
     furi_assert(context);
-    WendigoApp* app = context;
+    WendigoApp *app = context;
     return scene_manager_handle_custom_event(app->scene_manager, event);
 }
 
-static bool wendigo_app_back_event_callback(void* context) {
+static bool wendigo_app_back_event_callback(void *context) {
     furi_assert(context);
-    WendigoApp* app = context;
+    WendigoApp *app = context;
     return scene_manager_handle_back_event(app->scene_manager);
 }
 
-static void wendigo_app_tick_event_callback(void* context) {
+static void wendigo_app_tick_event_callback(void *context) {
     furi_assert(context);
-    WendigoApp* app = context;
+    WendigoApp *app = context;
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
-WendigoApp* wendigo_app_alloc() {
-    WendigoApp* app = malloc(sizeof(WendigoApp));
+WendigoApp *wendigo_app_alloc() {
+    WendigoApp *app = malloc(sizeof(WendigoApp));
 
     app->gui = furi_record_open(RECORD_GUI);
 
@@ -49,11 +50,11 @@ WendigoApp* wendigo_app_alloc() {
         WendigoAppViewVarItemList,
         variable_item_list_get_view(app->var_item_list));
 
-    for(int i = 0; i < START_MENU_ITEMS; ++i) {
+    for (int i = 0; i < START_MENU_ITEMS; ++i) {
         app->selected_option_index[i] = 0;
     }
 
-    for(int i = 0; i < SETUP_MENU_ITEMS; ++i) {
+    for (int i = 0; i < SETUP_MENU_ITEMS; ++i) {
         app->setup_selected_option_index[i] = 0;
     }
 
@@ -77,27 +78,27 @@ WendigoApp* wendigo_app_alloc() {
     view_dispatcher_add_view(
         app->view_dispatcher, WendigoAppViewTextInput, text_input_get_view(app->text_input));
 
-// TODO: Ditch the hex input
+    // TODO: Ditch the hex input
     app->hex_input = wendigo_hex_input_alloc();
     view_dispatcher_add_view(
-        app->view_dispatcher,
-        WendigoAppViewHexInput,
-        wendigo_hex_input_get_view(app->hex_input));
-    
+        app->view_dispatcher, WendigoAppViewHexInput, wendigo_hex_input_get_view(app->hex_input));
+
     /* Initialise MAC address view */
     app->setup_mac = byte_input_alloc();
-    view_dispatcher_add_view(app->view_dispatcher, WendigoAppViewSetupMAC, byte_input_get_view(app->setup_mac));
+    view_dispatcher_add_view(
+        app->view_dispatcher, WendigoAppViewSetupMAC, byte_input_get_view(app->setup_mac));
 
     /* Initialise the popup */
     app->popup = popup_alloc();
-    view_dispatcher_add_view(app->view_dispatcher, WendigoAppViewPopup, popup_get_view(app->popup));
+    view_dispatcher_add_view(
+        app->view_dispatcher, WendigoAppViewPopup, popup_get_view(app->popup));
 
     scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
 
     return app;
 }
 
-void wendigo_app_free(WendigoApp* app) {
+void wendigo_app_free(WendigoApp *app) {
     furi_assert(app);
 
     // Views
@@ -130,13 +131,13 @@ void wendigo_app_free(WendigoApp* app) {
     free(app);
 }
 
-int32_t wendigo_app(void* p) {
+int32_t wendigo_app(void *p) {
     UNUSED(p);
     // Disable expansion protocol to avoid interference with UART Handle
-    Expansion* expansion = furi_record_open(RECORD_EXPANSION);
+    Expansion *expansion = furi_record_open(RECORD_EXPANSION);
     expansion_disable(expansion);
 
-    WendigoApp* wendigo_app = wendigo_app_alloc();
+    WendigoApp *wendigo_app = wendigo_app_alloc();
 
     wendigo_app->uart = wendigo_uart_init(wendigo_app);
 

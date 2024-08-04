@@ -9,7 +9,8 @@ extern "C" {
 /** Text input anonymous structure */
 typedef struct Wendigo_TextInput Wendigo_TextInput;
 typedef void (*Wendigo_TextInputCallback)(void* context);
-typedef bool (*Wendigo_TextInputValidatorCallback)(const char* text, FuriString* error, void* context);
+typedef bool (
+    *Wendigo_TextInputValidatorCallback)(const char* text, FuriString* error, void* context);
 
 /** Allocate and initialize text input 
  * 

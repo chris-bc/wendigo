@@ -16,13 +16,13 @@
 #include <gui/modules/popup.h>
 #include "wendigo_hex_input.h"
 
-#define START_MENU_ITEMS (6)
-#define SETUP_MENU_ITEMS (4)
+#define START_MENU_ITEMS         (6)
+#define SETUP_MENU_ITEMS         (4)
 #define SETUP_CHANNEL_MENU_ITEMS (13)
 
 #define MAX_OPTIONS (3)
 
-#define WENDIGO_TEXT_BOX_STORE_SIZE (4096)
+#define WENDIGO_TEXT_BOX_STORE_SIZE   (4096)
 #define WENDIGO_TEXT_INPUT_STORE_SIZE (512)
 
 #define NUM_MAC_BYTES (6)
@@ -38,7 +38,12 @@ typedef enum {
     OPEN_HELP
 } ActionType;
 // Command availability in different modes
-typedef enum { OFF = 0, TEXT_MODE = 1, HEX_MODE = 2, BOTH_MODES = 3 } ModeMask;
+typedef enum {
+    OFF = 0,
+    TEXT_MODE = 1,
+    HEX_MODE = 2,
+    BOTH_MODES = 3
+} ModeMask;
 
 /* Bitmask for channel selection - Initialised in wendigo_app.c */
 static const uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1];
@@ -49,37 +54,37 @@ typedef enum {
 } InterfaceType;
 
 typedef struct {
-    const char* item_string;
-    const char* options_menu[MAX_OPTIONS];
+    const char *item_string;
+    const char *options_menu[MAX_OPTIONS];
     int num_options_menu;
     ActionType action;
     ModeMask mode_mask;
 } WendigoItem;
 
 struct WendigoApp {
-    Gui* gui;
-    ViewDispatcher* view_dispatcher;
-    SceneManager* scene_manager;
+    Gui *gui;
+    ViewDispatcher *view_dispatcher;
+    SceneManager *scene_manager;
 
     char text_input_store[WENDIGO_TEXT_INPUT_STORE_SIZE + 1];
-    FuriString* text_box_store;
+    FuriString *text_box_store;
     size_t text_box_store_strlen;
-    TextBox* text_box;
-    TextInput* text_input;
-    Wendigo_TextInput* hex_input;
-    Widget* widget;
-    VariableItemList* var_item_list;
-    Wendigo_Uart* uart;
+    TextBox *text_box;
+    TextInput *text_input;
+    Wendigo_TextInput *hex_input;
+    Widget *widget;
+    VariableItemList *var_item_list;
+    Wendigo_Uart *uart;
     ByteInput *setup_mac;
-    Popup *popup;                       // Avoid continual allocation and freeing of Popup by initialising at launch
+    Popup *popup; // Avoid continual allocation and freeing of Popup by initialising at launch
     uint8_t mac_bytes[NUM_MAC_BYTES];
-    InterfaceType mac_interface;        // What interface is mac_bytes representing?
+    InterfaceType mac_interface; // What interface is mac_bytes representing?
 
     int setup_selected_menu_index;
     int setup_selected_option_index[SETUP_MENU_ITEMS];
     int selected_menu_index;
     int selected_option_index[START_MENU_ITEMS];
-    const char* selected_tx_string;
+    const char *selected_tx_string;
 
     bool is_command;
     bool is_custom_tx_string;
