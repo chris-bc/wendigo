@@ -33,7 +33,6 @@
 * About
 
 ### Next steps
-* BT, BLE and WiFi on/off selections mapped to app->interfaces[i].active
 * Start scan -> disable setup
     * Settings should still be available to view, but read-only
     * Use an app->settings_locked flag

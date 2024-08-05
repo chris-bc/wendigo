@@ -2,9 +2,9 @@
 
 // SETUP_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
 static const WendigoItem items[SETUP_MENU_ITEMS] = {
-    {"BLE", {"On", "Off", "MAC"}, 3, NO_ACTION, OFF},
-    {"BT Classic", {"On", "Off", "MAC"}, 3, NO_ACTION, OFF},
-    {"WiFi", {"On", "Off", "MAC"}, 3, NO_ACTION, OFF},
+    {"BLE", {"On", "Off", "MAC"}, 3, LIST_DEVICES, OFF},
+    {"BT Classic", {"On", "Off", "MAC"}, 3, LIST_DEVICES, OFF},
+    {"WiFi", {"On", "Off", "MAC"}, 3, LIST_DEVICES, OFF},
     {"Channel", {"All", "Selected"}, 2, OPEN_SETUP, OFF},
     // YAGNI: Remove mode_mask from the data model
 };
@@ -28,10 +28,8 @@ static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t 
 
     switch(item->action) {
     case OPEN_SETUP:
-        // TODO: If value is "Selected" display channels view
-        //       Otherwise select all channels
+        /* If value is "Selected" display channel selection view */
         if(selected_option_index == CH_SELECTED) {
-            /* Display channel selection view */
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventSetup);
         }
         break;
@@ -71,18 +69,41 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem* item) {
     variable_item_set_current_value_text(item, menu_item->options_menu[item_index]);
     app->setup_selected_option_index[app->setup_selected_menu_index] = item_index;
 
-    /* Handle moving between "all" and "selected" channels */
-    if(menu_item->action == OPEN_SETUP) {
-        if(item_index == CH_ALL) {
+    switch(menu_item->action) {
+    case OPEN_SETUP:
+        /* Handle moving between "all" and "selected" channels */
+        switch(item_index) {
+        case CH_ALL:
             app->channel_mask |= CH_MASK_ALL;
-        } else if(item_index == CH_SELECTED) {
+            break;
+        case CH_SELECTED:
             /* Turn off the "all" bitmask if it is set */
             if((app->channel_mask & CH_MASK_ALL) == CH_MASK_ALL) {
                 app->channel_mask -= CH_MASK_ALL;
             }
-        } else {
+            break;
+        default:
             // TODO: Panic
+            break;
         }
+        break;
+    case LIST_DEVICES:
+        /* An interface is selected. Mark the interface as active or inactive if "On" or "Off" is selected */
+        switch(item_index) {
+        case RADIO_ON:
+            app->interfaces[app->active_interface].active = true;
+            break;
+        case RADIO_OFF:
+            app->interfaces[app->active_interface].active = false;
+            break;
+        default:
+            /* Do nothing */
+            break;
+        }
+        break;
+    default:
+        /* Do nothing */
+        break;
     }
 }
 
@@ -102,6 +123,21 @@ void wendigo_scene_setup_on_enter(void* context) {
             items[i].num_options_menu,
             wendigo_scene_setup_var_list_change_callback,
             app);
+        /* We don't want "MAC" to be displayed on launching the view, the interface should be "on" or "off" */
+        if(app->setup_selected_option_index[i] == RADIO_MAC) {
+            InterfaceType if_type = IF_COUNT;
+            if(!strncmp(items[i].item_string, "BLE", 3)) {
+                if_type = IF_BLE;
+            } else if(!strncmp(items[i].item_string, "BT", 2)) {
+                if_type = IF_BT_CLASSIC;
+            } else if(!strncmp(items[i].item_string, "WiFi", 4)) {
+                if_type = IF_WIFI;
+            } else {
+                // TODO: Panic
+            }
+            app->setup_selected_option_index[i] = (app->interfaces[if_type].active) ? RADIO_ON :
+                                                                                      RADIO_OFF;
+        }
         variable_item_set_current_value_index(item, app->setup_selected_option_index[i]);
         variable_item_set_current_value_text(
             item, items[i].options_menu[app->setup_selected_option_index[i]]);
