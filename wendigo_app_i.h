@@ -16,6 +16,8 @@
 #include <gui/modules/popup.h>
 #include "wendigo_hex_input.h"
 
+#include "wendigo_scan.h"
+
 #define START_MENU_ITEMS         (6)
 #define SETUP_MENU_ITEMS         (4)
 #define SETUP_CHANNEL_MENU_ITEMS (13)
@@ -94,6 +96,7 @@ struct WendigoApp {
     int selected_option_index[START_MENU_ITEMS];
     const char* selected_tx_string;
 
+    bool is_scanning;
     bool is_command;
     bool is_custom_tx_string;
     bool hex_mode;

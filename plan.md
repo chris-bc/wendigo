@@ -34,9 +34,8 @@
 
 ### Next steps
 * Start scan -> disable setup
-    * Settings should still be available to view, but read-only
-    * Use an app->settings_locked flag
 * Stop scan -> enable setup
+    * variable_item_set_locked(VariableItem *item, bool locked, const char *message);
 
 #### THEN commence work on esp32-wendigo
 * Perform sufficient initialisation of all radios to be able to get/set MACs
@@ -46,9 +45,12 @@
 #### Push application logic to Flipper this time
 * Activate UART interface on launch
 * Start scan passes the configured settings to ESP32 and processes responses indefinitely
+* Use Flipper LED to indicate progress - light blue new BLE dovice, dark blue new BT device, green new wifi device, yellow updated info for existing device, white idle (not scanning), purple scanning
 * Data from ESP32 processed into an object model to represent devices
 * Scan status summarises settings
 
 #### Iterate
 * Replace mocks with real device data
 * Refine data model and develop device list and detail UIs based on available data
+* Ability to select devices
+* Tracking view collating RSSI for selected devices

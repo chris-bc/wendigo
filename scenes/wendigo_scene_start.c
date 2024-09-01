@@ -10,6 +10,11 @@ static const WendigoItem items[START_MENU_ITEMS] = {
     {"Help", {"About"}, 1, OPEN_HELP, TEXT_MODE},
 };
 
+#define SETUP_IDX       (0)
+#define SCAN_START_IDX  (0)
+#define SCAN_STOP_IDX   (1)
+#define SCAN_STATUS_IDX (2)
+
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
 
@@ -35,6 +40,18 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
         view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventSetup);
         return;
     case OPEN_SCAN:
+        VariableItem* myItem;
+        if(selected_option_index == SCAN_START_IDX && !app->is_scanning) {
+            myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
+            variable_item_set_locked(myItem, true, "Cannot change settings while scanning");
+            //      start scanning
+        } else if(selected_option_index == SCAN_STOP_IDX && app->is_scanning) {
+            //      as above to unlock settings
+            myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
+            variable_item_set_locked(myItem, false, NULL);
+            // stop scanning
+        }
+        break;
     case LIST_DEVICES:
         app->is_command = true;
 

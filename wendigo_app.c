@@ -86,6 +86,7 @@ WendigoApp* wendigo_app_alloc() {
 
     /* Initialise and enable all interfaces */
     wendigo_interface_init(app);
+    app->is_scanning = false;
 
     app->widget = widget_alloc();
     view_dispatcher_add_view(
