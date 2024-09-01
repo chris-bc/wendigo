@@ -11,9 +11,6 @@ static const WendigoItem items[SETUP_MENU_ITEMS] = {
 
 #define CH_ALL      (0)
 #define CH_SELECTED (1)
-#define RADIO_ON    (0)
-#define RADIO_OFF   (1)
-#define RADIO_MAC   (2)
 
 static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);

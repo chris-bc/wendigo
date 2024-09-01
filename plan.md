@@ -35,7 +35,6 @@
 ### Next steps
 * Start scan -> disable setup
 * Stop scan -> enable setup
-    * variable_item_set_locked(VariableItem *item, bool locked, const char *message);
 
 #### THEN commence work on esp32-wendigo
 * Perform sufficient initialisation of all radios to be able to get/set MACs

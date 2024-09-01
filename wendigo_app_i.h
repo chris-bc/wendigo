@@ -21,7 +21,15 @@
 #define START_MENU_ITEMS         (6)
 #define SETUP_MENU_ITEMS         (4)
 #define SETUP_CHANNEL_MENU_ITEMS (13)
-#define CH_MASK_ALL              (8192)
+
+#define SETUP_RADIO_WIFI_IDX (2)
+#define SETUP_RADIO_BT_IDX   (1)
+#define SETUP_RADIO_BLE_IDX  (0)
+#define RADIO_ON             (0)
+#define RADIO_OFF            (1)
+#define RADIO_MAC            (2)
+
+#define CH_MASK_ALL (8192)
 
 #define MAX_OPTIONS (3)
 
