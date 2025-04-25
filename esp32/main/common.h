@@ -17,10 +17,12 @@
 
 #include "wendigo.h"
 
-char STRINGS_HOP_STATE_FAIL[];
-char STRINGS_MALLOC_FAIL[];
-char STRINGS_SET_MAC_FAIL[];
-char STRINGS_HOPMODE_INVALID[];
+/* Common string definitions */
+char STRINGS_HOP_STATE_FAIL[] = "Unable to set hop state: ";
+char STRINGS_MALLOC_FAIL[] = "Unable to allocate memory ";
+char STRINGS_SET_MAC_FAIL[] = "Unable to set MAC ";
+char STRINGS_HOPMODE_INVALID[] = "Invalid hopMode ";
+
 
 esp_err_t bytes_to_string(uint8_t *bytes, char *string, int byteCount);
 esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac);

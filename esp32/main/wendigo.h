@@ -128,10 +128,17 @@ esp_console_cmd_t commands[CMD_COUNT] = {
     }
 };
 
-typdef enum {
+typedef enum {
     MSG_ACK,
     MSG_OK,
-    MSG_FAIL
+    MSG_FAIL,
+    MSG_COUNT
 } MsgType;
+
+typedef enum {
+    ACTION_DISABLE = 0,
+    ACTION_ENABLE,
+    ACTION_STATUS
+} ActionType;
 
 #endif

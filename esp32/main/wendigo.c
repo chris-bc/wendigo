@@ -13,8 +13,6 @@
  * the amount of privacy the general public has given up for  *
  * the convenience of constant connectivity, and I don't      *
  * believe there is a general awareness of this.              *
- * Who knows, maybe this will crash & burn, and put my mind   *
- * at rest. *Hopefully* it will, but I doubt it.              *
  *                                                            *
  * ESP32 Wendigo is a lightweight application that provides   *
  * wireless data streams to the Flipper Zero application of   *
@@ -27,7 +25,7 @@
  * cannibals, in Native American Algonquian folklore.         *
  *                                                            *
  *                                                            *
- * ESP32 Wendigo: https://github.com/chris-bc/esp32-wendigo   *
+ * ESP32 Wendigo: https://github.com/chris-bc/wendigo   *
  * Licensed under the MIT Open Source License.                *
  *************************************************************/
 
@@ -63,24 +61,24 @@ esp_err_t outOfMemory() {
 
 /* Return the specified response over UART */
 esp_err_t send_response(char *cmd, char *arg, MsgType result) {
-    uint8_t len = strlen(cmd) + strlen(arg) + 3;
+    char resultMsg[5];
     switch (result) {
         case MSG_ACK:
-            len += 3;
+            strcpy(resultMsg, "ACK");
             break;
         case MSG_OK:
-            len += 2;
+            strcpy(resultMsg, "OK");
             break;
         case MSG_FAIL:
-         len += 4;
-         break;
+            strcpy(resultMsg, "FAIL");
+            break;
+        default:
+            ESP_LOGE(TAG, "Invalid result type: %d\n", result);
+            return ESP_ERR_INVALID_ARG;
     }
-    char *msg = malloc(sizeof(char) * len);
-    if (msg == NULL) {
-        outOfMemory();
-        return ESP_ERR_NO_MEM;
-    }
-    // concat string
+    printf("%s %s %s", cmd, arg, resultMsg);
+    
+    return ESP_OK;
 }
 
 /* Display command syntax for manipulating the HCI interface */
@@ -99,17 +97,8 @@ esp_err_t cmd_bluetooth(int argc, char **argv) {
 
     if (argc == 2 && strlen(argv[1]) == 1) {
         /* Acknowledge the message */
-        msg = malloc(sizeof(char) * (strlen(argv[0]) + 7));
-        if (msg == NULL) {
-            err = outOfMemory();
-            return err;
-        }
-        strcpy(msg, argv[0]);
-        strcat(msg, " ");
-        strcat(msg, argv[1]);
-        strcat(msg, " ACK");
-        printf(msg);
-        free(msg);
+        send_response(argv[0], argv[1], MSG_ACK);
+        
         /* Perform the command */
         /* First verify syntax - argv[1] is '0', '1', or '2' */
         switch (argv[1][0]) {
@@ -208,6 +197,7 @@ esp_err_t cmd_version(int argc, char **argv) {
 void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type) {
     wifi_promiscuous_pkt_t *data = (wifi_promiscuous_pkt_t *)buf;
 
+    ESP_LOGE("UNIMPLEMENTED", "wifi_pkt_rcvd is not yet implemented, I don't know what to do with this packet but its RSSI is %d\n", data->rx_ctrl.rssi);
   
     return;
 }

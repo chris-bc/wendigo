@@ -4,11 +4,6 @@
 const char *TAG = "WENDIGO";
 const uint8_t BROADCAST[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
-/* Common string definitions */
-char STRINGS_HOP_STATE_FAIL[] = "Unable to set hop state: ";
-char STRINGS_MALLOC_FAIL[] = "Unable to allocate memory ";
-char STRINGS_SET_MAC_FAIL[] = "Unable to set MAC ";
-char STRINGS_HOPMODE_INVALID[] = "Invalid hopMode ";
 
 bool arrayContainsString(char **arr, int arrCnt, char *str) {
     int i;
