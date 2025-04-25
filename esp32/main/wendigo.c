@@ -89,7 +89,6 @@ void display_bt_syntax() {
 /* This command is used to configure Bluetooth Classic status */
 esp_err_t cmd_bluetooth(int argc, char **argv) {
     esp_err_t err = ESP_OK;
-    char *msg;
     #ifndef CONFIG_BT_ENABLED
         ESP_LOGE(TAG, "Bluetooth Unsupported");
         return ESP_ERR_NOT_ALLOWED;
@@ -98,24 +97,20 @@ esp_err_t cmd_bluetooth(int argc, char **argv) {
     if (argc == 2 && strlen(argv[1]) == 1) {
         /* Acknowledge the message */
         send_response(argv[0], argv[1], MSG_ACK);
-        
+
         /* Perform the command */
-        /* First verify syntax - argv[1] is '0', '1', or '2' */
-        switch (argv[1][0]) {
-            case '0':
-                /* Disable BT Classic */
-                // TODO: err = disable_bt()
+        /* First verify syntax - argv[1] is '0', '1', or '2' - Convert to ActionType */
+        switch (strtol(argv[1], NULL, 10)) {
+            case ACTION_DISABLE:
+                // TODO: err = disable_bt();
                 break;
-            case '1':
-                /* Enable BT Classic */
-                // TODO: err = enable_bt()
+            case ACTION_ENABLE:
+                // TODO: err = enable_bt();
                 break;
-            case '2':
-                /* Return BT Classic status */
-                // TODO: err = bt_status()
+            case ACTION_STATUS:
+                // TODO: err = bt_status();
                 break;
             default:
-                /* Display command syntax */
                 display_bt_syntax();
                 err = ESP_ERR_INVALID_ARG;
                 break;
@@ -126,30 +121,10 @@ esp_err_t cmd_bluetooth(int argc, char **argv) {
     }
     if (err == ESP_OK) {
         /* Command succeeded. Inform success */
-        msg = malloc(sizeof(char) * (strlen(argv[0]) + 6));
-        if (msg == NULL) {
-            err = outOfMemory();
-            return err;
-        }
-        strcpy(msg, argv[0]);
-        strcat(msg, " ");
-        strcat(msg, argv[1]);
-        strcat(msg, " OK");
-        printf(msg);
-        free(msg);
+        send_response(argv[0], argv[1], MSG_OK);
     } else {
         /* Command failed */
-        msg = malloc(sizeof(char) * (strlen(argv[0]) + 8));
-        if (msg == NULL) {
-            err = outOfMemory();
-            return err;
-        }
-        strcpy(msg, argv[0]);
-        strcat(msg, " ");
-        strcat(msg, argv[1]);
-        strcat(msg, " FAIL");
-        printf(msg);
-        free(msg);
+        send_response(argv[0], argv[1], MSG_FAIL);
     }
     return err;
 }
@@ -196,8 +171,8 @@ esp_err_t cmd_version(int argc, char **argv) {
 */
 void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type) {
     wifi_promiscuous_pkt_t *data = (wifi_promiscuous_pkt_t *)buf;
-
-    ESP_LOGE("UNIMPLEMENTED", "wifi_pkt_rcvd is not yet implemented, I don't know what to do with this packet but its RSSI is %d\n", data->rx_ctrl.rssi);
+UNUSED(data);
+    //ESP_LOGE("UNIMPLEMENTED", "wifi_pkt_rcvd is not yet implemented, I don't know what to do with this packet but its RSSI is %d\n", data->rx_ctrl.rssi);
   
     return;
 }

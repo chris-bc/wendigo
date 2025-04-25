@@ -39,8 +39,6 @@ static esp_gattc_descr_elem_t *descr_elem_result = NULL;
 #define REMOTE_NOTIFY_CHAR_UUID    0xFF01
 #define PROFILE_NUM      1
 
-static int bt_comparator(const void *varOne, const void *varTwo);
-
 /* cod2deviceStr
    Converts a uint32_t representing a Bluetooth Class Of Device (COD)'s major
    device code into a useful string descriptor of the specified COD major device.
@@ -290,7 +288,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         gl_profile_tab[0].conn_id = p_data->connect.conn_id;
         memcpy(gl_profile_tab[0].remote_bda, p_data->connect.remote_bda, sizeof(esp_bd_addr_t));
         ESP_LOGI(BT_TAG, "REMOTE BDA:");
-        esp_log_buffer_hex(BT_TAG, gl_profile_tab[0].remote_bda, sizeof(esp_bd_addr_t));
+        ESP_LOG_BUFFER_HEX(BT_TAG, gl_profile_tab[0].remote_bda, sizeof(esp_bd_addr_t));
         esp_err_t mtu_ret = esp_ble_gattc_send_mtu_req (gattc_if, p_data->connect.conn_id);
         if (mtu_ret){
             ESP_LOGE(BT_TAG, "config MTU error, error code = %x", mtu_ret);
@@ -448,7 +446,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         }else{
             ESP_LOGI(BT_TAG, "ESP_GATTC_NOTIFY_EVT, receive indicate value:");
         }
-        esp_log_buffer_hex(BT_TAG, p_data->notify.value, p_data->notify.value_len);
+        ESP_LOG_BUFFER_HEX(BT_TAG, p_data->notify.value, p_data->notify.value_len);
         break;
     case ESP_GATTC_WRITE_DESCR_EVT:
         if (p_data->write.status != ESP_GATT_OK){
@@ -473,7 +471,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
         esp_bd_addr_t bda;
         memcpy(bda, p_data->srvc_chg.remote_bda, sizeof(esp_bd_addr_t));
         ESP_LOGI(BT_TAG, "ESP_GATTC_SRVC_CHG_EVT, bd_addr:");
-        esp_log_buffer_hex(BT_TAG, bda, sizeof(esp_bd_addr_t));
+        ESP_LOG_BUFFER_HEX(BT_TAG, bda, sizeof(esp_bd_addr_t));
         break;
     }
     case ESP_GATTC_WRITE_CHAR_EVT:
@@ -1333,7 +1331,7 @@ esp_err_t wendigo_bt_gap_start() {
     err |= esp_bt_gap_register_callback(bt_gap_cb);
     /* Set Device name */
     char *dev_name = "WENDIGO_INQUIRY";
-    err |= esp_bt_dev_set_device_name(dev_name);
+    err |= esp_bt_gap_set_device_name(dev_name);
 
     /* Set discoverable and connectable, wait to be connected */
     err |= esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
@@ -1719,17 +1717,6 @@ esp_err_t bt_scanTypeToString(wendigo_bt_scan_t scanType, char *strOutput) {
             break;
     }
     return err;
-}
-
-/* Comparison function for sorting of ScanResultAPs */
-/* Provides a sort function that uses sortResults
-*/
-static int bt_comparator(const void *varOne, const void *varTwo) {
-    /* Return 0 if they're identical */
-    if ( 0) {
-        return 0;
-    }
-    return 0;
 }
 
 esp_err_t wendigo_clear_bt() {
