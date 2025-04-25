@@ -563,7 +563,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     wendigo_bt_devices[devIdx]->bdName[adv_name_len] = '\0';
                 }
             } else {
-                bt_dev_add_components(scan_result->scan_rst.bda, bdNameStr, adv_name_len, scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len, 0, scan_result->scan_rst.rssi, WENDIGO_BT_SCAN_BLE);
+                // TODO Tidy bt_dev_add_components(scan_result->scan_rst.bda, bdNameStr, adv_name_len, scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len, 0, scan_result->scan_rst.rssi, WENDIGO_BT_SCAN_BLE);
             }
             break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
@@ -821,7 +821,7 @@ void update_device_info(esp_bt_gap_cb_param_t *param) {
         #else
             ESP_LOGI(BT_TAG, "%s", devString);
         #endif
-        bt_dev_add_components(dev_bda, dev_bdname, dev_bdname_len, dev_eir, dev_eir_len, dev_cod, dev_rssi, WENDIGO_BT_SCAN_CLASSIC_DISCOVERY);
+        // TODO tidy bt_dev_add_components(dev_bda, dev_bdname, dev_bdname_len, dev_eir, dev_eir_len, dev_cod, dev_rssi, WENDIGO_BT_SCAN_CLASSIC_DISCOVERY);
     }
 
     state = APP_GAP_STATE_DEVICE_DISCOVER_COMPLETE;
@@ -886,7 +886,7 @@ esp_err_t updateDevice(bool *updatedFlags, esp_bd_addr_t theBda, int32_t theCod,
         wendigo_bt_devices[deviceIdx]->lastSeen = clock();
     } else {
         /* Device doesn't exist, add it instead */
-        return bt_dev_add_components(theBda, theName, theNameLen, theEir, theEirLen, theCod, theRssi, WENDIGO_BT_SCAN_CLASSIC_DISCOVERY);
+        // TODO tidy return bt_dev_add_components(theBda, theName, theNameLen, theEir, theEirLen, theCod, theRssi, WENDIGO_BT_SCAN_CLASSIC_DISCOVERY);
     }
     return err;
 }
@@ -1360,136 +1360,11 @@ esp_err_t wendigo_bt_initialise() {    esp_err_t err = ESP_OK;
     return err;
 }
 
-/* Add a new Bluetooth device to wendigo_bt_devices[]
-   Creates a new BT device struct using the specified parameters and adds it to
-   wendigo_bt_devices[].
-   A uniqueness check will be done using BDA prior to adding the specified device.
-   The most barebones, valid way to call this (i.e. the minimum info that must be
-   specified for a BT device) is bt_dev_add(myValidBDA, NULL, 0, NULL, 0, myValidCOD, 0, 0);
-   bdNameLen should specify the raw length of the name because it is stored in a uint8_t[],
-   excluding the trailing '\0'.
-*/
-esp_err_t bt_dev_add_components(esp_bd_addr_t bda, char *bdName, uint8_t bdNameLen, uint8_t *eir,
-                        uint8_t eirLen, uint32_t cod, int32_t rssi, wendigo_bt_scan_t devScanType) {
-    esp_err_t err = ESP_OK;
-    esp_err_t err2 = ESP_OK;
-    UNUSED(err2);
-
-    /* Make sure the specified BDA doesn't already exist */
-    if (isBDAInArray(bda, wendigo_bt_devices, wendigo_bt_dev_count)) {
-        char bdaStr[MAC_STRLEN + 1] = "";
-        #ifdef CONFIG_FLIPPER
-            printf("Unable to add existing BT Dev:\n%25s\n", bda2str(bda, bdaStr, MAC_STRLEN + 1));
-        #else
-            ESP_LOGE(BT_TAG, "Unable to add the requested Bluetooth device to Wendigo's device array; BDA %s already exists.", bda2str(bda, bdaStr, MAC_STRLEN + 1));
-        #endif
-        return ESP_ERR_NOT_SUPPORTED;
-    }
-
-    /* Set up a replacement copy of wendigo_bt_devices */
-    app_gap_cb_t **newDevices = wendigo_ble_purge_and_malloc(sizeof(app_gap_cb_t *) * (wendigo_bt_dev_count + 1));
-    if (newDevices == NULL) {
-        #ifdef CONFIG_FLIPPER
-            printf("%sto add BT device\n", STRINGS_MALLOC_FAIL);
-        #else
-            ESP_LOGE(BT_TAG, "%sfor Bluetooth Device #%d.", STRINGS_MALLOC_FAIL, (wendigo_bt_dev_count + 1));
-        #endif
-        return ESP_ERR_NO_MEM;
-    }
-    /* Copy contents from wendigo_bt_devices to newDevices */
-    /* This was previously a loop iterating through and calling an additional function to
-       copy the struct. Luckily I stuffed up and corrupted nearby memory so I had to use my
-       brain and come up with a simple solution - Copy the memory contents of the first array
-       to the second.
-    */
-    /* Calculate max index while we're looping */
-    uint8_t maxIndex = 0;
-    for (int i=0;i<wendigo_bt_dev_count;++i) {
-        newDevices[i] = wendigo_bt_devices[i];
-        if (wendigo_bt_devices[i]->index > maxIndex) {
-            maxIndex = wendigo_bt_devices[i]->index;
-        }
-    }
-    /* Create new device at index wendigo_bt_dev_count */
-    newDevices[wendigo_bt_dev_count] = wendigo_ble_purge_and_malloc(sizeof(app_gap_cb_t));
-    if (newDevices[wendigo_bt_dev_count] == NULL) {
-        #ifdef CONFIG_FLIPPER
-            printf("%sfor BT device %d.\n", STRINGS_MALLOC_FAIL, wendigo_bt_dev_count + 1);
-        #else
-            ESP_LOGE(BT_TAG, "%s(%d) for BT device #%d.", STRINGS_MALLOC_FAIL, sizeof(app_gap_cb_t), wendigo_bt_dev_count + 1);
-        #endif
-        free(newDevices);
-        return ESP_ERR_NO_MEM;
-    }
-    newDevices[wendigo_bt_dev_count]->bt_services.known_services = NULL;
-    newDevices[wendigo_bt_dev_count]->bt_services.known_services_len = 0;
-    newDevices[wendigo_bt_dev_count]->bt_services.num_services = 0;
-    newDevices[wendigo_bt_dev_count]->bt_services.service_uuids = NULL;
-    newDevices[wendigo_bt_dev_count]->bt_services.lastSeen = 0;
-    newDevices[wendigo_bt_dev_count]->bdname_len = bdNameLen;
-    newDevices[wendigo_bt_dev_count]->eir_len = eirLen;
-    newDevices[wendigo_bt_dev_count]->eir = NULL;
-    newDevices[wendigo_bt_dev_count]->rssi = rssi;
-    newDevices[wendigo_bt_dev_count]->cod = cod;
-    newDevices[wendigo_bt_dev_count]->scanType = devScanType;
-    newDevices[wendigo_bt_dev_count]->lastSeen = clock();
-    newDevices[wendigo_bt_dev_count]->selected = false;
-    newDevices[wendigo_bt_dev_count]->index = maxIndex + 1;
-    memcpy(newDevices[wendigo_bt_dev_count]->bda, bda, ESP_BD_ADDR_LEN);
-    newDevices[wendigo_bt_dev_count]->bdName = wendigo_ble_purge_and_malloc(sizeof(char) * (bdNameLen + 1));
-    if (newDevices[wendigo_bt_dev_count]->bdName == NULL) {
-        #ifdef CONFIG_FLIPPER
-            printf("%sfor BDName (len %u).\n", STRINGS_MALLOC_FAIL, bdNameLen);
-        #else
-            ESP_LOGE(BT_TAG, "%sfor Bluetooth Device Name (length %u).", STRINGS_MALLOC_FAIL, bdNameLen);
-        #endif
-        free(newDevices);
-        return ESP_ERR_NO_MEM;
-    }
-    strncpy(newDevices[wendigo_bt_dev_count]->bdName, bdName, bdNameLen);
-    newDevices[wendigo_bt_dev_count]->bdName[bdNameLen] = '\0';
-    if (eirLen > 0) {
-        newDevices[wendigo_bt_dev_count]->eir = wendigo_ble_purge_and_malloc(sizeof(uint8_t) * eirLen);
-        if (newDevices[wendigo_bt_dev_count]->eir == NULL) {
-            #ifdef CONFIG_FLIPPER
-                printf("%sfor EIR (len %u).\n", STRINGS_MALLOC_FAIL, eirLen);
-            #else
-                ESP_LOGE(BT_TAG, "%sfor EIR (length %u).", STRINGS_MALLOC_FAIL, eirLen);
-            #endif
-            if (newDevices[wendigo_bt_dev_count]->bdName != NULL) {
-                free(newDevices[wendigo_bt_dev_count]->bdName);
-            }
-            free(newDevices);
-            return ESP_ERR_NO_MEM;
-        }
-        memcpy(newDevices[wendigo_bt_dev_count]->eir, eir, eirLen);
-    }
-
-    /* Finally copy new device array into place */
-    if (wendigo_bt_devices != NULL) {
-        free(wendigo_bt_devices);
-    }
-    wendigo_bt_devices = newDevices;
-    ++wendigo_bt_dev_count;
-
-
-    #ifdef CONFIG_DEBUG_VERBOSE
-        printf("End of bt_dev_add_components(), wendigo_bt_devices has %u elements:\n", wendigo_bt_dev_count);
-        for (int i =0; i < wendigo_bt_dev_count; ++i) {
-            if (i > 0) {
-                printf(",\t");
-            }
-            printf("\"%s\"", wendigo_bt_devices[i]->bdName);
-        }
-    #endif
-
-    return err;
-}
-
-esp_err_t bt_dev_add(app_gap_cb_t *dev) {
-    return bt_dev_add_components(dev->bda, dev->bdName, dev->bdname_len,
-            dev->eir, dev->eir_len, dev->cod, dev->rssi, dev->scanType);
-}
+// TODO: Clean up
+// esp_err_t bt_dev_add(app_gap_cb_t *dev) {
+//     return bt_dev_add_components(dev->bda, dev->bdName, dev->bdname_len,
+//             dev->eir, dev->eir_len, dev->cod, dev->rssi, dev->scanType);
+// }
 
 /* Is the specified bluetooth device address in the specified array, which has the specified length? */
 bool isBDAInArray(esp_bd_addr_t bda, app_gap_cb_t **array, uint8_t arrayLen) {

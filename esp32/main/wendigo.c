@@ -32,6 +32,7 @@
 #include "wendigo.h"
 
 #include "common.h"
+#include "bluetooth.h"
 #include "esp_err.h"
 #include "esp_wifi_types.h"
 #include "freertos/portmacro.h"
@@ -61,7 +62,7 @@ esp_err_t outOfMemory() {
 
 /* Return the specified response over UART */
 esp_err_t send_response(char *cmd, char *arg, MsgType result) {
-    char resultMsg[5];
+    char resultMsg[6];
     switch (result) {
         case MSG_ACK:
             strcpy(resultMsg, "ACK");
@@ -71,6 +72,9 @@ esp_err_t send_response(char *cmd, char *arg, MsgType result) {
             break;
         case MSG_FAIL:
             strcpy(resultMsg, "FAIL");
+            break;
+        case MSG_ERROR:
+            strcpy(resultMsg, "ERROR");
             break;
         default:
             ESP_LOGE(TAG, "Invalid result type: %d\n", result);
@@ -89,7 +93,7 @@ void display_bt_syntax() {
     printf("Usage: H[CI] ( 0 | 1 | 2 )\n0: Disable\n1: Enable\n2: Status\n");
 }
 
-/* This command is used to configure Bluetooth Classic status */
+/* This command is used to configure Bluetooth Classic scanning */
 esp_err_t cmd_bluetooth(int argc, char **argv) {
     esp_err_t err = ESP_OK;
     #ifndef CONFIG_BT_ENABLED
@@ -97,18 +101,23 @@ esp_err_t cmd_bluetooth(int argc, char **argv) {
         return ESP_ERR_NOT_ALLOWED;
     #endif
 
-    if (argc == 2 && strlen(argv[1]) == 1) {
+    /* Validate the argument - Must be between 0 & 2 */
+    int action;
+    if (argc > 1) {
+        action = strtol(argv[1], NULL, 10);
+    }
+    if (argc == 2 && strlen(argv[1]) == 1 && action >= 0 && action < 3) {
         /* Acknowledge the message */
         send_response(argv[0], argv[1], MSG_ACK);
 
         /* Perform the command */
-        /* First verify syntax - argv[1] is '0', '1', or '2' - Convert to ActionType */
-        switch (strtol(argv[1], NULL, 10)) {
+        switch (action) {
             case ACTION_DISABLE:
-                // TODO: err = disable_bt();
+                // TODO: err = disable_bt(); esp_bt_gap_cancel_discovery();
+                //err = esp_bt_gap_cancel_discovery();
                 break;
             case ACTION_ENABLE:
-                // TODO: err = enable_bt();
+                err = wendigo_bt_gap_start();
                 break;
             case ACTION_STATUS:
                 // TODO: err = bt_status();
@@ -119,7 +128,8 @@ esp_err_t cmd_bluetooth(int argc, char **argv) {
                 break;
         }
     } else {
-        display_bt_syntax();
+        /* Notify faulty command */
+        send_response(argv[0], argv[1], MSG_ERROR);
         err = ESP_ERR_INVALID_ARG;
     }
     if (err == ESP_OK) {
