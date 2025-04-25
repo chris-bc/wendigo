@@ -20,18 +20,12 @@
   <p align="center">
     Wendigo is a Flipper Zero application to detect and follow WiFi, Bluetooth and BLE radio signals, allowing them to be monitored and tracked to their location. Wendigo is a creature from North American mythology that stalks and overpowers its victims.
     <br />
-    <a href="https://github.com/chris-bc/wendigo"><strong>Explore the docs »</strong></a>
     <br />
-    <br />
-    <a href="https://github.com/chris-bc/wendigo">View Demo</a>
-    &middot;
     <a href="https://github.com/chris-bc/wendigo/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     &middot;
     <a href="https://github.com/chris-bc/wendigo/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
-
-
 
 <!-- TABLE OF CONTENTS -->
 <details>
@@ -39,14 +33,16 @@
   <ol>
     <li>
       <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
     </li>
     <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
+        <ul>
+          <li><a href="#flipper-prerequisites">Flipper Zero</a></li>
+          <li><a href="#esp32-prerequisites">ESP32</a></li>
+          <li><a href="#wendigo-prerequisites">Wendigo</a></li>
+        </ul>
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
@@ -60,57 +56,118 @@
 
 
 
-<!-- ABOUT THE PROJECT -->
+<a id="about-the-project"></a>
 ## About The Project
 
-Here's a blank template to get started. To avoid retyping too much info, do a search and replace with your text editor for the following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`, `project_license`
+Wendigo is a Flipper Zero application to detect, monitor and track nearby wireless devices. It uses detected WiFi, Bluetooth Classic, and Bluetooth Low Energy signals to fingerprint a device, monitoring identified device(s) to inspect their behaviour and track their location.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-<!-- GETTING STARTED -->
+<a id="getting-started"></a>
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+Once the application has a functional base binaries will be made available under *Releases*. Alternatively, especially if you want the latest features or to contribute to the development, you can build the application from source, 
 
+<a id="prerequisites"></a>
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
+<a id="flipper-prerequisites"></a>
+#### Flipper Zero
+Download source code for your preferred firmware. The most popular unofficial distributions are Momentum, RogueMaster and Unleashed, although a variety of other distributions are also available.
+
+* Momentum Firmware:
   ```sh
-  npm install npm@latest -g
+  git clone https://github.com/Next-Flip/Momentum-Firmware.git
+  ```
+* RogueMaster Firmware:
+  ```sh
+  git clone https://github.com/RogueMaster/flipperzero-firmware-wPlugins.git
+  ```
+* Unleashed Firmware:
+  ```sh
+  git clone https://github.com/DarkFlippers/unleashed-firmware.git
+  ```
+* Official Firmware:
+  ```sh
+  git clone https://github.com/flipperdevices/flipperzero-firmware.git
   ```
 
+<a id="esp32-prerequisites"></a>
+#### ESP32
+Download ESP-IDF, the Espressif IoT Development Framework. If you use VSCode you can download the extension *ESP-IDF by Espressif Systems* from the VSCode Extension Marketplace and follow the setup wizard. This guide focuses on building and flashing using the command line so if you opt for this approach you're on your own! :)
+
+  ```sh
+  git clone https://github.com/espressif/esp-idf.git
+  ```
+
+<a id="wendigo-prerequisites"></a>
+#### Wendigo
+  ```sh
+  git clone https://github.com/chris-bc/wendigo.git
+  ```
+  To check out a specific tagged version:
+  ```sh
+  git checkout <tag name>
+  ```
+
+<a id="installation"></a>
 ### Installation
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+These instructions are written under the assumption that the above packages have been downloaded to the following locations. Substitute those locations for your own in the instructions that follow.
+* Flipper Zero firmware: ~/flipperzero
+* ESP-IDF: ~/esp-idf
+* Wendigo: ~/wendigo
+
+1. Configure and Install ESP-IDF
    ```sh
-   git clone https://github.com/chris-bc/wendigo.git
+   cd ~/esp-idf
+   ./install.sh
    ```
-3. Install NPM packages
+2. Configure your current terminal session for ESP-IDF. This must be run prior to a new terminal session running idf.py.
    ```sh
-   npm install
+   . ./export.sh
    ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
-5. Change git remote url to avoid accidental pushes to base project
+3. Connect an ESP32 and verify it has been detected by the OS
    ```sh
-   git remote set-url origin chris-bc/wendigo
-   git remote -v # confirm the changes
+   ls /dev/tty*
+   ```
+4. Compile and flash ESP32-Wendigo
+   ```sh
+   cd ~/wendigo/esp32
+   idf.py set-target <target chipset>
+   idf.py menuconfig
+   idf.py build flash
+   ```
+5. Install the Flipper Zero toolchain and compile firmware
+   ```sh
+   cd ~/flipper
+   ./fbt
+   ```
+6. Remove the ESP32, connect a Flipper Zero, and verify it has been detected by the OS
+   ```sh
+   ls /dev/tty*
+   ```
+7. Link Flipper-Wendigo into the Flipper Zero firmware, build and flash the firmware
+   ```sh
+   ln -s ~/wendigo/flipper ~/flipper/applications_user/wendigo
+   ./fbt firmware_all flash_usb_full
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
-<!-- USAGE EXAMPLES -->
+<a id="usage"></a>
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+Connect the ESP32 to the Flipper Zero by connecting the following pins:
+* Flipper Zero TX (13) to ESP32 RX
+* Flipper Zero RX (14) to ESP32 TX
+* Flipper Zero GND (8 or 18) to ESP32 GND
+* Flipper Zero 3V3 (9) to ESP32 3V3 (sometimes labelled VCC)
+
+Launch the Wendigo application from Apps -> GPIO -> ESP -> [ESP32] Wendigo.
 
 _For more examples, please refer to the [Documentation](https://example.com)_
 
@@ -118,7 +175,7 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 
 
-<!-- ROADMAP -->
+<a id="roadmap"></a>
 ## Roadmap
 
 - [ ] Feature 1
@@ -132,7 +189,7 @@ See the [open issues](https://github.com/chris-bc/wendigo/issues) for a full lis
 
 
 
-<!-- CONTRIBUTING -->
+<a id="contributing"></a>
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
@@ -156,7 +213,7 @@ Don't forget to give the project a star! Thanks again!
 
 
 
-<!-- LICENSE -->
+<a id="license"></a>
 ## License
 
 Distributed under the MIT Licence. See `LICENSE` for more information.
@@ -165,7 +222,7 @@ Distributed under the MIT Licence. See `LICENSE` for more information.
 
 
 
-<!-- CONTACT -->
+<a id="contact"></a>
 ## Contact
 
 Chris BC - [@chris_bc](https://twitter.com/chris_bc) - chris@bennettscash.id.au
