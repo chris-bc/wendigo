@@ -177,11 +177,19 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 <a id="roadmap"></a>
 ## Roadmap
+There isn't much value in reading this at the moment because not enough has been built to be useful. So this section is for me :)
 
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
+- [ ] Finish basic command parsing
+	- [ ] And state maintenance - flags etc
+- [ ] Implement BT Classic scanning
+- [ ] Implement BLE scanning
+- [ ] Deliver bluetooth data to Flipper
+- [ ] Create Flipper data model
+- [ ] Create Flipper UI
+- [ ] Flipper settings
+	- [ ] ESP32 integration
+- [ ] Target and monitor devices
+- [ ] WiFi scanning
 
 See the [open issues](https://github.com/chris-bc/wendigo/issues) for a full list of proposed features (and known issues).
 
