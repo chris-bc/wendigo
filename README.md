@@ -190,6 +190,7 @@ There isn't much value in reading this at the moment because not enough has been
 	- [ ] ESP32 integration
 - [ ] Target and monitor devices
 - [ ] WiFi scanning
+- [ ] Update Kconfig menu items
 
 See the [open issues](https://github.com/chris-bc/wendigo/issues) for a full list of proposed features (and known issues).
 
