@@ -76,14 +76,17 @@ esp_err_t send_response(char *cmd, char *arg, MsgType result) {
             ESP_LOGE(TAG, "Invalid result type: %d\n", result);
             return ESP_ERR_INVALID_ARG;
     }
-    printf("%s %s %s", cmd, arg, resultMsg);
-    
+    if (arg == NULL) {
+        printf("%s %s\n", cmd, resultMsg);
+    } else {
+        printf("%s %s %s\n", cmd, arg, resultMsg);
+    }    
     return ESP_OK;
 }
 
 /* Display command syntax for manipulating the HCI interface */
 void display_bt_syntax() {
-    printf("Usage: H[CI] ( 0 | 1 | 2 )\n0: Disable\n1: Enable\n2: Status");
+    printf("Usage: H[CI] ( 0 | 1 | 2 )\n0: Disable\n1: Enable\n2: Status\n");
 }
 
 /* This command is used to configure Bluetooth Classic status */
@@ -124,9 +127,9 @@ esp_err_t cmd_bluetooth(int argc, char **argv) {
         send_response(argv[0], argv[1], MSG_OK);
     } else {
         /* Command failed */
-        send_response(argv[0], argv[1], MSG_FAIL);
+        send_response(argv[0], (argc == 2)?argv[1]:NULL, MSG_FAIL);
     }
-    return err;
+    return ESP_OK;
 }
 
 /* Configure BLE status */
