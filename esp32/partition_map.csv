@@ -1,0 +1,14 @@
+# Name,   Type, SubType, Offset,  Size, Flags
+# Note: Supporting OTA update requires 2 OTA app and 1 OTA data partitions.
+#       Will require experimentation because I don't remember what problems
+#       I was having with Gravity that necessitated this partition map (maybe
+#       available memory to store the Bluetooth UUID dictionary?).
+#
+# 0x0 - 0xfff (4KB): Unknown
+# 0x1000 - 0x7fff (I think - 28KB): Bootloader
+# 0x8000 - 0x8fff (4KB): Unknown
+# Notes: 0x1000 == 4096, 0x9000 == 36864, 0x10000 == 65536
+nvs,      data, nvs,     0x9000,  0x6000,
+phy_init, data, phy,     0xf000,  0x1000,
+factory,  app,  factory, 0x10000, 2M,
+storage,  data, fat,     ,        1M,
