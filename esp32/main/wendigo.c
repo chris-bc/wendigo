@@ -62,7 +62,7 @@ esp_err_t outOfMemory() {
 
 /* Return the specified response over UART */
 esp_err_t send_response(char *cmd, char *arg, MsgType result) {
-    char resultMsg[6];
+    char resultMsg[8];
     switch (result) {
         case MSG_ACK:
             strcpy(resultMsg, "ACK");
@@ -73,8 +73,8 @@ esp_err_t send_response(char *cmd, char *arg, MsgType result) {
         case MSG_FAIL:
             strcpy(resultMsg, "FAIL");
             break;
-        case MSG_ERROR:
-            strcpy(resultMsg, "ERROR");
+        case MSG_INVALID:
+            strcpy(resultMsg, "INVALID");
             break;
         default:
             ESP_LOGE(TAG, "Invalid result type: %d\n", result);
@@ -88,9 +88,34 @@ esp_err_t send_response(char *cmd, char *arg, MsgType result) {
     return ESP_OK;
 }
 
+/* Command syntax is <command> <ActionType>, where ActionType :== 0 | 1 | 2 */
+ActionType parseCommand(int argc, char **argv) {
+    /* Validate the argument - Must be between 0 & 2 */
+    if (argc != 2) {
+        return ACTION_INVALID;
+    }
+    int action = strtol(argv[1], NULL, 10);
+    if (strlen(argv[1]) == 1 && action >= ACTION_DISABLE && action < ACTION_INVALID) {
+        return (ActionType)action;
+    } else {
+        return ACTION_INVALID;
+    }
+}
+
 /* Display command syntax for manipulating the HCI interface */
-void display_bt_syntax() {
-    printf("Usage: H[CI] ( 0 | 1 | 2 )\n0: Disable\n1: Enable\n2: Status\n");
+void display_syntax(char *command) {
+    printf("Usage: %s ( 0 | 1 | 2 )\n0: Disable\n1: Enable\n2: Status\n", command);
+}
+
+/* Inform the caller of an invalid command
+   Either by displaying the command syntax or sending a MSG_INVALID response
+*/
+void invalid_command(char *cmd, char *arg, char *syntax) {
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+        display_syntax(syntax);
+    } else {
+        send_response(cmd, arg, MSG_INVALID);
+    }
 }
 
 /* This command is used to configure Bluetooth Classic scanning */
@@ -101,43 +126,41 @@ esp_err_t cmd_bluetooth(int argc, char **argv) {
         return ESP_ERR_NOT_ALLOWED;
     #endif
 
-    /* Validate the argument - Must be between 0 & 2 */
-    int action;
-    if (argc > 1) {
-        action = strtol(argv[1], NULL, 10);
-    }
-    if (argc == 2 && strlen(argv[1]) == 1 && action >= 0 && action < 3) {
+    ActionType action = parseCommand(argc, argv);
+    if (action == ACTION_INVALID) {
+        invalid_command(argv[0], argv[1], syntaxTip[SCAN_HCI]);
+        err = ESP_ERR_INVALID_ARG;
+    } else {
         /* Acknowledge the message */
         send_response(argv[0], argv[1], MSG_ACK);
 
         /* Perform the command */
         switch (action) {
             case ACTION_DISABLE:
-                // TODO: err = disable_bt(); esp_bt_gap_cancel_discovery();
-                //err = esp_bt_gap_cancel_discovery();
+                err = esp_bt_gap_cancel_discovery();
                 break;
             case ACTION_ENABLE:
                 err = wendigo_bt_gap_start();
                 break;
             case ACTION_STATUS:
-                // TODO: err = bt_status();
+                if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                    ESP_LOGI(TAG, "Bluetooth Classic Scanning %s\n", (scanStatus[SCAN_HCI] == ACTION_ENABLE)?"Enabled":"Disabled");
+                } else {
+                    printf("hci status %d\n", scanStatus[SCAN_HCI]);
+                }
                 break;
             default:
-                display_bt_syntax();
+                invalid_command(argv[0], argv[1], syntaxTip[SCAN_HCI]);
                 err = ESP_ERR_INVALID_ARG;
                 break;
         }
-    } else {
-        /* Notify faulty command */
-        send_response(argv[0], argv[1], MSG_ERROR);
-        err = ESP_ERR_INVALID_ARG;
     }
     if (err == ESP_OK) {
         /* Command succeeded. Inform success */
         send_response(argv[0], argv[1], MSG_OK);
     } else {
         /* Command failed */
-        send_response(argv[0], (argc == 2)?argv[1]:NULL, MSG_FAIL);
+        send_response(argv[0], argv[1], MSG_FAIL);
     }
     return ESP_OK;
 }
@@ -150,10 +173,40 @@ esp_err_t cmd_ble(int argc, char **argv) {
     return err;
 }
 
-esp_err_t cmd_wifi(int argc, char **agrv) {
+esp_err_t cmd_wifi(int argc, char **argv) {
     esp_err_t err = ESP_OK;
-    // TODO: Manipulate WiFi
-    return err;
+    ActionType action = parseCommand(argc, argv);
+    if (action == ACTION_INVALID) {
+        invalid_command(argv[0], argv[1], syntaxTip[SCAN_WIFI]);
+    } else {
+        // ACK
+        err = send_response(argv[0], argv[1], MSG_ACK);
+
+        /* Perform the command */
+        switch (action) {
+            case ACTION_ENABLE:
+            case ACTION_DISABLE:
+                err = esp_wifi_set_promiscuous(action == ACTION_ENABLE);
+                scanStatus[SCAN_WIFI] = action;
+                break;
+            case ACTION_STATUS:
+                if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                    ESP_LOGI(TAG, "WiFi Scanning %s\n", (scanStatus[SCAN_WIFI] == ACTION_ENABLE)?"Enabled":"Disabled");
+                } else {
+                    printf("wifi status %d\n", scanStatus[SCAN_WIFI]);
+                }
+                break;
+            default:
+                invalid_command(argv[0], argv[1], syntaxTip[SCAN_WIFI]);
+                break;
+        }
+    }
+    if (err == ESP_OK) {
+        send_response(argv[0], argv[1], MSG_OK);
+    } else {
+        send_response(argv[0], argv[1], MSG_FAIL);
+    }
+    return ESP_OK;
 }
 
 esp_err_t cmd_status(int argc, char **argv) {
@@ -172,6 +225,16 @@ esp_err_t cmd_version(int argc, char **argv) {
         ESP_LOGI(TAG, "esp32-Wendigo v%s\n", WENDIGO_VERSION);
     #endif
     return err;
+}
+
+/* Toggle interactive mode to interact directly with ESP32-Wendigo */
+esp_err_t cmd_interactive(int argc, char **argv) {
+    #ifdef CONFIG_FLIPPER
+        ESP_LOGW(TAG, "This build of esp32-Wendigo has Flipper enhancements enabled, some UI elements may not display well.");
+    #endif
+    /* Toggle interactive status */
+    scanStatus[SCAN_INTERACTIVE] = (scanStatus[SCAN_INTERACTIVE] + 1) % 2;
+    return ESP_OK;
 }
 
 /* Monitor mode callback
@@ -240,7 +303,7 @@ void initPromiscuous() {
     wifi_promiscuous_filter_t filter = { .filter_mask = WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_CTRL | WIFI_PROMIS_FILTER_MASK_DATA };
     esp_wifi_set_promiscuous_filter(&filter);
     esp_wifi_set_promiscuous_rx_cb(wifi_pkt_rcvd);
-    esp_wifi_set_promiscuous(true);
+    // TODO delete me esp_wifi_set_promiscuous(true);
 }
 
 static void initialize_filesystem(void)

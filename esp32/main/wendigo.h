@@ -67,13 +67,14 @@ esp_err_t cmd_ble(int argc, char **argv);
 esp_err_t cmd_wifi(int argc, char **argv);
 esp_err_t cmd_status(int argc, char **argv);
 esp_err_t cmd_version(int argc, char **argv);
+esp_err_t cmd_interactive(int argc, char **argv);
 
 void initPromiscuous();
 int initialise_wifi();
 
 bool WIFI_INITIALISED = false;
 
-#define CMD_COUNT 10
+#define CMD_COUNT 12
 esp_console_cmd_t commands[CMD_COUNT] = {
     {
         .command = "h",
@@ -125,6 +126,16 @@ esp_console_cmd_t commands[CMD_COUNT] = {
         .hint = "Wendigo Version",
         .help = "The `ver(sion)` command displays esp32-Wendigo version information",
         .func = cmd_version
+    }, {
+        .command = "i",
+        .hint = "Toggle Interactive Mode",
+        .help = "Toggle i[nteractive] mode",
+        .func = cmd_interactive
+    }, {
+        .command = "interactive",
+        .hint = "Toggle Interactive Mode",
+        .help = "Toggle i[nteractive] mode",
+        .func = cmd_interactive
     }
 };
 
