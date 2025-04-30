@@ -11,13 +11,6 @@
 #include <cmd_wifi.h>
 #include <cmd_nvs.h>
 
-#include <esp_wifi.h>
-#include <esp_wifi_types.h>
-#include <esp_gap_ble_api.h>
-#include <esp_gatt_defs.h>
-#include <esp_gattc_api.h>
-#include <esp_gap_bt_api.h>
-
 #include "common.h"
 
 #define WENDIGO_VERSION = "0.1.0"

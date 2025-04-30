@@ -21,7 +21,6 @@
 #endif
 #endif
 
-static const char* TAG = "example";
 #define PROMPT_STR CONFIG_IDF_TARGET
 
 /* Console command history can be stored to and loaded from a file.
