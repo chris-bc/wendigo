@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <string.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -45,6 +46,17 @@ void app_main(void)
     for (int i = 10; i >= 0; i--) {
         printf("Restarting in %d seconds...\n", i);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+    printf("\nEnter a line of text: ");
+    char input[256];
+    char *result = fgets(input, 256, stdin);
+    if (result[strlen(result)-1] == '\n') {
+	result[strlen(result)-1] = '\0';
+    }
+    if (result == NULL) {
+	printf("You entered nothing\n");
+    } else {
+	printf("You entered \"%s\"\n", input);
     }
     printf("Restarting now.\n");
     fflush(stdout);
