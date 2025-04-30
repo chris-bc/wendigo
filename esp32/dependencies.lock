@@ -1,0 +1,30 @@
+dependencies:
+  cmd_nvs:
+    dependencies: []
+    source:
+      path: /home/chris/Documents/Microcontrollers/esp/esp-idf/examples/system/console/advanced/components/cmd_nvs
+      type: local
+    version: '*'
+  cmd_system:
+    dependencies: []
+    source:
+      path: /home/chris/Documents/Microcontrollers/esp/esp-idf/examples/system/console/advanced/components/cmd_system
+      type: local
+    version: '*'
+  cmd_wifi:
+    dependencies: []
+    source:
+      path: /home/chris/Documents/Microcontrollers/esp/esp-idf/examples/system/console/advanced/components/cmd_wifi
+      type: local
+    version: '*'
+  idf:
+    source:
+      type: idf
+    version: 5.4.1
+direct_dependencies:
+- cmd_nvs
+- cmd_system
+- cmd_wifi
+manifest_hash: 6d54c5e451ccd396bf1c0136ca6744e4f31c8b91775ca1b87d7790cd9f317199
+target: esp32
+version: 2.0.0
