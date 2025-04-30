@@ -1,3 +1,5 @@
-idf_component_register(SRCS "wendigo.c" "bluetooth.c" "common.c"
-                    INCLUDE_DIRS ".")
-target_link_libraries(${COMPONENT_LIB} -Wl,-zmuldefs)
+idf_component_register(SRCS "wendigo_main.c"
+                       PRIV_REQUIRES spi_flash
+		       REQUIRES bt
+		       REQUIRES esp_wifi
+                       INCLUDE_DIRS ".")
