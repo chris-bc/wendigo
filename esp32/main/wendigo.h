@@ -1,10 +1,6 @@
 #ifndef WENDIGO_H
 #define WENDIGO_H
 
-#include <stdio.h>
-#include <inttypes.h>
-#include <string.h>
-
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -17,5 +13,7 @@
 #include "esp_gatt_defs.h"
 #include "esp_gattc_api.h"
 #include "esp_gap_bt_api.h"
+
+#include "common.h"
 
 #endif
