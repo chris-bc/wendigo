@@ -32,6 +32,36 @@
 #define MOUNT_PATH "/data"
 #define HISTORY_PATH MOUNT_PATH "/history.txt"
 
+esp_err_t cmd_bluetooth(int argc, char **argv) {
+    //
+    return ESP_OK;
+}
+
+esp_err_t cmd_ble(int argc, char **argv) {
+    //
+    return ESP_OK;
+}
+
+esp_err_t cmd_wifi(int argc, char **argv) {
+    //
+    return ESP_OK;
+}
+
+esp_err_t cmd_status(int argc, char **argv) {
+    //
+    return ESP_OK;
+}
+
+esp_err_t cmd_version(int argc, char **argv) {
+    //
+    return ESP_OK;
+}
+
+esp_err_t cmd_interactive(int argc, char **argv) {
+    //
+    return ESP_OK;
+}
+
 static void initialize_filesystem(void)
 {
     static wl_handle_t wl_handle;
@@ -55,6 +85,25 @@ static void initialize_nvs(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
+}
+
+static int register_wendigo_commands() {
+    esp_err_t err;
+    for (int i=0; i < CMD_COUNT; ++i) {
+        err = esp_console_cmd_register(&commands[i]);
+        switch (err) {
+        case ESP_OK:
+            ESP_LOGI(TAG, "Registered command \"%s\"...", commands[i].command);
+            break;
+        case ESP_ERR_NO_MEM:
+            ESP_LOGE(TAG, "Out of memory registering command \"%s\"!", commands[i].command);
+            return ESP_ERR_NO_MEM;
+        case ESP_ERR_INVALID_ARG:
+            ESP_LOGW(TAG, "Invalid arguments provided during registration of \"%s\". Skipping...", commands[i].command);
+            continue;
+        }
+    }
+    return ESP_OK;
 }
 
 void app_main(void)
@@ -90,6 +139,8 @@ void app_main(void)
     register_wifi();
 #endif
     register_nvs();
+
+    register_wendigo_commands();
 
 #if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
     esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
