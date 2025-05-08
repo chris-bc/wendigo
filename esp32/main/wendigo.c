@@ -32,11 +32,6 @@
 #define MOUNT_PATH "/data"
 #define HISTORY_PATH MOUNT_PATH "/history.txt"
 
-/* Override the default implementation so we can send arbitrary 802.11 packets */
-esp_err_t ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
-    return ESP_OK;
-}
-
 esp_err_t cmd_bluetooth(int argc, char **argv) {
     //
     return ESP_OK;
@@ -48,7 +43,43 @@ esp_err_t cmd_ble(int argc, char **argv) {
 }
 
 esp_err_t cmd_wifi(int argc, char **argv) {
-    //
+    esp_err_t err = ESP_OK;
+
+    ActionType action = parseCommand(argc, argv);
+    if (action == ACTION_INVALID) {
+        err = send_response(argv[0], argv[1], MSG_INVALID);
+        err = ESP_ERR_INVALID_ARG;
+    } else {
+        /* Acknowledge the message */
+        send_response(argv[0], argv[1], MSG_ACK);
+        /* Perform the command */
+        switch (action) {
+            case ACTION_DISABLE:
+                // TODO: Disable
+                break;
+            case ACTION_ENABLE:
+                // TODO: enable
+                break;
+            case ACTION_STATUS:
+                if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                    ESP_LOGI(TAG, "WiFi Scanning %s\n", (scanStatus[SCAN_WIFI] == ACTION_ENABLE)?"Enabled":"Disabled");
+                } else {
+                    printf("wifi status %d\n", scanStatus[SCAN_WIFI]);
+                }
+                break;
+            default:
+                send_response(argv[0], argv[1], MSG_INVALID);
+                err = ESP_ERR_INVALID_ARG;
+                break;
+        }
+    }
+    if (err == ESP_OK) {
+        /* Command succeeded. Inform success */
+        send_response(argv[0], argv[1], MSG_OK);
+    } else {
+        /* Command failed */
+        send_response(argv[0], argv[1], MSG_FAIL);
+    }
     return ESP_OK;
 }
 
@@ -123,45 +154,45 @@ void app_main(void)
 
     initialize_nvs();
 
-#if CONFIG_CONSOLE_STORE_HISTORY
-    initialize_filesystem();
-    repl_config.history_save_path = HISTORY_PATH;
-    ESP_LOGI(TAG, "Command history enabled");
-#else
-    ESP_LOGI(TAG, "Command history disabled");
-#endif
+    #if CONFIG_CONSOLE_STORE_HISTORY
+        initialize_filesystem();
+        repl_config.history_save_path = HISTORY_PATH;
+        ESP_LOGI(TAG, "Command history enabled");
+    #else
+        ESP_LOGI(TAG, "Command history disabled");
+    #endif
 
     /* Register commands */
     esp_console_register_help_command();
     register_system_common();
-#if SOC_LIGHT_SLEEP_SUPPORTED
-    register_system_light_sleep();
-#endif
-#if SOC_DEEP_SLEEP_SUPPORTED
-    register_system_deep_sleep();
-#endif
-#if (CONFIG_ESP_WIFI_ENABLED || CONFIG_ESP_HOST_WIFI_ENABLED)
-    register_wifi();
-#endif
+    #if SOC_LIGHT_SLEEP_SUPPORTED
+        register_system_light_sleep();
+    #endif
+    #if SOC_DEEP_SLEEP_SUPPORTED
+        register_system_deep_sleep();
+    #endif
+    #if (CONFIG_ESP_WIFI_ENABLED || CONFIG_ESP_HOST_WIFI_ENABLED)
+        register_wifi();
+    #endif
     register_nvs();
 
     register_wendigo_commands();
 
-#if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
-    esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_console_new_repl_uart(&hw_config, &repl_config, &repl));
+    #if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
+        esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_console_new_repl_uart(&hw_config, &repl_config, &repl));
 
-#elif defined(CONFIG_ESP_CONSOLE_USB_CDC)
-    esp_console_dev_usb_cdc_config_t hw_config = ESP_CONSOLE_DEV_CDC_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_console_new_repl_usb_cdc(&hw_config, &repl_config, &repl));
+    #elif defined(CONFIG_ESP_CONSOLE_USB_CDC)
+        esp_console_dev_usb_cdc_config_t hw_config = ESP_CONSOLE_DEV_CDC_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_console_new_repl_usb_cdc(&hw_config, &repl_config, &repl));
 
-#elif defined(CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG)
-    esp_console_dev_usb_serial_jtag_config_t hw_config = ESP_CONSOLE_DEV_USB_SERIAL_JTAG_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_console_new_repl_usb_serial_jtag(&hw_config, &repl_config, &repl));
+    #elif defined(CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG)
+        esp_console_dev_usb_serial_jtag_config_t hw_config = ESP_CONSOLE_DEV_USB_SERIAL_JTAG_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_console_new_repl_usb_serial_jtag(&hw_config, &repl_config, &repl));
 
-#else
-#error Unsupported console type
-#endif
+    #else
+        #error Unsupported console type
+    #endif
 
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
 }

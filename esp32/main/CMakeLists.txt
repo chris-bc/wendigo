@@ -1,4 +1,4 @@
-idf_component_register(SRCS "bluetooth.c" "wendigo.c" "common.c"
+idf_component_register(SRCS "bluetooth.c" "wendigo.c" "common.c" "wifi.c"
 		    REQUIRES bt
 		    REQUIRES esp_wifi
 			REQUIRES console
