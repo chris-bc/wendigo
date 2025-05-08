@@ -50,30 +50,72 @@ void invalid_command(char *cmd, char *arg, char *syntax) {
     }
 }
 
-/* Return the specified response over UART */
+/* Sends a `result` message corresponding to the command `cmd` with optional argument `arg` over UART
+   unless interactive mode is enabled, in which case a more readable result is printed to the console. */
 esp_err_t send_response(char *cmd, char *arg, MsgType result) {
-    char resultMsg[8];
+    char resultMsg[17];
+    bool isError = false;
     switch (result) {
         case MSG_ACK:
-            strcpy(resultMsg, "ACK");
+            isError = false;
+            if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                strcpy(resultMsg, "Executing:");
+            } else {
+                strcpy(resultMsg, "ACK");
+            }
             break;
         case MSG_OK:
-            strcpy(resultMsg, "OK");
+            isError = false;
+            if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                strcpy(resultMsg, "Success:");
+            } else {
+                strcpy(resultMsg, "OK");
+            }
             break;
         case MSG_FAIL:
-            strcpy(resultMsg, "FAIL");
+            isError = true;
+            if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                strcpy(resultMsg, "Error Running");
+            } else {
+                strcpy(resultMsg, "FAIL");
+            }
             break;
         case MSG_INVALID:
-            strcpy(resultMsg, "INVALID");
+            isError = true;
+            if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                strcpy(resultMsg, "Invalid Command:");
+            } else {
+                strcpy(resultMsg, "INVALID");
+            }
             break;
         default:
             ESP_LOGE(TAG, "Invalid result type: %d\n", result);
             return ESP_ERR_INVALID_ARG;
     }
+    /* To display the message we want to include 2 strings if arg is NULL, otherwise 3, and to order
+       printf arguments resultMsg, cmd, arg for Interactive mode; cmd, arg, resultMsg for UART mode. */
     if (arg == NULL) {
-        printf("%s %s\n", cmd, resultMsg);
+        if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+            if (isError) {
+                ESP_LOGE(TAG, "%s %s\n", resultMsg, cmd);
+            } else {
+                /* Not currently displaying non-error messages to interactive console */
+                //ESP_LOGI(TAG, "%s %s\n", resultMsg, cmd);
+            }
+        } else {
+            printf("%s %s\n", cmd, resultMsg);
+        }
     } else {
-        printf("%s %s %s\n", cmd, arg, resultMsg);
+        if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+            if (isError) {
+                ESP_LOGE(TAG, "%s %s %s\n", resultMsg, cmd, arg);
+            } else {
+                /* Not currently displaying non-error messages to interactive console */
+                //ESP_LOGI(TAG, "%s %s %s\n", resultMsg, cmd, arg);
+            }
+        } else {
+            printf("%s %s %s\n", cmd, arg, resultMsg);
+        }
     }
     return ESP_OK;
 }
@@ -92,6 +134,11 @@ ActionType parseCommand(int argc, char **argv) {
     }
 }
 
+/* A generic function that is called by the command handlers for the HCI, BLE, WIFI and INTERACTIVE commands.
+   Parses the command line to determine and perform the requested action, sending appropriate messages to the UART
+   host throughout. If a command requires `radio` to be enabled or disabled the function pointer `enableFunction()`
+   or `disableFunction` is executed. These functions must take no arguments and return esp_err_t (or int).
+*/
 esp_err_t enableDisableRadios(int argc, char **argv, ScanType radio, esp_err_t (*enableFunction)(), esp_err_t (*disableFunction)()) {
     esp_err_t result = ESP_OK;
     ActionType action = parseCommand(argc, argv);
