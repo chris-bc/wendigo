@@ -41,13 +41,13 @@ static void bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
             char bdaStr[MAC_STRLEN + 1];
             bda2str(param->disc_res.bda, bdaStr, MAC_STRLEN + 1);
             printf("ESP_BT_GAP_DISC_RES_EVT for device: %s\n", bdaStr);
+            // TODO: Extract properties about device and send to host
             break;
         case ESP_BT_GAP_DISC_STATE_CHANGED_EVT:
             if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STOPPED) {
                 printf("ESP_BT_GAP_DSC_STATE_CHANGED_EVT: ESP_BT_GAP_DISCOVERY_STOPPED:\n");
                 if (scanStatus[SCAN_HCI] == ACTION_ENABLE) {
                     printf("Restarting...\n");
-                    //state = APP_GAP_STATE_DEVICE_DISCOVERING;
                     esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, CONFIG_BT_SCAN_DURATION, 0);
                 }
             } else if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STARTED) {
@@ -78,7 +78,6 @@ esp_err_t wendigo_bt_gap_start() {
     err |= esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
 
     /* Start to discover nearby devices */
-    //state = APP_GAP_STATE_DEVICE_DISCOVERING;
     err |= esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, CONFIG_BT_SCAN_DURATION, 0);
 
     return err;
