@@ -217,7 +217,15 @@ esp_err_t cmd_status(int argc, char **argv) {
         #else
             char *uuidDictionary = "NO";
         #endif
-        printf("\n*****************************************************\n*              Wendigo version %7s              *\n*                Chris Bennetts-Cash                *\n*                                                   *\n*    Compiled With UUID Dictionary: %6s          *\n*    Bluetooth Classic Scanning: %9s          *\n*    Bluetooth Low Energy Scanning: %6s          *\n*    WiFi Scanning: %22s          *\n*****************************************************\n", WENDIGO_VERSION, uuidDictionary, (scanStatus[SCAN_HCI] == ACTION_ENABLE)?"ACTIVE":"IDLE", (scanStatus[SCAN_BLE] == ACTION_ENABLE)?"ACTIVE":"IDLE", (scanStatus[SCAN_WIFI] == ACTION_ENABLE)?"ACTIVE":"IDLE");
+        printf("\n*****************************************************\n*              Wendigo \
+version %7s              *\n*                Chris Bennetts-Cash                *\n*            \
+                                       *\n*    Compiled With UUID Dictionary: %6s          *\n* \
+   Bluetooth Classic Scanning: %9s          *\n*    Bluetooth Low Energy Scanning: %6s          \
+*\n*    WiFi Scanning: %22s          *\n*****************************************************\n",
+                WENDIGO_VERSION, uuidDictionary,
+                (scanStatus[SCAN_HCI] == ACTION_ENABLE)?"ACTIVE":"IDLE",
+                (scanStatus[SCAN_BLE] == ACTION_ENABLE)?"ACTIVE":"IDLE",
+                (scanStatus[SCAN_WIFI] == ACTION_ENABLE)?"ACTIVE":"IDLE");
     } else {
         /* This command is not valid unless running interactively */
         send_response(argv[0], argv[1], MSG_INVALID);
