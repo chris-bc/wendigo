@@ -53,9 +53,24 @@ esp_err_t initialise_wifi() {
         wifi_promiscuous_filter_t filter = { .filter_mask = WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_CTRL | WIFI_PROMIS_FILTER_MASK_DATA };
         esp_wifi_set_promiscuous_filter(&filter);
         esp_wifi_set_promiscuous_rx_cb(wifi_pkt_rcvd);
-        // TODO Is this needed? esp_wifi_set_promiscuous(true);
 
         WIFI_INITIALISED = true;
     }
+    return ESP_OK;
+}
+
+/* Enable wifi scanning */
+esp_err_t wendigo_wifi_enable() {
+    esp_err_t result = ESP_OK;
+    if (!WIFI_INITIALISED) {
+        result = initialise_wifi();
+    }
+    result |= esp_wifi_set_promiscuous(true);
+    return result;
+}
+
+/* Disable wifi scanning */
+esp_err_t wendigo_wifi_disable() {
+    esp_wifi_set_promiscuous(false);
     return ESP_OK;
 }

@@ -23,6 +23,11 @@ esp_err_t cmd_status(int argc, char **argv);
 esp_err_t cmd_version(int argc, char **argv);
 esp_err_t cmd_interactive(int argc, char **argv);
 
+void invalid_command(char *cmd, char *arg, char *syntax);
+void display_syntax(char *command);
+esp_err_t send_response(char *cmd, char *arg, MsgType result);
+ActionType parseCommand(int argc, char **argv);
+
 #define CMD_COUNT 12
 esp_console_cmd_t commands[CMD_COUNT] = {
     {

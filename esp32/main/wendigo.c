@@ -9,6 +9,7 @@
 
 #include "wendigo.h"
 #include "common.h"
+#include "wifi.h"
 
 /*
  * We warn if a secondary serial console is enabled. A secondary serial console is always output-only and
@@ -31,6 +32,64 @@
 
 #define MOUNT_PATH "/data"
 #define HISTORY_PATH MOUNT_PATH "/history.txt"
+
+/* Display command syntax when in interactive mode */
+void display_syntax(char *command) {
+    printf("Usage: %s ( 0 | 1 | 2 )\n0: Disable\n1: Enable\n2: Status\n", command);
+}
+
+/* Inform the caller of an invalid command
+   Either by displaying the command syntax or sending a MSG_INVALID response
+*/
+void invalid_command(char *cmd, char *arg, char *syntax) {
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+        display_syntax(syntax);
+    } else {
+        send_response(cmd, arg, MSG_INVALID);
+    }
+}
+
+/* Return the specified response over UART */
+esp_err_t send_response(char *cmd, char *arg, MsgType result) {
+    char resultMsg[8];
+    switch (result) {
+        case MSG_ACK:
+            strcpy(resultMsg, "ACK");
+            break;
+        case MSG_OK:
+            strcpy(resultMsg, "OK");
+            break;
+        case MSG_FAIL:
+            strcpy(resultMsg, "FAIL");
+            break;
+        case MSG_INVALID:
+            strcpy(resultMsg, "INVALID");
+            break;
+        default:
+            ESP_LOGE(TAG, "Invalid result type: %d\n", result);
+            return ESP_ERR_INVALID_ARG;
+    }
+    if (arg == NULL) {
+        printf("%s %s\n", cmd, resultMsg);
+    } else {
+        printf("%s %s %s\n", cmd, arg, resultMsg);
+    }
+    return ESP_OK;
+}
+
+/* Command syntax is <command> <ActionType>, where ActionType :== 0 | 1 | 2 */
+ActionType parseCommand(int argc, char **argv) {
+    /* Validate the argument - Must be between 0 & 2 */
+    if (argc != 2) {
+        return ACTION_INVALID;
+    }
+    int action = strtol(argv[1], NULL, 10);
+    if (strlen(argv[1]) == 1 && action >= ACTION_DISABLE && action < ACTION_INVALID) {
+        return (ActionType)action;
+    } else {
+        return ACTION_INVALID;
+    }
+}
 
 esp_err_t cmd_bluetooth(int argc, char **argv) {
     //
@@ -55,10 +114,16 @@ esp_err_t cmd_wifi(int argc, char **argv) {
         /* Perform the command */
         switch (action) {
             case ACTION_DISABLE:
-                // TODO: Disable
+                if (scanStatus[SCAN_WIFI]) {
+                    scanStatus[SCAN_WIFI] = false;
+                    err = wendigo_wifi_disable();
+                }
                 break;
             case ACTION_ENABLE:
-                // TODO: enable
+                if (!scanStatus[SCAN_WIFI]) {
+                    scanStatus[SCAN_WIFI] = true;
+                    err = wendigo_wifi_enable();
+                }
                 break;
             case ACTION_STATUS:
                 if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {

@@ -6,48 +6,6 @@ esp_err_t outOfMemory() {
     return ESP_ERR_NO_MEM;
 }
 
-/* Return the specified response over UART */
-esp_err_t send_response(char *cmd, char *arg, MsgType result) {
-    char resultMsg[8];
-    switch (result) {
-        case MSG_ACK:
-            strcpy(resultMsg, "ACK");
-            break;
-        case MSG_OK:
-            strcpy(resultMsg, "OK");
-            break;
-        case MSG_FAIL:
-            strcpy(resultMsg, "FAIL");
-            break;
-        case MSG_INVALID:
-            strcpy(resultMsg, "INVALID");
-            break;
-        default:
-            ESP_LOGE(TAG, "Invalid result type: %d\n", result);
-            return ESP_ERR_INVALID_ARG;
-    }
-    if (arg == NULL) {
-        printf("%s %s\n", cmd, resultMsg);
-    } else {
-        printf("%s %s %s\n", cmd, arg, resultMsg);
-    }
-    return ESP_OK;
-}
-
-/* Command syntax is <command> <ActionType>, where ActionType :== 0 | 1 | 2 */
-ActionType parseCommand(int argc, char **argv) {
-    /* Validate the argument - Must be between 0 & 2 */
-    if (argc != 2) {
-        return ACTION_INVALID;
-    }
-    int action = strtol(argv[1], NULL, 10);
-    if (strlen(argv[1]) == 1 && action >= ACTION_DISABLE && action < ACTION_INVALID) {
-        return (ActionType)action;
-    } else {
-        return ACTION_INVALID;
-    }
-}
-
 /* General purpose byte to string convertor
    byteCount specifies the number of bytes to be converted to a string,
    commencing at bytes.
