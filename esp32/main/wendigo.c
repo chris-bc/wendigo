@@ -32,6 +32,11 @@
 #define MOUNT_PATH "/data"
 #define HISTORY_PATH MOUNT_PATH "/history.txt"
 
+/* Override the default implementation so we can send arbitrary 802.11 packets */
+esp_err_t ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
+    return ESP_OK;
+}
+
 esp_err_t cmd_bluetooth(int argc, char **argv) {
     //
     return ESP_OK;

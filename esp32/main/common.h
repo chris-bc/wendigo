@@ -61,5 +61,8 @@ char *syntaxTip[SCAN_COUNT] = { "H[CI]", "B[LE]", "W[IFI]", "I[NTERACTIVE]" };
 esp_err_t bytes_to_string(uint8_t *bytes, char *string, int byteCount);
 esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac);
 esp_err_t mac_string_to_bytes(char *strMac, uint8_t *bMac);
+esp_err_t outOfMemory();
+esp_err_t send_response(char *cmd, char *arg, MsgType result);
+ActionType parseCommand(int argc, char **argv);
 
 #endif
