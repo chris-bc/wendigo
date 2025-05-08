@@ -204,8 +204,24 @@ esp_err_t cmd_wifi(int argc, char **argv) {
     return ESP_OK;
 }
 
+/* The `status` command is intended to provide an overall picture of ESP32-Wendigo's current state:
+   * Scanning status for each radio
+   * Compiled with Bluetooth UUID dictionary (CONFIG_DECODE_UUIDS)
+   * ???
+   This is only relevant to interactive use.
+*/
 esp_err_t cmd_status(int argc, char **argv) {
-    //
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+        #if defined(CONFIG_DECODE_UUIDS)
+            char *uuidDictionary = "YES";
+        #else
+            char *uuidDictionary = "NO";
+        #endif
+        printf("\n*****************************************************\n*              Wendigo version %7s              *\n*                Chris Bennetts-Cash                *\n*                                                   *\n*    Compiled With UUID Dictionary: %6s          *\n*    Bluetooth Classic Scanning: %9s          *\n*    Bluetooth Low Energy Scanning: %6s          *\n*    WiFi Scanning: %22s          *\n*****************************************************\n", WENDIGO_VERSION, uuidDictionary, (scanStatus[SCAN_HCI] == ACTION_ENABLE)?"ACTIVE":"IDLE", (scanStatus[SCAN_BLE] == ACTION_ENABLE)?"ACTIVE":"IDLE", (scanStatus[SCAN_WIFI] == ACTION_ENABLE)?"ACTIVE":"IDLE");
+    } else {
+        /* This command is not valid unless running interactively */
+        send_response(argv[0], argv[1], MSG_INVALID);
+    }
     return ESP_OK;
 }
 
