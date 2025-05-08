@@ -106,7 +106,7 @@ esp_err_t cmd_wifi(int argc, char **argv) {
 
     ActionType action = parseCommand(argc, argv);
     if (action == ACTION_INVALID) {
-        err = send_response(argv[0], argv[1], MSG_INVALID);
+        invalid_command(argv[0], argv[1], syntaxTip[SCAN_WIFI]);
         err = ESP_ERR_INVALID_ARG;
     } else {
         /* Acknowledge the message */
@@ -133,7 +133,7 @@ esp_err_t cmd_wifi(int argc, char **argv) {
                 }
                 break;
             default:
-                send_response(argv[0], argv[1], MSG_INVALID);
+                invalid_command(argv[0], argv[1], syntaxTip[SCAN_WIFI]);
                 err = ESP_ERR_INVALID_ARG;
                 break;
         }
