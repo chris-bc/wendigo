@@ -13,7 +13,7 @@
 
 #include "common.h"
 
-#define WENDIGO_VERSION = "0.1.0"
+#define WENDIGO_VERSION "0.1.0"
 
 /* Command handlers */
 esp_err_t cmd_bluetooth(int argc, char **argv);

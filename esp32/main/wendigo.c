@@ -106,13 +106,17 @@ esp_err_t enableDisableRadios(int argc, char **argv, ScanType radio, esp_err_t (
             case ACTION_DISABLE:
                 if (scanStatus[radio] == ACTION_ENABLE) {
                     scanStatus[radio] = ACTION_DISABLE;
-                    result = disableFunction();
+                    if (disableFunction != NULL) {
+                        result = disableFunction();
+                    }
                 }
                 break;
             case ACTION_ENABLE:
                 if (scanStatus[radio] == ACTION_DISABLE) {
                     scanStatus[radio] = ACTION_ENABLE;
-                    result = enableFunction();
+                    if (enableFunction != NULL) {
+                        result = enableFunction();
+                    }
                 }
                 break;
             case ACTION_STATUS:
@@ -159,12 +163,20 @@ esp_err_t cmd_status(int argc, char **argv) {
 }
 
 esp_err_t cmd_version(int argc, char **argv) {
-    //
+    char msg[17];
+    snprintf(msg, sizeof(msg), "Wendigo v%s\n", WENDIGO_VERSION);
+    send_response(argv[0], NULL, MSG_ACK);
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+        ESP_LOGI(TAG, "%s", msg);
+    } else {
+        printf(msg);
+    }
+    send_response(argv[0], NULL, MSG_OK);
     return ESP_OK;
 }
 
 esp_err_t cmd_interactive(int argc, char **argv) {
-    //
+    enableDisableRadios(argc, argv, SCAN_INTERACTIVE, NULL, NULL);
     return ESP_OK;
 }
 
