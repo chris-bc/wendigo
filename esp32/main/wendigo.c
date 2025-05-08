@@ -10,6 +10,7 @@
 #include "wendigo.h"
 #include "common.h"
 #include "wifi.h"
+#include "bluetooth.h"
 
 /*
  * We warn if a secondary serial console is enabled. A secondary serial console is always output-only and
@@ -29,9 +30,9 @@
  * wear_levelling library.
  */
 #if CONFIG_CONSOLE_STORE_HISTORY
-
-#define MOUNT_PATH "/data"
-#define HISTORY_PATH MOUNT_PATH "/history.txt"
+    #define MOUNT_PATH "/data"
+    #define HISTORY_PATH MOUNT_PATH "/history.txt"
+#endif // CONFIG_STORE_HISTORY
 
 /* Display command syntax when in interactive mode */
 void display_syntax(char *command) {
@@ -91,60 +92,64 @@ ActionType parseCommand(int argc, char **argv) {
     }
 }
 
-esp_err_t cmd_bluetooth(int argc, char **argv) {
-    //
-    return ESP_OK;
-}
-
-esp_err_t cmd_ble(int argc, char **argv) {
-    //
-    return ESP_OK;
-}
-
-esp_err_t cmd_wifi(int argc, char **argv) {
-    esp_err_t err = ESP_OK;
-
+esp_err_t enableDisableRadios(int argc, char **argv, ScanType radio, esp_err_t (*enableFunction)(), esp_err_t (*disableFunction)()) {
+    esp_err_t result = ESP_OK;
     ActionType action = parseCommand(argc, argv);
     if (action == ACTION_INVALID) {
-        invalid_command(argv[0], argv[1], syntaxTip[SCAN_WIFI]);
-        err = ESP_ERR_INVALID_ARG;
+        invalid_command(argv[0], argv[1], syntaxTip[radio]);
+        result = ESP_ERR_INVALID_ARG;
     } else {
         /* Acknowledge the message */
         send_response(argv[0], argv[1], MSG_ACK);
-        /* Perform the command */
+        /* Is the radio being turned on, turned off, or queried? */
         switch (action) {
             case ACTION_DISABLE:
-                if (scanStatus[SCAN_WIFI]) {
-                    scanStatus[SCAN_WIFI] = false;
-                    err = wendigo_wifi_disable();
+                if (scanStatus[radio] == ACTION_ENABLE) {
+                    scanStatus[radio] = ACTION_DISABLE;
+                    result = disableFunction();
                 }
                 break;
             case ACTION_ENABLE:
-                if (!scanStatus[SCAN_WIFI]) {
-                    scanStatus[SCAN_WIFI] = true;
-                    err = wendigo_wifi_enable();
+                if (scanStatus[radio] == ACTION_DISABLE) {
+                    scanStatus[radio] = ACTION_ENABLE;
+                    result = enableFunction();
                 }
                 break;
             case ACTION_STATUS:
                 if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-                    ESP_LOGI(TAG, "WiFi Scanning %s\n", (scanStatus[SCAN_WIFI] == ACTION_ENABLE)?"Enabled":"Disabled");
+                    ESP_LOGI(TAG, "%s Scanning %s\n", radioFullNames[radio], (scanStatus[radio] == ACTION_ENABLE)?"Enabled":"Disabled");
                 } else {
-                    printf("wifi status %d\n", scanStatus[SCAN_WIFI]);
+                    printf("%s status %d\n", radioShortNames[radio], scanStatus[radio]);
                 }
                 break;
             default:
-                invalid_command(argv[0], argv[1], syntaxTip[SCAN_WIFI]);
-                err = ESP_ERR_INVALID_ARG;
+                invalid_command(argv[0], argv[1], syntaxTip[radio]);
+                result = ESP_ERR_INVALID_ARG;
                 break;
         }
     }
-    if (err == ESP_OK) {
-        /* Command succeeded. Inform success */
-        send_response(argv[0], argv[1], MSG_OK);
-    } else {
-        /* Command failed */
-        send_response(argv[0], argv[1], MSG_FAIL);
+    /* Reply with MSG_OK or MSG_FAIL */
+    // TODO: Incorporate interactive mode
+    MsgType reply = MSG_OK;
+    if (result != ESP_OK) {
+        reply = MSG_FAIL;
     }
+    send_response(argv[0], argv[1], reply);
+    return ESP_OK;
+}
+
+esp_err_t cmd_bluetooth(int argc, char **argv) {
+    enableDisableRadios(argc, argv, SCAN_HCI, wendigo_bt_enable, wendigo_bt_disable);
+    return ESP_OK;
+}
+
+esp_err_t cmd_ble(int argc, char **argv) {
+    enableDisableRadios(argc, argv, SCAN_BLE, wendigo_ble_enable, wendigo_ble_disable);
+    return ESP_OK;
+}
+
+esp_err_t cmd_wifi(int argc, char **argv) {
+    enableDisableRadios(argc, argv, SCAN_WIFI, wendigo_wifi_enable, wendigo_wifi_disable);
     return ESP_OK;
 }
 
@@ -176,7 +181,6 @@ static void initialize_filesystem(void)
         return;
     }
 }
-#endif // CONFIG_STORE_HISTORY
 
 static void initialize_nvs(void)
 {

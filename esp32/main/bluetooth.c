@@ -1,6 +1,82 @@
 #include "bluetooth.h"
 #include "uuids.c"
 
+bool BT_INITIALISED = false;
+
+esp_err_t wendigo_bt_initialise() {
+    esp_err_t result = ESP_OK;
+    if (!BT_INITIALISED) {
+        esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+        #if defined(CONFIG_BT_CLASSIC_ENABLED)
+            #if defined(CONFIG_BT_BLE_ENABLED)
+                bt_cfg.mode = ESP_BT_MODE_BTDM;
+            #else
+                bt_cfg.mode = ESP_BT_MODE_CLASSIC_BT;
+            #endif
+        #else
+            #if defined(CONFIG_BT_BLE_ENABLED)
+                bt_cfg.mode = ESP_BT_MODE_BLE;
+            #else
+                /* No Bluetooth support */
+                bt_cfg.mode = ESP_BT_MODE_IDLE;
+                return ESP_ERR_NOT_SUPPORTED;
+            #endif
+        #endif
+        result |= esp_bt_controller_init(&bt_cfg);
+        /* Enable WiFi sleep mode in order for wireless coexistence to work */
+        esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+        result |= esp_bt_controller_enable(bt_cfg.mode);
+        result |= esp_bluedroid_init();
+        result |= esp_bluedroid_enable();
+        BT_INITIALISED = true;
+    }
+    return result;
+}
+
+esp_err_t wendigo_bt_enable() {
+    esp_err_t result = ESP_OK;
+    if (!BT_INITIALISED) {
+        result = wendigo_bt_initialise();
+        if (result != ESP_OK) {
+            return result;
+        }
+    }
+    return result;
+}
+
+esp_err_t wendigo_bt_disable() {
+    esp_err_t result = ESP_OK;
+    if (!BT_INITIALISED) {
+        result = wendigo_bt_initialise();
+        if (result != ESP_OK) {
+            return result;
+        }
+    }
+    return result;
+}
+
+esp_err_t wendigo_ble_enable() {
+    esp_err_t result = ESP_OK;
+    if (!BT_INITIALISED) {
+        result = wendigo_bt_initialise();
+        if (result != ESP_OK) {
+            return result;
+        }
+    }
+    return result;
+}
+
+esp_err_t wendigo_ble_disable() {
+    esp_err_t result = ESP_OK;
+    if (!BT_INITIALISED) {
+        result = wendigo_bt_initialise();
+        if (result != ESP_OK) {
+            return result;
+        }
+    }
+    return result;
+}
+
 /* cod2deviceStr
    Converts a uint32_t representing a Bluetooth Class Of Device (COD)'s major
    device code into a useful string descriptor of the specified COD major device.
@@ -115,6 +191,7 @@ esp_err_t cod2shortStr(uint32_t cod, char *string, uint8_t *stringLen) {
     return err;
 }
 
+/* Convert Bluetooth Device Address (equivalent to MAC) to a printable hex string */
 char *bda2str(esp_bd_addr_t bda, char *str, size_t size) {
     if (bda == NULL || str == NULL || size < (MAC_STRLEN + 1)) {
         return NULL;
@@ -125,6 +202,7 @@ char *bda2str(esp_bd_addr_t bda, char *str, size_t size) {
     return str;
 }
 
+/* Convert a UUID (service or attribute descriptor) to a printable hex string */
 char *uuid2str(esp_bt_uuid_t *uuid, char *str, size_t size) {
     if (uuid == NULL || str == NULL) {
         return NULL;

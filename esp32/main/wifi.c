@@ -12,7 +12,7 @@ void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type) {
     wifi_promiscuous_pkt_t *data = (wifi_promiscuous_pkt_t *)buf;
 
     UNUSED(data);
-    //ESP_LOGE("UNIMPLEMENTED", "wifi_pkt_rcvd is not yet implemented, I don't know what to do with this packet but its RSSI is %d\n", data->rx_ctrl.rssi);
+    ESP_LOGE("UNIMPLEMENTED", "wifi_pkt_rcvd is not yet implemented, I don't know what to do with this packet but its RSSI is %d\n", data->rx_ctrl.rssi);
 
     return;
 }
