@@ -2,7 +2,7 @@
 
 /* Display a simple out of memory message and set error code */
 esp_err_t outOfMemory() {
-    printf("Out of memory\n");
+    printf("%s\n", STRING_MALLOC_FAIL;
     return ESP_ERR_NO_MEM;
 }
 
@@ -44,11 +44,7 @@ esp_err_t bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
     uint8_t nBytes = (strlen(strMac) + 1) / 3; /* Support arbitrary-length string */
     char *working = strMac;
     if (nBytes == 0) {
-        #ifdef CONFIG_FLIPPER
-            printf("mac_string_to_bytes()\ninvalid input\n   \"%s\"\n", strMac);
-        #else
-            ESP_LOGE(TAG, "mac_string_to_bytes() called with an invalid string - There are no bytes\n\t%s\tExpected format 0A:1B:2C:3D:4E:5F:60", strMac);
-        #endif
+        ESP_LOGE(TAG, "mac_string_to_bytes() called with an invalid string - There are no bytes\n\t%s\tExpected format 0A:1B:2C:3D:4E:5F:60", strMac);
         return ESP_ERR_INVALID_ARG;
     }
     for (int i = 0; i < nBytes; ++i, ++working) {

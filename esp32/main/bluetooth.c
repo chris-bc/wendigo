@@ -207,20 +207,13 @@ esp_err_t cod2shortStr(uint32_t cod, char *string, uint8_t *stringLen) {
             strcpy(temp, "A/V");
             break;
         case ESP_BT_COD_MAJOR_DEV_PERIPHERAL:
-            #ifdef CONFIG_FLIPPER
-                strcpy(temp, "Periph.");
-            #else
-                strcpy(temp, "Peripheral");
-            #endif
+            strcpy(temp, "Peripheral");
             break;
         case ESP_BT_COD_MAJOR_DEV_IMAGING:
             strcpy(temp, "Imaging");
             break;
         case ESP_BT_COD_MAJOR_DEV_WEARABLE:
             strcpy(temp, "Wearable");
-            #ifdef CONFIG_FLIPPER
-                temp[7] = '\0'; /* Truncate the last character if necessary */
-            #endif
             break;
         case ESP_BT_COD_MAJOR_DEV_TOY:
             strcpy(temp, "Toy");

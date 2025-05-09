@@ -22,7 +22,15 @@
 #define MAC_STRLEN 17
 
 /* Common string definitions */
-char STRINGS_MALLOC_FAIL[] = "Unable to allocate memory ";
+static const char STRING_MALLOC_FAIL[] = "Unable to allocate memory ";
+static const char STRING_YES[] = "YES";
+static const char STRING_NO[] = "NO";
+static const char STRING_NA[] = "N/A";
+static const char STRING_ACTIVE[] = "ACTIVE";
+static const char STRING_IDLE[] = "IDLE";
+static const char STRING_ENABLE[] = "ENABLE";
+static const char STRING_DISABLE[] = "DISABLE";
+static const char STRING_STATUS[] = "STATUS";
 
 /* enums */
 typedef enum {

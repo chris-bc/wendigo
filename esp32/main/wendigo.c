@@ -36,7 +36,9 @@
 
 /* Display command syntax when in interactive mode */
 void display_syntax(char *command) {
-    printf("Usage: %s ( 0 | 1 | 2 )\n0: Disable\n1: Enable\n2: Status\n", command);
+    printf("Usage: %s ( %d | %d | %d )\n%d: %s\n%d: %s\n%d: %s\n", command, ACTION_DISABLE,
+           ACTION_ENABLE, ACTION_STATUS, ACTION_DISABLE, STRING_DISABLE, ACTION_ENABLE,
+           STRING_ENABLE, ACTION_STATUS, STRING_STATUS);
 }
 
 /* Inform the caller of an invalid command
@@ -168,7 +170,7 @@ esp_err_t enableDisableRadios(int argc, char **argv, ScanType radio, esp_err_t (
                 break;
             case ACTION_STATUS:
                 if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-                    ESP_LOGI(TAG, "%s Scanning %s\n", radioFullNames[radio], (scanStatus[radio] == ACTION_ENABLE)?"Enabled":"Disabled");
+                    ESP_LOGI(TAG, "%s Scanning: %s\n", radioFullNames[radio], (scanStatus[radio] == ACTION_ENABLE)?STRING_ACTIVE:STRING_IDLE);
                 } else {
                     printf("%s status %d\n", radioShortNames[radio], scanStatus[radio]);
                 }
@@ -213,20 +215,38 @@ esp_err_t cmd_wifi(int argc, char **argv) {
 esp_err_t cmd_status(int argc, char **argv) {
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         #if defined(CONFIG_DECODE_UUIDS)
-            char *uuidDictionary = "YES";
+            char *uuidDictionary = STRING_YES;
         #else
-            char *uuidDictionary = "NO";
+            char *uuidDictionary = STRING_NO;
         #endif
+        #if defined(CONFIG_BT_CLASSIC_ENABLED)
+            char *btClassicSupport = STRING_YES;
+        #else
+            char *btClassicSupport = STRING_NO;
+        #endif
+        #if defined(CONFIG_BT_BLE_ENABLED)
+            char *btBLESupport = STRING_YES;
+        #else
+            char *btBLESupport = STRING_NO;
+        #endif
+        #if defined(CONFIG_ESP_WIFI_ENABLED) || defined(CONFIG_ESP_HOST_WIFI_ENABLED)
+            char *wifiSupport = STRING_YES;
+        #else
+            char *wifiSupport = STRING_NO;
+        #endif
+        // TODO: Construct this programmatically. Don't waste so much memory.
         printf("\n*****************************************************\n*              Wendigo \
 version %7s              *\n*                Chris Bennetts-Cash                *\n*            \
                                        *\n*                                                   *\n\
-*    Compiled With Bluetooth Dictionary: %7s    *\n*    Bluetooth Classic Scanning: %15s    *\n*\
-    Bluetooth Low Energy Scanning: %12s    *\n*    WiFi Scanning: %28s    *\n*                  \
-                                 *\n*****************************************************\n",
-                WENDIGO_VERSION, uuidDictionary,
-                (scanStatus[SCAN_HCI] == ACTION_ENABLE)?"ACTIVE":"IDLE",
-                (scanStatus[SCAN_BLE] == ACTION_ENABLE)?"ACTIVE":"IDLE",
-                (scanStatus[SCAN_WIFI] == ACTION_ENABLE)?"ACTIVE":"IDLE");
+*    Compiled With Bluetooth Dictionary: %7s    *\n*    Bluetooth Classic Supported: %14s    *\n\
+*    Bluetooth Low Energy Supported: %11s    *\n*    WiFi Supported: %27s    *\n*    Bluetooth C\
+lassic Scanning: %15s    *\n*    Bluetooth Low Energy Scanning: %12s    *\n*    WiFi Scanning: \
+%28s    *\n*                                                   *\n******************************\
+***********************\n",
+                WENDIGO_VERSION, uuidDictionary, btClassicSupport, btBLESupport, wifiSupport,
+                (strcmp(btClassicSupport, STRING_YES))?STRING_NA:(scanStatus[SCAN_HCI] == ACTION_ENABLE)?STRING_ACTIVE:STRING_IDLE,
+                (strcmp(btBLESupport, STRING_YES))?STRING_NA:(scanStatus[SCAN_BLE] == ACTION_ENABLE)?STRING_ACTIVE:STRING_IDLE,
+                (strcmp(wifiSupport, STRING_YES))?STRING_NA:(scanStatus[SCAN_WIFI] == ACTION_ENABLE)?STRING_ACTIVE:STRING_IDLE);
     } else {
         /* This command is not valid unless running interactively */
         send_response(argv[0], argv[1], MSG_INVALID);
