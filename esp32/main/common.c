@@ -2,7 +2,7 @@
 
 /* Display a simple out of memory message and set error code */
 esp_err_t outOfMemory() {
-    printf("%s\n", STRING_MALLOC_FAIL;
+    printf("%s\n", STRING_MALLOC_FAIL);
     return ESP_ERR_NO_MEM;
 }
 
