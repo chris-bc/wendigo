@@ -73,8 +73,25 @@ bool BLE_INITIALISED = false;
 
 esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
     esp_err_t result = ESP_OK;
+    char *dev_type = (dev->scanType == SCAN_HCI)?radioShortNames[SCAN_HCI]:(dev->scanType == SCAN_BLE)?radioShortNames[SCAN_BLE]:"UNK";
+    char bda_str[MAC_STRLEN + 1];
+    bda2str(dev->bda, bda_str, MAC_STRLEN + 1);
+    char formatted_name[dev->bdname_len + 3];
+    printf("\nbdname_len: %d\n", dev->bdname_len);
+    printf("\nbdname[0]: %c\n",dev->bdname[0]);
+    printf("\nbdname: %s\n", dev->bdname);
+    if (dev->bdname_len == 0) {
+        strcpy(formatted_name, "");
+    } else {
+        //snprintf(formatted_name, dev->bdname_len + 2, "(%s)", dev->bdname);
+        sprintf(formatted_name, "(%s)", dev->bdname);
+    }
+    char cod_str[59];
+    uint8_t cod_str_len = 0;
+    cod2deviceStr(dev->cod, cod_str, &cod_str_len);
 
-    //
+    printf("*******************************************\n*    %3s Device %s %s    *\n*    %22s RSSI: %4ld    *\n*******************************************\n",
+            dev_type, bda_str, formatted_name, cod_str, dev->rssi);
 
     return result;
 }

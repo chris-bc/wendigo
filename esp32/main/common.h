@@ -60,7 +60,7 @@ typedef enum {
 const char *TAG = "WENDIGO";
 ActionType scanStatus[SCAN_COUNT] = { ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE };
 char *syntaxTip[SCAN_COUNT] = { "H[CI]", "B[LE]", "W[IFI]", "I[NTERACTIVE]" };
-char *radioShortNames[SCAN_COUNT] = { "hci", "ble", "wifi", "interactive" };
+char *radioShortNames[SCAN_COUNT] = { "HCI", "BLE", "WiFi", "Interactive" };
 char *radioFullNames[SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi", "Interactive Mode" };
 
 /* Function declarations */
