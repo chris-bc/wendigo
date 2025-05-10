@@ -126,7 +126,7 @@ Controls ESP32-Wendigo's Follow Mode. In Follow Mode ESP32-Wendigo only displays
 
 ### Command Arguments
 
-The hci, ble, wifi, follow, and interactive commands follow the same syntax, requiring a single argument to specify whether to enable, disable, or query the status or the feature.
+The hci, ble, wifi, follow, and interactive commands follow the same syntax, requiring a single argument to specify whether to enable, disable, or query the status of the feature.
 
   * 0: Disable
   * 1: Enable
