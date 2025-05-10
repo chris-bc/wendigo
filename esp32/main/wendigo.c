@@ -215,24 +215,24 @@ esp_err_t cmd_wifi(int argc, char **argv) {
 esp_err_t cmd_status(int argc, char **argv) {
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         #if defined(CONFIG_DECODE_UUIDS)
-            char *uuidDictionary = STRING_YES;
+            const char *uuidDictionary = STRING_YES;
         #else
-            char *uuidDictionary = STRING_NO;
+            const char *uuidDictionary = STRING_NO;
         #endif
         #if defined(CONFIG_BT_CLASSIC_ENABLED)
-            char *btClassicSupport = STRING_YES;
+            const char *btClassicSupport = STRING_YES;
         #else
-            char *btClassicSupport = STRING_NO;
+            const char *btClassicSupport = STRING_NO;
         #endif
         #if defined(CONFIG_BT_BLE_ENABLED)
-            char *btBLESupport = STRING_YES;
+            const char *btBLESupport = STRING_YES;
         #else
-            char *btBLESupport = STRING_NO;
+            const char *btBLESupport = STRING_NO;
         #endif
         #if defined(CONFIG_ESP_WIFI_ENABLED) || defined(CONFIG_ESP_HOST_WIFI_ENABLED)
-            char *wifiSupport = STRING_YES;
+            const char *wifiSupport = STRING_YES;
         #else
-            char *wifiSupport = STRING_NO;
+            const char *wifiSupport = STRING_NO;
         #endif
         // TODO: Construct this programmatically. Don't waste so much memory.
         printf("\n*****************************************************\n*              Wendigo \
@@ -368,4 +368,6 @@ void app_main(void)
     #endif
 
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
+
+    printf("\nREADY\n");
 }

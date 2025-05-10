@@ -67,14 +67,18 @@ Wendigo is a Flipper Zero application to detect, monitor and track nearby wirele
 <a id="getting-started"></a>
 ## Getting Started
 
-Once the application has a functional base binaries will be made available under *Releases*. Alternatively, especially if you want the latest features or to contribute to the development, you can build the application from source, 
+Wendigo is in its early stages of development. The Flipper Zero application provides an initial outline of its expected functionality, but does not yet communicate with its companion ESP32 firmware in any way at all.
+
+**The Flipper Zero application currently does not function**.
+
+Once the Flipper and ESP32 applications have a functional base binaries will be made available under *Releases*. Alternatively, especially if you want the latest features or to contribute to the development, you can compile the application yourself, as described below.
 
 <a id="prerequisites"></a>
 ### Prerequisites
 
 <a id="flipper-prerequisites"></a>
 #### Flipper Zero
-Download source code for your preferred firmware. The most popular unofficial distributions are Momentum, RogueMaster and Unleashed, although a variety of other distributions are also available.
+Download source code for your preferred Flipper Zero firmware. The most popular unofficial distributions are Momentum, RogueMaster and Unleashed, although a variety of other distributions are also available.
 
 * Momentum Firmware:
   ```sh
@@ -124,7 +128,7 @@ These instructions are written under the assumption that the above packages have
    cd ~/esp-idf
    ./install.sh
    ```
-2. Configure your current terminal session for ESP-IDF. This must be run prior to a new terminal session running idf.py.
+2. Configure your current terminal session for ESP-IDF. This must be done before running ```idf.py``` in your current terminal session (note that if you have multiple terminal windows open you must run this in *every* terminal window you would like to run ```idf.py``` in).
    ```sh
    . ./export.sh
    ```
@@ -136,7 +140,7 @@ These instructions are written under the assumption that the above packages have
    ```sh
    cd ~/wendigo/esp32
    idf.py set-target <target chipset>
-   idf.py menuconfig
+   (optional) idf.py menuconfig
    idf.py build flash
    ```
 5. Install the Flipper Zero toolchain and compile firmware
@@ -177,20 +181,36 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 <a id="roadmap"></a>
 ## Roadmap
-There isn't much value in reading this at the moment because not enough has been built to be useful. So this section is for me :)
+Because Wendigo is still in early development the following changes are core to its initial functionality. Hopefully it won't be too much longer before this is a useful tool and the roadmap is filled with more interesting, and perhaps esoteric, things. :)
 
-- [ ] Finish basic command parsing
-	- [ ] And state maintenance - flags etc
-- [ ] Implement BT Classic scanning
-- [ ] Implement BLE scanning
-- [ ] Deliver bluetooth data to Flipper
-- [ ] Create Flipper data model
-- [ ] Create Flipper UI
-- [ ] Flipper settings
-	- [ ] ESP32 integration
-- [ ] Target and monitor devices
-- [ ] WiFi scanning
-- [ ] Update Kconfig menu items
+* [ ] First cut protocol to represent devices from all sources
+  * [ ] Probably start with a fully-encapsulated, primitive-based struct
+  * [ ] Then simply serialise/deserialise at either end
+* [ ] Develop a Flipper-based logging mechanism and support for multiple streams of data
+  * [ ] Logs which go directly to a buffer or file;
+  * [ ] Device info which goes directly to display
+* [ ] Consider creating a Wireshark plugin to monitor the protocol
+* [ ] Deliver BLE results to ESP32 dispatcher
+* [ ] Obtain BT Classic device information
+* [ ] Deliver BT Classic results to dispatcher
+* [ ] Obtain WiFi device information
+* [ ] Deliver WiFi results to dispatcher
+* [ ] WiFi Channel hopping
+* [ ] Bluetooth service discovery
+* [ ] Expand protocol to support transmission of service details
+* [ ] Refactor all logging, error handling and status functionality
+  * [ ] In FZ mode dispatch to FZ logging mechanism
+* [ ] Consider whether and how to reduce the volume of scan results
+  * [ ] Reduce scan output in interactive mode by caching device details
+  * [ ] Consider applying similar caching to FZ
+* [ ] Create Flipper data model
+* [ ] Create Flipper UI
+* [ ] Flipper settings
+  * [ ] ESP32 integration
+  * [ ] Ability to flash ESP32 firmware from Flipper?
+* [ ] Target and monitor devices
+  * [ ] **Focus** mode that restricts received data to devices of interest only
+  * [ ] Designed to be usable from console as well as from Flipper
 
 See the [open issues](https://github.com/chris-bc/wendigo/issues) for a full list of proposed features (and known issues).
 
