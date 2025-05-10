@@ -72,7 +72,7 @@ I (423315) BTDM_INIT: Bluetooth MAC: d4:8a:fc:xx:xx:xx
 I (423315) phy_init: phy_version 4860,6b7a6e5,Feb  6 2025,14:47:07
 I (424035) HCI@Wendigo: event: 10
 h 1 OK
-HCI 3c:22:fb:xx:xx:xx
+HCI 3c:22:fb:xx:xx:xx RSSI -65
 esp32> h 0
 h 0 ACK
 h 0 OK
