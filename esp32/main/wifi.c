@@ -27,8 +27,8 @@ esp_err_t initialise_wifi() {
         /* Set up promiscuous mode */
         wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
         ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-        // TODO: I should probably change this to WIFI_STORAGE_FLASH
-        ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+        // NOTE: This was previously WIFI_STORAGE_RAM
+        ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
 
         /* Dummy AP to specify a channel and get WiFi hardware into a
            mode where we can send arbitrary frames. */

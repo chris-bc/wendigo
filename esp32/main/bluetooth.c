@@ -8,6 +8,8 @@
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
 static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void ble_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
+esp_err_t cod2deviceStr(uint32_t cod, char *string, uint8_t *stringLen);
+static bool get_string_name_from_eir(uint8_t *eir, char *bdname, uint8_t *bdname_len);
 
 enum bt_device_parameters {
     BT_PARAM_COD = 0,
@@ -68,6 +70,30 @@ static esp_gattc_descr_elem_t *descr_elem_result    = NULL;
 
 bool BT_INITIALISED = false;
 bool BLE_INITIALISED = false;
+
+esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
+    esp_err_t result = ESP_OK;
+
+    //
+
+    return result;
+}
+
+esp_err_t display_gap_uart(wendigo_bt_device *dev) {
+    esp_err_t result = ESP_OK;
+
+    //
+
+    return result;
+}
+
+esp_err_t display_gap_device(wendigo_bt_device *dev) {
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+        return display_gap_interactive(dev);
+    } else {
+        return display_gap_uart(dev);
+    }
+}
 
 esp_err_t wendigo_bt_initialise() {
     esp_err_t result = ESP_OK;
@@ -142,6 +168,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     uint8_t *adv_name = NULL;
     uint8_t adv_name_len = 0;
     char bdaStr[MAC_STRLEN + 1];
+    wendigo_bt_device dev;
     switch (event) {
         case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT:
             esp_ble_gap_start_scanning(CONFIG_BLE_SCAN_SECONDS);
@@ -179,7 +206,15 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
         case ESP_GAP_BLE_GET_DEV_NAME_COMPLETE_EVT:
                 bda2str(param->scan_rst.bda, bdaStr, MAC_STRLEN + 1); //TODO: Confirm param->scan_rst.bda exists
                 ESP_LOGI(BLE_TAG, "Got a complete BLE device name for %s: %s. Status %d", bdaStr, param->get_dev_name_cmpl.name, param->get_dev_name_cmpl.status);
-                // TODO: Notify device update
+                memcpy(dev.bda, param->scan_rst.bda, sizeof(esp_bd_addr_t));
+                dev.bdname = (char *)malloc(sizeof(char) * (strlen(param->get_dev_name_cmpl.name) + 1));
+                if (dev.bdname == NULL) {
+                    outOfMemory();
+                    break;
+                }
+                strncpy(dev.bdname, param->get_dev_name_cmpl.name, strlen(param->get_dev_name_cmpl.name) + 1);
+                // TODO: Can I get anything else out of these structs?
+                display_gap_device(&dev);
                 break;
         case ESP_GAP_BLE_SCAN_RESULT_EVT:
             esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
@@ -198,9 +233,9 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     break;
                 case ESP_GAP_SEARCH_INQ_RES_EVT:
                     /* Get device info */
-                    wendigo_bt_device dev;
                     memcpy(dev.bda, scan_result->scan_rst.bda, sizeof(esp_bd_addr_t));
                     dev.rssi = scan_result->scan_rst.rssi;
+                    dev.scanType = SCAN_BLE;
                     /* Name */
                     adv_name = esp_ble_resolve_adv_data(scan_result->scan_rst.ble_adv,
                                                         ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
@@ -225,7 +260,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     // TODO: Can I find the COD (Class Of Device) anywhere?
                     bda2str(dev.bda, bdaStr, MAC_STRLEN + 1);
                     ESP_LOGI(BLE_TAG, "Found device %s (%s).", bdaStr, dev.bdname);
-                    // TODO: Notify dev
+                    display_gap_device(&dev);
                     break;
                 default:
                     break;
@@ -480,6 +515,65 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
     }
 }
 
+wendigo_bt_device *bt_device_from_gap_cb(esp_bt_gap_cb_param_t *param) {
+    wendigo_bt_device *dev = (wendigo_bt_device *)malloc(sizeof(wendigo_bt_device));
+    esp_bt_gap_dev_prop_t *p;
+    char codDevType[59]; /* Placeholder to store COD major device type */
+    uint8_t codDevTypeLen = 0;
+    char dev_bdname[ESP_BT_GAP_MAX_BDNAME_LEN + 1];
+    
+    dev->scanType = SCAN_HCI;
+    memcpy(dev->bda, param->disc_res.bda, ESP_BD_ADDR_LEN);
+
+    /* Collect all the properties we have */
+    int numProp = param->disc_res.num_prop;
+    for (int i = 0; i < numProp; ++i) {
+        p = param->disc_res.prop + i;
+        switch (p->type) {
+            case ESP_BT_GAP_DEV_PROP_COD:
+                dev->cod = *(uint32_t *)(p->val);
+                cod2deviceStr(dev->cod, codDevType, &codDevTypeLen);
+                break;
+            case ESP_BT_GAP_DEV_PROP_RSSI:
+                dev->rssi = *(int8_t *)(p->val);
+                break;
+            case ESP_BT_GAP_DEV_PROP_BDNAME:
+                dev->bdname_len = (p->len > ESP_BT_GAP_MAX_BDNAME_LEN) ? ESP_BT_GAP_MAX_BDNAME_LEN :
+                        (uint8_t)p->len;
+                dev->bdname = (char *)malloc(sizeof(char) * (dev->bdname_len + 1));
+                if (dev->bdname == NULL) {
+                    outOfMemory();
+                    break;
+                }
+                memcpy(dev->bdname, p->val, dev->bdname_len);
+                dev->bdname[dev->bdname_len] = '\0';
+                break;
+            case ESP_BT_GAP_DEV_PROP_EIR:
+                dev->eir = (uint8_t *)malloc(sizeof(uint8_t) * p->len);
+                if (dev->eir == NULL) {
+                    outOfMemory();
+                    break;
+                }
+                memcpy(dev->eir, p->val, p->len);
+                dev->eir_len = p->len;
+                break;
+            default:
+                break;
+        }
+    }
+
+    /* If we didn't get a bdname check EIR for a name */
+    if (dev->bdname_len == 0) {
+        get_string_name_from_eir(dev->eir, dev_bdname, &(dev->bdname_len));
+        if (dev->bdname_len > 0) {
+            dev->bdname = (char *)malloc(sizeof(char) * (strlen(dev_bdname) + 1));
+            strncpy(dev->bdname, dev_bdname, strlen(dev_bdname) + 1);
+        }
+    }
+    
+    return dev;
+}
+
 /* Bluetooth Classic Discovery callback - Called on Bluetooth Classic events including
    device discovery, additional device information, discovery completed */
 static void bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param) {
@@ -488,7 +582,11 @@ static void bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
             char bdaStr[MAC_STRLEN + 1];
             bda2str(param->disc_res.bda, bdaStr, MAC_STRLEN + 1);
             printf("ESP_BT_GAP_DISC_RES_EVT for device: %s\n", bdaStr);
-            // TODO: Extract properties about device and send to host - update_device_info(param) in Gravity
+            wendigo_bt_device *dev = bt_device_from_gap_cb(param);
+            if (dev == NULL) {
+                ESP_LOGE(BT_TAG, "Failed to obtain device from event parameters :(");
+            }
+            display_gap_device(dev);
             break;
         case ESP_BT_GAP_DISC_STATE_CHANGED_EVT:
             if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STOPPED) {

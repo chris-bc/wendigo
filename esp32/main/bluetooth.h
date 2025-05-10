@@ -46,5 +46,6 @@ esp_err_t wendigo_bt_enable();
 esp_err_t wendigo_bt_disable();
 esp_err_t wendigo_ble_enable();
 esp_err_t wendigo_ble_disable();
+esp_err_t display_gap_device(wendigo_bt_device *dev);
 
 #endif
