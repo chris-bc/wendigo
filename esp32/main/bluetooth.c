@@ -9,6 +9,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
 static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 static void ble_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
 esp_err_t cod2deviceStr(uint32_t cod, char *string, uint8_t *stringLen);
+esp_err_t cod2shortStr(uint32_t cod, char *string, uint8_t *stringLen);
 static bool get_string_name_from_eir(uint8_t *eir, char *bdname, uint8_t *bdname_len);
 
 enum bt_device_parameters {
@@ -123,10 +124,47 @@ esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
     return result;
 }
 
+void repeat_bytes(uint8_t byte, uint8_t count) {
+    for (int i = 0; i < count; ++i) {
+        putc(byte, stdout);
+    }
+}
+
+void send_bytes(uint8_t *bytes, uint8_t size) {
+    for (int i = 0; i < size; ++i) {
+        putc(bytes[i], stdout);
+    }
+}
+
+/* Send device info to stdout to transmit over UART
+   Initial plan had been to stream bytes directly from `dev`, but that causes difficulties for
+     a) Using pointers for bdname and eir
+     b) Using a uint32_t, rather than a textual description, for COD
+   I'm now torn between sticking with text or making this work...
+*/
 esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     esp_err_t result = ESP_OK;
+    char cod_short[SHORT_COD_MAX_LEN];
+    uint8_t cod_len;
+    cod2shortStr(dev->cod, cod_short, &cod_len);
 
-    //
+    /* Send a stream of 0xFF to mark beginning of transmission */
+    repeat_bytes(0xFF, 8);
+    /* Send `dev` */
+    uint8_t *devBytes = (uint8_t *)dev;
+    send_bytes(devBytes, sizeof(*dev));
+    /* Send a stream of 0xEE as an interlude */
+    repeat_bytes(0xEE, 8);
+    /* bdname */
+    send_bytes((uint8_t *)(dev->bdname), dev->bdname_len + 1);
+    /* The story continues... */
+    repeat_bytes(0xDD, 8);
+    send_bytes(dev->eir, dev->eir_len);
+    repeat_bytes(0xCC, 8);
+    send_bytes((uint8_t *)cod_short, cod_len + 1);
+    repeat_bytes(0xBB, 8);
+    putc('\n', stdout);
+    fflush(stdout);
 
     return result;
 }
