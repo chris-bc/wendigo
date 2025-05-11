@@ -28,6 +28,15 @@ menu "Wendigo Configuration"
             performance impact this setting is mostly concerned with how frequentnly you would
             like a status update.
             Developer's recommendation: 0x10 (16).
+    
+    config DELAY_AFTER_DEVICE_DISPLAYED
+        int "Delay before a device is re-reported in Interactive Mode"
+        default 2000
+        help
+            This specifies the minimum time that must elapse before a device that has been
+            reported in scanning will be reported again in Interactive Mode. While this may
+            reduce the quality of scan results, without this setting the interactive display
+            is immediately crowded by multiple reports of the same device.
 
     config DECODE_UUIDS
         bool "Include Bluetooth UUID Dictionary"
