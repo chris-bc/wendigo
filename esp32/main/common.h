@@ -69,4 +69,7 @@ esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac);
 esp_err_t mac_string_to_bytes(char *strMac, uint8_t *bMac);
 esp_err_t outOfMemory();
 
+void print_star(int size, bool newline);
+void print_space(int size, bool newline);
+
 #endif

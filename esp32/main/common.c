@@ -1,5 +1,23 @@
 #include "common.h"
 
+/* Helper functions to simplify, and minimise memory use of, banners */
+void print_star(int size, bool newline) {
+    for (int i = 0; i < size; ++i) {
+        putc('*', stdout);
+    }
+    if (newline) {
+        putc('\n', stdout);
+    }
+}
+void print_space(int size, bool newline) {
+    for (int i = 0; i < size; ++i) {
+        putc(' ', stdout);
+    }
+    if (newline) {
+        putc('\n', stdout);
+    }
+}
+
 /* Display a simple out of memory message and set error code */
 esp_err_t outOfMemory() {
     printf("%s\n", STRING_MALLOC_FAIL);

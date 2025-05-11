@@ -11,6 +11,9 @@
 #include <esp_gap_bt_api.h>
 #include <esp_gatt_common_api.h>
 
+#define COD_MAX_LEN 59
+#define SHORT_COD_MAX_LEN 11
+
 static const char *BT_TAG = "HCI@Wendigo";
 static const char *BLE_TAG = "BLE@Wendigo";
 

@@ -73,25 +73,52 @@ bool BLE_INITIALISED = false;
 
 esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
     esp_err_t result = ESP_OK;
+    bool cod_fit = false;
     char *dev_type = (dev->scanType == SCAN_HCI)?radioShortNames[SCAN_HCI]:(dev->scanType == SCAN_BLE)?radioShortNames[SCAN_BLE]:"UNK";
     char bda_str[MAC_STRLEN + 1];
     bda2str(dev->bda, bda_str, MAC_STRLEN + 1);
-    char formatted_name[dev->bdname_len + 3];
-    printf("\nbdname_len: %d\n", dev->bdname_len);
-    printf("\nbdname[0]: %c\n",dev->bdname[0]);
-    printf("\nbdname: %s\n", dev->bdname);
-    if (dev->bdname_len == 0) {
-        strcpy(formatted_name, "");
-    } else {
-        //snprintf(formatted_name, dev->bdname_len + 2, "(%s)", dev->bdname);
-        sprintf(formatted_name, "(%s)", dev->bdname);
-    }
-    char cod_str[59];
+    char cod_str[COD_MAX_LEN];
     uint8_t cod_str_len = 0;
     cod2deviceStr(dev->cod, cod_str, &cod_str_len);
 
-    printf("*******************************************\n*    %3s Device %s %s    *\n*    %22s RSSI: %4ld    *\n*******************************************\n",
-            dev_type, bda_str, formatted_name, cod_str, dev->rssi);
+    const int banner_width = 62;
+    print_star(banner_width, true);
+    print_star(1, false);
+    print_space(4, false);
+    printf("%3s Device %s", dev_type, bda_str);
+    print_space(14, false);
+    printf("RSSI: %4ld", dev->rssi);
+    print_space(4, false);
+    print_star(1, true);
+    /* Put name on line 2 if we have a name */
+    if (dev->bdname_len > 0) {
+        print_star(1, false);
+        print_space(4, false);
+        printf("Name: \"%s\"", dev->bdname);
+        /* Can name and COD fit on a single line? */
+        /* Requires 10 + "Name: "bdname" Class: COD" < 62 => 26 + strlen(bdname) + strlen(cod) <= 62 */
+        if ((26 + strlen(dev->bdname) + strlen(cod_str)) <= banner_width) {
+            cod_fit = true;
+            /* How many spaces between name and COD? (62 - 25 (=37) - strlen(bdname) - strlen(cod)) */
+            print_space(37 - strlen(dev->bdname) - strlen(cod_str), false);
+            printf("Class: %s", cod_str);
+            print_space(4, false);
+            print_star(1, true);
+        } else {
+            print_space(banner_width - 14 - strlen(dev->bdname), false);
+            print_star(1, true);
+        }
+    }
+    if (!cod_fit) {
+        /* COD can be anywhere from 3 characters to 58, we'd better centre it in the banner */
+        int num_spaces = ((banner_width - strlen(cod_str)) / 2) - 1;
+        print_star(1, false);
+        print_space(num_spaces, false);
+        printf("%s", cod_str);
+        print_space(banner_width - 2 - num_spaces - strlen(cod_str), false);
+        print_star(1, true);
+    }
+    print_star(banner_width, true);
 
     return result;
 }
@@ -276,7 +303,6 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     }
                     // TODO: Can I find the COD (Class Of Device) anywhere?
                     bda2str(dev.bda, bdaStr, MAC_STRLEN + 1);
-                    ESP_LOGI(BLE_TAG, "Found device %s (%s).", bdaStr, dev.bdname);
                     display_gap_device(&dev);
                     break;
                 default:
@@ -534,8 +560,10 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
 
 wendigo_bt_device *bt_device_from_gap_cb(esp_bt_gap_cb_param_t *param) {
     wendigo_bt_device *dev = (wendigo_bt_device *)malloc(sizeof(wendigo_bt_device));
+    dev->eir_len = 0;
+    dev->bdname_len = 0;
     esp_bt_gap_dev_prop_t *p;
-    char codDevType[59]; /* Placeholder to store COD major device type */
+    char codDevType[COD_MAX_LEN]; /* Placeholder to store COD major device type */
     uint8_t codDevTypeLen = 0;
     char dev_bdname[ESP_BT_GAP_MAX_BDNAME_LEN + 1];
     
@@ -598,7 +626,6 @@ static void bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
         case ESP_BT_GAP_DISC_RES_EVT:
             char bdaStr[MAC_STRLEN + 1];
             bda2str(param->disc_res.bda, bdaStr, MAC_STRLEN + 1);
-            printf("ESP_BT_GAP_DISC_RES_EVT for device: %s\n", bdaStr);
             wendigo_bt_device *dev = bt_device_from_gap_cb(param);
             if (dev == NULL) {
                 ESP_LOGE(BT_TAG, "Failed to obtain device from event parameters :(");
@@ -704,7 +731,7 @@ esp_err_t wendigo_ble_disable() {
 */
 esp_err_t cod2deviceStr(uint32_t cod, char *string, uint8_t *stringLen) {
     esp_err_t err = ESP_OK;
-    char temp[59] = "";
+    char temp[COD_MAX_LEN] = "";
     esp_bt_cod_major_dev_t devType = esp_bt_gap_get_cod_major_dev(cod);
     switch (devType) {
         case ESP_BT_COD_MAJOR_DEV_MISC:
@@ -753,7 +780,7 @@ esp_err_t cod2deviceStr(uint32_t cod, char *string, uint8_t *stringLen) {
 /* As above, but returning a shortened string suitable for display by VIEW */
 esp_err_t cod2shortStr(uint32_t cod, char *string, uint8_t *stringLen) {
     esp_err_t err = ESP_OK;
-    char temp[11] = "";
+    char temp[SHORT_COD_MAX_LEN] = "";
     esp_bt_cod_major_dev_t devType = esp_bt_gap_get_cod_major_dev(cod);
     switch (devType) {
         case ESP_BT_COD_MAJOR_DEV_MISC:
