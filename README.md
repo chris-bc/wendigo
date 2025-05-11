@@ -203,7 +203,7 @@ Because Wendigo is still in early development the following changes are core to 
 * [ ] Refactor all logging, error handling and status functionality
   * [ ] In FZ mode dispatch to FZ logging mechanism
 * [ ] Consider whether and how to reduce the volume of scan results
-  * [ ] Reduce scan output in interactive mode by caching device details
+  * [X] Reduce scan output in interactive mode by caching device details
   * [ ] Consider applying similar caching to FZ
 * [ ] Create Flipper data model
 * [ ] Create Flipper UI

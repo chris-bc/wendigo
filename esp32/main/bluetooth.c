@@ -1,5 +1,6 @@
 #include "bluetooth.h"
 #include "uuids.c"
+#include <sys/time.h>
 
 #define REMOTE_SERVICE_UUID     0x00FF
 #define REMOTE_NOTIFY_CHAR_UUID 0xFF01
@@ -72,7 +73,54 @@ static esp_gattc_descr_elem_t *descr_elem_result    = NULL;
 bool BT_INITIALISED = false;
 bool BLE_INITIALISED = false;
 
+/* Storage to maintain a cache of recently-displayed devices */
+uint16_t num_gap_devices = 0;
+uint16_t gap_capacity = 0;
+typedef struct GapDeviceTime {
+    esp_bd_addr_t bda;
+    struct timeval lastSeen;
+} GapDeviceTime;
+GapDeviceTime *all_gap_devices;
+
 esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
+    /* Before doing anything else check if we have seen this device
+       within CONFIG_DELAY_AFTER_DEVICE_DISPLAYED ms */
+    if (CONFIG_DELAY_AFTER_DEVICE_DISPLAYED > 0) {
+        /* Is BDA in all_gap_devices? */
+        int idx = 0;
+        for (; idx < num_gap_devices && memcmp(dev->bda, all_gap_devices[idx].bda, ESP_BD_ADDR_LEN); ++idx) {}
+        if (idx == num_gap_devices) {
+            /* Not Found - Add it to the array and continue */
+            if (num_gap_devices == gap_capacity) {
+                /* No spare array capacity - malloc more */
+                GapDeviceTime *new_gap_devices = malloc(sizeof(GapDeviceTime) * (gap_capacity + 10));
+                if (new_gap_devices != NULL) {
+                    memcpy(new_gap_devices, all_gap_devices, sizeof(GapDeviceTime) * gap_capacity);
+                    if (gap_capacity > 0 && all_gap_devices != NULL) {
+                        free(all_gap_devices);
+                    }
+                    gap_capacity += 10;
+                    all_gap_devices = new_gap_devices;
+                }
+            }
+            /* Testing again in case the malloc above failed */
+            if (num_gap_devices < gap_capacity) {
+                memcpy(all_gap_devices[num_gap_devices].bda, dev->bda, ESP_BD_ADDR_LEN);
+                gettimeofday(&(all_gap_devices[num_gap_devices].lastSeen), NULL);
+                ++num_gap_devices;
+            }
+        } else {
+            /* We've seen it before - decide whether it was too recent and update lastSeen */
+            struct timeval nowTime;
+            gettimeofday(&nowTime, NULL);
+            double elapsed = (nowTime.tv_sec - all_gap_devices[idx].lastSeen.tv_sec) * 1000.0;
+            /* Update lastSeen with current time */
+            gettimeofday(&all_gap_devices[idx].lastSeen, NULL);
+            if (elapsed < CONFIG_DELAY_AFTER_DEVICE_DISPLAYED) {
+                return ESP_OK;
+            }
+        }
+    }
     esp_err_t result = ESP_OK;
     bool cod_fit = false;
     char *dev_type = (dev->scanType == SCAN_HCI)?radioShortNames[SCAN_HCI]:(dev->scanType == SCAN_BLE)?radioShortNames[SCAN_BLE]:"UNK";
