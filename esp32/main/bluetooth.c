@@ -156,7 +156,9 @@ esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     /* Send a stream of 0xEE as an interlude */
     repeat_bytes(0xEE, 8);
     /* bdname */
-    send_bytes((uint8_t *)(dev->bdname), dev->bdname_len + 1);
+    if (dev->bdname_len > 0) {
+        send_bytes((uint8_t *)(dev->bdname), dev->bdname_len + 1);
+    }
     /* The story continues... */
     repeat_bytes(0xDD, 8);
     send_bytes(dev->eir, dev->eir_len);
@@ -175,6 +177,16 @@ esp_err_t display_gap_device(wendigo_bt_device *dev) {
     } else {
         return display_gap_uart(dev);
     }
+}
+
+esp_err_t free_gap_device(wendigo_bt_device *dev) {
+    if (dev->bdname_len > 0 && dev->bdname != NULL) {
+        free(dev->bdname);
+    }
+    if (dev->eir_len > 0 && dev->eir != NULL) {
+        free(dev->eir);
+    }
+    return ESP_OK;
 }
 
 esp_err_t wendigo_bt_initialise() {
@@ -251,6 +263,14 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     uint8_t adv_name_len = 0;
     char bdaStr[MAC_STRLEN + 1];
     wendigo_bt_device dev;
+    /* I'm pretty sure these will be initialised because it's on the stack,
+       but the consequences of being wrong are too annoying */
+    dev.bdname_len = 0;
+    dev.eir_len = 0;
+    dev.cod = 0;
+    dev.bdname = NULL;
+    dev.eir = NULL;
+    dev.scanType = SCAN_BLE;
     switch (event) {
         case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT:
             esp_ble_gap_start_scanning(CONFIG_BLE_SCAN_SECONDS);
@@ -297,6 +317,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 strncpy(dev.bdname, param->get_dev_name_cmpl.name, strlen(param->get_dev_name_cmpl.name) + 1);
                 // TODO: Can I get anything else out of these structs?
                 display_gap_device(&dev);
+                free_gap_device(&dev);
                 break;
         case ESP_GAP_BLE_SCAN_RESULT_EVT:
             esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
@@ -342,6 +363,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     // TODO: Can I find the COD (Class Of Device) anywhere?
                     bda2str(dev.bda, bdaStr, MAC_STRLEN + 1);
                     display_gap_device(&dev);
+                    free_gap_device(&dev);
                     break;
                 default:
                     break;
@@ -600,12 +622,15 @@ wendigo_bt_device *bt_device_from_gap_cb(esp_bt_gap_cb_param_t *param) {
     wendigo_bt_device *dev = (wendigo_bt_device *)malloc(sizeof(wendigo_bt_device));
     dev->eir_len = 0;
     dev->bdname_len = 0;
+    dev->bdname = NULL;
+    dev->eir = NULL;
+    dev->cod = 0;
+    dev->scanType = SCAN_HCI;
     esp_bt_gap_dev_prop_t *p;
     char codDevType[COD_MAX_LEN]; /* Placeholder to store COD major device type */
     uint8_t codDevTypeLen = 0;
     char dev_bdname[ESP_BT_GAP_MAX_BDNAME_LEN + 1];
     
-    dev->scanType = SCAN_HCI;
     memcpy(dev->bda, param->disc_res.bda, ESP_BD_ADDR_LEN);
 
     /* Collect all the properties we have */
@@ -649,7 +674,7 @@ wendigo_bt_device *bt_device_from_gap_cb(esp_bt_gap_cb_param_t *param) {
     if (dev->bdname_len == 0) {
         get_string_name_from_eir(dev->eir, dev_bdname, &(dev->bdname_len));
         if (dev->bdname_len > 0) {
-            dev->bdname = (char *)malloc(sizeof(char) * (strlen(dev_bdname) + 1));
+            dev->bdname = (char *)malloc(sizeof(char) * (dev->bdname_len + 1));
             strncpy(dev->bdname, dev_bdname, strlen(dev_bdname) + 1);
         }
     }
@@ -669,6 +694,8 @@ static void bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
                 ESP_LOGE(BT_TAG, "Failed to obtain device from event parameters :(");
             }
             display_gap_device(dev);
+            free_gap_device(dev);
+            free(dev);
             break;
         case ESP_BT_GAP_DISC_STATE_CHANGED_EVT:
             if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STOPPED) {

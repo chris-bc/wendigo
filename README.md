@@ -183,16 +183,18 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 ## Roadmap
 Because Wendigo is still in early development the following changes are core to its initial functionality. Hopefully it won't be too much longer before this is a useful tool and the roadmap is filled with more interesting, and perhaps esoteric, things. :)
 
-* [ ] First cut protocol to represent devices from all sources
-  * [ ] Probably start with a fully-encapsulated, primitive-based struct
-  * [ ] Then simply serialise/deserialise at either end
+* [ ] First cut WiFi protocol
+* [X] First cut combined bluetooth protocol
+  * [X] Probably start with a fully-encapsulated, primitive-based struct
+  * [X] Serialise from ESP32
+  * [ ] Deserialise from Flipper
 * [ ] Develop a Flipper-based logging mechanism and support for multiple streams of data
   * [ ] Logs which go directly to a buffer or file;
   * [ ] Device info which goes directly to display
 * [ ] Consider creating a Wireshark plugin to monitor the protocol
-* [ ] Deliver BLE results to ESP32 dispatcher
-* [ ] Obtain BT Classic device information
-* [ ] Deliver BT Classic results to dispatcher
+* [X] Deliver BLE results to ESP32 dispatcher
+* [X] Obtain BT Classic device information
+* [X] Deliver BT Classic results to dispatcher
 * [ ] Obtain WiFi device information
 * [ ] Deliver WiFi results to dispatcher
 * [ ] WiFi Channel hopping
@@ -210,6 +212,7 @@ Because Wendigo is still in early development the following changes are core to 
   * [ ] Ability to flash ESP32 firmware from Flipper?
 * [ ] Target and monitor devices
   * [ ] **Focus** mode that restricts received data to devices of interest only
+  * [ ] **Tag** command to select devices
   * [ ] Designed to be usable from console as well as from Flipper
 
 See the [open issues](https://github.com/chris-bc/wendigo/issues) for a full list of proposed features (and known issues).
