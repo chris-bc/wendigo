@@ -66,9 +66,9 @@ char *radioShortNames[SCAN_COUNT] = { "HCI", "BLE", "WiFi", "Interactive", "Tag"
 char *radioFullNames[SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi", "Interactive Mode", "Tag Devices", "Focus Mode" };
 
 /* Function declarations */
-esp_err_t bytes_to_string(uint8_t *bytes, char *string, int byteCount);
+esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount);
 esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac);
-esp_err_t mac_string_to_bytes(char *strMac, uint8_t *bMac);
+esp_err_t wendigo_string_to_bytes(char *strMac, uint8_t *bMac);
 esp_err_t outOfMemory();
 
 void print_star(int size, bool newline);

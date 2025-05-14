@@ -128,11 +128,40 @@ ActionType parseCommand(int argc, char **argv) {
     if (argc != 2) {
         return ACTION_INVALID;
     }
-    int action = strtol(argv[1], NULL, 10);
-    if (strlen(argv[1]) == 1 && action >= ACTION_DISABLE && action < ACTION_INVALID) {
+    uint8_t action = strtol(argv[1], NULL, 10);
+    if (strlen(argv[1]) == 1 && action < ACTION_INVALID) {
         return (ActionType)action;
     } else {
         return ACTION_INVALID;
+    }
+}
+
+/* Tag syntax is tag <MAC> <ActionType>, where ActionType :== 0 | 1 | 2 (or 3 for ACTION_INVALID) */
+ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr) {
+    if (argc == 1 || argc > 3) {
+        return ACTION_INVALID;
+    }
+    /* argv[1] must be a MAC/BDA - Check it has the right number of bytes
+       (and won't buffer overflow etc).
+    */
+    if ((strlen(argv[1] + 1) / 3) != ESP_BD_ADDR_LEN) {
+        return ACTION_INVALID;
+    }
+    esp_err_t result = wendigo_string_to_bytes(argv[1], addr);
+    if (result != ESP_OK) {
+        return ACTION_INVALID;
+    }
+    /* argv[2], if it exists, must contain a valid ActionType enum */
+    if (argc == 3) {
+        uint8_t action = strtol(argv[2], NULL, 10);
+        if (strlen(argv[2]) == 1 && action < ACTION_INVALID) {
+            return (ActionType)action;
+        } else {
+            return ACTION_INVALID;
+        }
+    } else {
+        /* If no action specified, return the status */
+        return ACTION_STATUS;
     }
 }
 
@@ -311,7 +340,14 @@ esp_err_t cmd_interactive(int argc, char **argv) {
    If no action specified, toggle the tag state.
 */
 esp_err_t cmd_tag(int argc, char **argv) {
-    //
+    esp_bd_addr_t addr;
+    ActionType action = parse_command_tag(argc, argv, addr);
+    if (action == ACTION_INVALID) {
+        invalid_command(argv[0], argv[1], syntaxTip[SCAN_TAG]);
+        return ESP_ERR_INVALID_ARG;
+    }
+    send_response(argv[0], argv[1], MSG_ACK);
+    // TODO: Finish this - find specified device and set/get tag status
 
     return ESP_OK;
 }

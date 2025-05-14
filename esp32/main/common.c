@@ -32,7 +32,7 @@ esp_err_t outOfMemory() {
    String length (including terminating \0) will be 3 * byteCount
    (standard formatting - 0F:AA:E5)
 */
-esp_err_t bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
+esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
     esp_err_t err = ESP_OK;
     char temp[4];
     memset(string, '\0', (3 * byteCount));
@@ -50,6 +50,7 @@ esp_err_t bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
 /* Convert the specified byte array to a string representing
    a MAC address. strMac must be a pointer initialised to
    contain at least 18 bytes (MAC + '\0') */
+// TODO: Refactor to use bytes_to_string()
    esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac) {
     sprintf(strMac, "%02X:%02X:%02X:%02X:%02X:%02X", bMac[0],
             bMac[1], bMac[2], bMac[3], bMac[4], bMac[5]);
@@ -58,7 +59,7 @@ esp_err_t bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
 
 /* Convert the specified string to a byte array
    bMac must be a pointer to 6 bytes of allocated memory */
-   esp_err_t mac_string_to_bytes(char *strMac, uint8_t *bMac) {
+   esp_err_t wendigo_string_to_bytes(char *strMac, uint8_t *bMac) {
     uint8_t nBytes = (strlen(strMac) + 1) / 3; /* Support arbitrary-length string */
     char *working = strMac;
     if (nBytes == 0) {
