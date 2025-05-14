@@ -627,7 +627,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
             break;
         case ESP_GATTC_WRITE_DESCR_EVT:
             if (p_data->write.status != ESP_GATT_OK) {
-                ESP_LOGE(BLE_TAG, "Write descr failed, error: %s", p_data->write.status);
+                ESP_LOGE(BLE_TAG, "Write descr failed, error: %s", esp_err_to_name(p_data->write.status));
                 break;
             }
             ESP_LOGI(BLE_TAG, "Write descr success");

@@ -307,6 +307,62 @@ esp_err_t cmd_interactive(int argc, char **argv) {
     return ESP_OK;
 }
 
+/* Usage: tag <MAC> [ 0 | 1 | 2 ]
+   If no action specified, toggle the tag state.
+*/
+esp_err_t cmd_tag(int argc, char **argv) {
+    //
+
+    return ESP_OK;
+}
+
+esp_err_t cmd_focus(int argc, char **argv) {
+    esp_err_t result = ESP_OK;
+    ActionType action = parseCommand(argc, argv);
+    if (action == ACTION_INVALID) {
+        invalid_command(argv[0], argv[1], syntaxTip[SCAN_FOCUS]);
+        return ESP_ERR_INVALID_ARG;
+    }
+    send_response(argv[0], argv[1], MSG_ACK);
+    switch (action) {
+        case ACTION_DISABLE:
+            if (scanStatus[SCAN_FOCUS] == ACTION_ENABLE) {
+                scanStatus[SCAN_FOCUS] = ACTION_DISABLE;
+                /* Everything else should take care of itself */
+            }
+            break;
+        case ACTION_ENABLE:
+            if (scanStatus[SCAN_FOCUS] == ACTION_DISABLE) {
+                scanStatus[SCAN_FOCUS] = ACTION_ENABLE;
+            }
+            break;
+        case ACTION_STATUS:
+            if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                ESP_LOGI(TAG, "Focus Mode: %s\n", (scanStatus[SCAN_FOCUS] == ACTION_ENABLE)?STRING_ACTIVE:STRING_IDLE);
+            } else {
+                printf("%s status %d\n", radioShortNames[SCAN_FOCUS], scanStatus[SCAN_FOCUS]);
+            }
+            break;
+        default:
+            invalid_command(argv[0], argv[1], syntaxTip[SCAN_FOCUS]);
+            result = ESP_ERR_INVALID_ARG;
+    }
+    if (result == ESP_OK) {
+        if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+            ESP_LOGI(TAG, "Focus Mode %s successfully.", (action == ACTION_ENABLE)?"enabled":(action == ACTION_DISABLE)?"disabled":"queried");
+        } else {
+            send_response(argv[0], argv[1], MSG_OK);
+        }
+    } else {
+        if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+            ESP_LOGE(TAG, "Failed to %s Focus Mode.", (action == ACTION_ENABLE)?"enable":(action == ACTION_DISABLE)?"disable":"query");
+        } else {
+            send_response(argv[0], argv[1], MSG_FAIL);
+        }
+    }
+    return result;
+}
+
 static void initialize_filesystem(void)
 {
     static wl_handle_t wl_handle;

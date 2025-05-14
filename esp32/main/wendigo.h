@@ -22,13 +22,15 @@ esp_err_t cmd_wifi(int argc, char **argv);
 esp_err_t cmd_status(int argc, char **argv);
 esp_err_t cmd_version(int argc, char **argv);
 esp_err_t cmd_interactive(int argc, char **argv);
+esp_err_t cmd_tag(int argc, char **argv);
+esp_err_t cmd_focus(int argc, char **argv);
 
 void invalid_command(char *cmd, char *arg, char *syntax);
 void display_syntax(char *command);
 esp_err_t send_response(char *cmd, char *arg, MsgType result);
 ActionType parseCommand(int argc, char **argv);
 
-#define CMD_COUNT 12
+#define CMD_COUNT 16
 esp_console_cmd_t commands[CMD_COUNT] = {
     {
         .command = "h",
@@ -60,6 +62,26 @@ esp_console_cmd_t commands[CMD_COUNT] = {
         .hint = "WiFi Commands",
         .help = "The `wifi` command allows management of the WiFi interface",
         .func = cmd_wifi
+    }, {
+        .command = "t",
+        .hint = "Tagging Commands",
+        .help = "The `t[ag]` command allows you to tag and untag devices.",
+        .func = cmd_tag
+    }, {
+        .command = "tag",
+        .hint = "Tagging Commands",
+        .help = "The `tag` command allows you to tag and untag devices.",
+        .func = cmd_tag
+    }, {
+        .command = "f",
+        .hint = "Toggle f[ocus] Mode",
+        .help = "Focus Mode limits the display to tagged devices only, and provides output focused on RSSI, allowing devices to be located using their radio signal.",
+        .func = cmd_focus
+    }, {
+        .command = "focus",
+        .hint = "Toggle Focus Mode",
+        .help = "Focus Mode limits the display to tagged devices only, and provides output focused on RSSI, allowing devices to be located using their radio signal.",
+        .func = cmd_focus
     }, {
         .command = "s",
         .hint = "Status Information",

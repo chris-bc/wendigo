@@ -53,15 +53,17 @@ typedef enum {
     SCAN_BLE,
     SCAN_WIFI,
     SCAN_INTERACTIVE,
+    SCAN_TAG,
+    SCAN_FOCUS,
     SCAN_COUNT
 } ScanType;
 
 /* Globals for state management */
 const char *TAG = "WENDIGO";
-ActionType scanStatus[SCAN_COUNT] = { ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE };
-char *syntaxTip[SCAN_COUNT] = { "H[CI]", "B[LE]", "W[IFI]", "I[NTERACTIVE]" };
-char *radioShortNames[SCAN_COUNT] = { "HCI", "BLE", "WiFi", "Interactive" };
-char *radioFullNames[SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi", "Interactive Mode" };
+ActionType scanStatus[SCAN_COUNT] = { ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE };
+char *syntaxTip[SCAN_COUNT] = { "H[CI]", "B[LE]", "W[IFI]", "I[NTERACTIVE]", "T[AG]", "F[OCUS]" };
+char *radioShortNames[SCAN_COUNT] = { "HCI", "BLE", "WiFi", "Interactive", "Tag", "Focus" };
+char *radioFullNames[SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi", "Interactive Mode", "Tag Devices", "Focus Mode" };
 
 /* Function declarations */
 esp_err_t bytes_to_string(uint8_t *bytes, char *string, int byteCount);
