@@ -284,7 +284,6 @@ esp_err_t add_gap_device(wendigo_bt_device *dev) {
         if (dev->cod != 0) {
             existingDevice->cod = dev->cod;
         }
-        existingDevice->tagged = dev->tagged;
         existingDevice->scanType = dev->scanType;
         // TODO: Think about whether I should malloc memory for services or use previously-allocated memory
         //       bt_uuid **known_services will make malloc'ing more difficult
@@ -295,6 +294,12 @@ esp_err_t add_gap_device(wendigo_bt_device *dev) {
 
 /* Display the specified Bluetooth (Classic or LE) device */
 esp_err_t display_gap_device(wendigo_bt_device *dev) {
+    /* If we're in Focus Mode only display the device if it's tagged
+       => Ignore if Focus Mode and device not selected */
+    wendigo_bt_device *existingDevice = retrieve_gap_device(dev);
+    if (scanStatus[SCAN_FOCUS] == ACTION_ENABLE && (existingDevice == NULL || !existingDevice->tagged)) {
+        return ESP_OK;
+    }
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         return display_gap_interactive(dev);
     } else {
@@ -394,6 +399,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     dev.bdname = NULL;
     dev.eir = NULL;
     dev.scanType = SCAN_BLE;
+    dev.tagged = false;
     switch (event) {
         case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT:
             esp_ble_gap_start_scanning(CONFIG_BLE_SCAN_SECONDS);
@@ -753,6 +759,7 @@ wendigo_bt_device *bt_device_from_gap_cb(esp_bt_gap_cb_param_t *param) {
     dev->eir = NULL;
     dev->cod = 0;
     dev->scanType = SCAN_HCI;
+    dev->tagged = false;
     esp_bt_gap_dev_prop_t *p;
     char codDevType[COD_MAX_LEN]; /* Placeholder to store COD major device type */
     uint8_t codDevTypeLen = 0;

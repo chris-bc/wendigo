@@ -408,15 +408,11 @@ esp_err_t cmd_focus(int argc, char **argv) {
     send_response(argv[0], argv[1], MSG_ACK);
     switch (action) {
         case ACTION_DISABLE:
-            if (scanStatus[SCAN_FOCUS] == ACTION_ENABLE) {
-                scanStatus[SCAN_FOCUS] = ACTION_DISABLE;
-                /* Everything else should take care of itself */
-            }
+            scanStatus[SCAN_FOCUS] = ACTION_DISABLE;
+            /* Everything else should take care of itself */
             break;
         case ACTION_ENABLE:
-            if (scanStatus[SCAN_FOCUS] == ACTION_DISABLE) {
-                scanStatus[SCAN_FOCUS] = ACTION_ENABLE;
-            }
+            scanStatus[SCAN_FOCUS] = ACTION_ENABLE;
             break;
         case ACTION_STATUS:
             if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
