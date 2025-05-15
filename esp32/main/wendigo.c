@@ -363,9 +363,15 @@ esp_err_t cmd_tag(int argc, char **argv) {
             switch (action) {
                 case ACTION_DISABLE:
                     device->tagged = false;
+                    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                        ESP_LOGI(TAG, "Device %s untagged", argv[2]);
+                    }
                     break;
                 case ACTION_ENABLE:
                     device->tagged = true;
+                    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                        ESP_LOGI(TAG, "Device %s tagged", argv[2]);
+                    }
                     break;
                 case ACTION_STATUS:
                     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
