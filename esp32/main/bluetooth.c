@@ -1,6 +1,5 @@
 #include "bluetooth.h"
 #include "uuids.c"
-#include <sys/time.h>
 
 #define REMOTE_SERVICE_UUID     0x00FF
 #define REMOTE_NOTIFY_CHAR_UUID 0xFF01
@@ -76,11 +75,7 @@ bool BLE_INITIALISED = false;
 /* Storage to maintain a cache of recently-displayed devices */
 uint16_t num_gap_devices = 0;
 uint16_t gap_capacity = 0;
-typedef struct GapDeviceTime {
-    esp_bd_addr_t bda;
-    struct timeval lastSeen;
-} GapDeviceTime;
-GapDeviceTime *all_gap_devices;
+wendigo_bt_device *all_gap_devices;
 
 esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
     /* Before doing anything else check if we have seen this device
@@ -88,14 +83,14 @@ esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
     if (CONFIG_DELAY_AFTER_DEVICE_DISPLAYED > 0) {
         /* Is BDA in all_gap_devices? */
         int idx = 0;
+        // TODO: all_gap_devices management should be elsewhere
         for (; idx < num_gap_devices && memcmp(dev->bda, all_gap_devices[idx].bda, ESP_BD_ADDR_LEN); ++idx) {}
         if (idx == num_gap_devices) {
             /* Not Found - Add it to the array and continue */
             if (num_gap_devices == gap_capacity) {
                 /* No spare array capacity - malloc more */
-                GapDeviceTime *new_gap_devices = malloc(sizeof(GapDeviceTime) * (gap_capacity + 10));
+                wendigo_bt_device *new_gap_devices = realloc(all_gap_devices, sizeof(wendigo_bt_device) * (gap_capacity + 10));
                 if (new_gap_devices != NULL) {
-                    memcpy(new_gap_devices, all_gap_devices, sizeof(GapDeviceTime) * gap_capacity);
                     if (gap_capacity > 0 && all_gap_devices != NULL) {
                         free(all_gap_devices);
                     }
@@ -105,7 +100,7 @@ esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
             }
             /* Testing again in case the malloc above failed */
             if (num_gap_devices < gap_capacity) {
-                memcpy(all_gap_devices[num_gap_devices].bda, dev->bda, ESP_BD_ADDR_LEN);
+                memcpy(&(all_gap_devices[num_gap_devices]), dev, sizeof(wendigo_bt_device));
                 gettimeofday(&(all_gap_devices[num_gap_devices].lastSeen), NULL);
                 ++num_gap_devices;
             }

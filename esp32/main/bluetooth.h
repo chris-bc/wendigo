@@ -9,6 +9,7 @@
 #include <esp_gattc_api.h>
 #include <esp_gap_bt_api.h>
 #include <esp_gatt_common_api.h>
+#include <sys/time.h>
 
 #define COD_MAX_LEN 59
 #define SHORT_COD_MAX_LEN 11
@@ -38,6 +39,8 @@ typedef struct {
     char *bdname;   // Consider inline - [ESP_BT_GAP_MAX_BDNAME_LEN + 1]
     esp_bd_addr_t bda;
     ScanType scanType;
+    bool tagged;
+    struct timeval lastSeen;
     wendigo_bt_svc bt_services;
 } wendigo_bt_device;
 
