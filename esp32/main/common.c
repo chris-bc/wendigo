@@ -61,13 +61,12 @@ esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
    bMac must be a pointer to 6 bytes of allocated memory */
    esp_err_t wendigo_string_to_bytes(char *strMac, uint8_t *bMac) {
     uint8_t nBytes = (strlen(strMac) + 1) / 3; /* Support arbitrary-length string */
-    char *working = strMac;
-    if (nBytes == 0) {
+        if (nBytes == 0) {
         ESP_LOGE(TAG, "mac_string_to_bytes() called with an invalid string - There are no bytes\n\t%s\tExpected format 0A:1B:2C:3D:4E:5F:60", strMac);
         return ESP_ERR_INVALID_ARG;
     }
-    for (int i = 0; i < nBytes; ++i, ++working) {
-        bMac[i] = strtol(working, &working, 10);
+    for (int i = 0; i < nBytes; ++i) {
+        sscanf(strMac + 3 * i, "%2hhx", &bMac[i]);
     }
     return ESP_OK;
 }
