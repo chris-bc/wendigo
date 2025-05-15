@@ -152,7 +152,7 @@ ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr, ScanType
     /* argv[2] must be a MAC/BDA - Check it has the right number of bytes
        (and won't buffer overflow etc).
     */
-    if ((strlen(argv[2] + 1) / 3) != ESP_BD_ADDR_LEN) {
+    if (((strlen(argv[2]) + 1) / 3) != ESP_BD_ADDR_LEN) {
         return ACTION_INVALID;
     }
     esp_err_t result = wendigo_string_to_bytes(argv[2], addr);
@@ -160,8 +160,8 @@ ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr, ScanType
         return ACTION_INVALID;
     }
     /* argv[3] must contain a valid ActionType enum */
-    uint8_t action = strtol(argv[2], NULL, 10);
-    if (strlen(argv[2]) == 1 && action < ACTION_INVALID) {
+    uint8_t action = strtol(argv[3], NULL, 10);
+    if (strlen(argv[3]) == 1 && action < ACTION_INVALID) {
         return (ActionType)action;
     } else {
         return ACTION_INVALID;
