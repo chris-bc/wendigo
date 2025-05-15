@@ -429,13 +429,13 @@ esp_err_t cmd_focus(int argc, char **argv) {
             invalid_command(argv[0], argv[1], syntaxTip[SCAN_FOCUS]);
             result = ESP_ERR_INVALID_ARG;
     }
-    if (result == ESP_OK) {
+    if (result == ESP_OK && action != ACTION_STATUS) {
         if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
             ESP_LOGI(TAG, "Focus Mode %s successfully.", (action == ACTION_ENABLE)?"enabled":(action == ACTION_DISABLE)?"disabled":"queried");
         } else {
             send_response(argv[0], argv[1], MSG_OK);
         }
-    } else {
+    } else if (action != ACTION_STATUS) {
         if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
             ESP_LOGE(TAG, "Failed to %s Focus Mode.", (action == ACTION_ENABLE)?"enable":(action == ACTION_DISABLE)?"disable":"query");
         } else {
