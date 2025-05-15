@@ -221,9 +221,6 @@ esp_err_t add_gap_device(wendigo_bt_device *dev) {
             /* No spare array capacity - malloc more */
             wendigo_bt_device *new_gap_devices = realloc(all_gap_devices, sizeof(wendigo_bt_device) * (gap_capacity + 10));
             if (new_gap_devices != NULL) {
-                if (gap_capacity > 0 && all_gap_devices != NULL) {
-                    free(all_gap_devices);
-                }
                 gap_capacity += 10;
                 all_gap_devices = new_gap_devices;
             }
@@ -232,6 +229,26 @@ esp_err_t add_gap_device(wendigo_bt_device *dev) {
         if (num_gap_devices < gap_capacity) {
             memcpy(&(all_gap_devices[num_gap_devices]), dev, sizeof(wendigo_bt_device));
             gettimeofday(&(all_gap_devices[num_gap_devices].lastSeen), NULL);
+            /* Duplicate bdname and eir if they exist so the caller can call free() */
+            if (dev->bdname_len > 0) {
+                all_gap_devices[num_gap_devices].bdname = malloc(dev->bdname_len + 1);
+                if (all_gap_devices[num_gap_devices].bdname == NULL) {
+                    result = outOfMemory();
+                } else {
+                    memcpy(all_gap_devices[num_gap_devices].bdname, dev->bdname, dev->bdname_len);
+                    all_gap_devices[num_gap_devices].bdname[dev->bdname_len] = '\0';
+                    all_gap_devices[num_gap_devices].bdname_len = dev->bdname_len;
+                }
+            }
+            if (dev->eir_len > 0) {
+                all_gap_devices[num_gap_devices].eir = malloc(dev->eir_len);
+                if (all_gap_devices[num_gap_devices].eir == NULL) {
+                    result = outOfMemory();
+                } else {
+                    memcpy(all_gap_devices[num_gap_devices].eir, dev->eir, dev->eir_len);
+                    all_gap_devices[num_gap_devices].eir_len = dev->eir_len;
+                }
+            }
             ++num_gap_devices;
         }
     } else {
