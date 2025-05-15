@@ -211,7 +211,6 @@ esp_err_t enableDisableRadios(int argc, char **argv, ScanType radio, esp_err_t (
         }
     }
     /* Reply with MSG_OK or MSG_FAIL */
-    // TODO: Incorporate interactive mode
     MsgType reply = MSG_OK;
     if (result != ESP_OK) {
         reply = MSG_FAIL;
