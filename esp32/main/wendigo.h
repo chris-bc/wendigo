@@ -30,7 +30,7 @@ void invalid_command(char *cmd, char *arg, char *syntax);
 void display_syntax(char *command);
 esp_err_t send_response(char *cmd, char *arg, MsgType result);
 ActionType parseCommand(int argc, char **argv);
-ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr);
+ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr, ScanType *radio);
 
 #define CMD_COUNT 16
 esp_console_cmd_t commands[CMD_COUNT] = {

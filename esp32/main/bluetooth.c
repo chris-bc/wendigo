@@ -78,45 +78,24 @@ uint16_t gap_capacity = 0;
 wendigo_bt_device *all_gap_devices;
 
 esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
+    esp_err_t result = ESP_OK;
     /* Before doing anything else check if we have seen this device
        within CONFIG_DELAY_AFTER_DEVICE_DISPLAYED ms */
     if (CONFIG_DELAY_AFTER_DEVICE_DISPLAYED > 0) {
-        /* Is BDA in all_gap_devices? */
-        int idx = 0;
-        // TODO: all_gap_devices management should be elsewhere
-        for (; idx < num_gap_devices && memcmp(dev->bda, all_gap_devices[idx].bda, ESP_BD_ADDR_LEN); ++idx) {}
-        if (idx == num_gap_devices) {
-            /* Not Found - Add it to the array and continue */
-            if (num_gap_devices == gap_capacity) {
-                /* No spare array capacity - malloc more */
-                wendigo_bt_device *new_gap_devices = realloc(all_gap_devices, sizeof(wendigo_bt_device) * (gap_capacity + 10));
-                if (new_gap_devices != NULL) {
-                    if (gap_capacity > 0 && all_gap_devices != NULL) {
-                        free(all_gap_devices);
-                    }
-                    gap_capacity += 10;
-                    all_gap_devices = new_gap_devices;
-                }
-            }
-            /* Testing again in case the malloc above failed */
-            if (num_gap_devices < gap_capacity) {
-                memcpy(&(all_gap_devices[num_gap_devices]), dev, sizeof(wendigo_bt_device));
-                gettimeofday(&(all_gap_devices[num_gap_devices].lastSeen), NULL);
-                ++num_gap_devices;
-            }
-        } else {
+        /* Only display the device if it hasn't been seen before or
+           CONFIG_DELAY_AFTER_DEVICE_DISPLAYED ms have passed */
+        wendigo_bt_device *existingDevice = retrieve_gap_device(dev);
+        if (existingDevice != NULL) {
             /* We've seen it before - decide whether it was too recent and update lastSeen */
             struct timeval nowTime;
             gettimeofday(&nowTime, NULL);
-            double elapsed = (nowTime.tv_sec - all_gap_devices[idx].lastSeen.tv_sec) * 1000.0;
-            /* Update lastSeen with current time */
-            gettimeofday(&all_gap_devices[idx].lastSeen, NULL);
+            double elapsed = (nowTime.tv_sec - existingDevice->lastSeen.tv_sec) * 1000.0;
             if (elapsed < CONFIG_DELAY_AFTER_DEVICE_DISPLAYED) {
+                /* It's been seen too recently, don't display it */
                 return ESP_OK;
             }
         }
     }
-    esp_err_t result = ESP_OK;
     bool cod_fit = false;
     char *dev_type = (dev->scanType == SCAN_HCI)?radioShortNames[SCAN_HCI]:(dev->scanType == SCAN_BLE)?radioShortNames[SCAN_BLE]:"UNK";
     char bda_str[MAC_STRLEN + 1];
@@ -180,10 +159,11 @@ void send_bytes(uint8_t *bytes, uint8_t size) {
 }
 
 /* Send device info to stdout to transmit over UART
-   Initial plan had been to stream bytes directly from `dev`, but that causes difficulties for
-     a) Using pointers for bdname and eir
-     b) Using a uint32_t, rather than a textual description, for COD
-   I'm now torn between sticking with text or making this work...
+   * Sends 4 bytes of 0xFF followed by 4 bytes of 0xAA to begin the transmission
+   * Sends the device structure (sizeof(wendigo_bt_device))
+   * Sends bdname if present (wendigo_bt_device.bdname_len bytes)
+   * Sends eir if present (wendigo_bt_device.eir_len bytes)
+   * Sends strlen(cod_short) (1 byte) followed by cod_short
 */
 esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     esp_err_t result = ESP_OK;
@@ -191,29 +171,112 @@ esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     uint8_t cod_len;
     cod2shortStr(dev->cod, cod_short, &cod_len);
 
-    /* Send a stream of 0xFF to mark beginning of transmission */
-    repeat_bytes(0xFF, 8);
+    /* Send a stream of bytes to mark beginning of transmission */
+    repeat_bytes(0xFF, 4);
+    repeat_bytes(0xAA, 4);
     /* Send `dev` */
     uint8_t *devBytes = (uint8_t *)dev;
     send_bytes(devBytes, sizeof(*dev));
-    /* Send a stream of 0xEE as an interlude */
-    repeat_bytes(0xEE, 8);
     /* bdname */
     if (dev->bdname_len > 0) {
-        send_bytes((uint8_t *)(dev->bdname), dev->bdname_len + 1);
+        send_bytes((uint8_t *)(dev->bdname), dev->bdname_len);
     }
-    /* The story continues... */
-    repeat_bytes(0xDD, 8);
+    /* EIR */
     send_bytes(dev->eir, dev->eir_len);
-    repeat_bytes(0xCC, 8);
-    send_bytes((uint8_t *)cod_short, cod_len + 1);
-    repeat_bytes(0xBB, 8);
+    send_bytes(&cod_len, 1);
+    send_bytes((uint8_t *)cod_short, cod_len);
     putc('\n', stdout);
     fflush(stdout);
 
     return result;
 }
 
+/* Determines whether the BDA of the specified device exists in all_gap_devices[].
+   Returns a pointer to the object in all_gap_devices[] if found, NULL otherwise */
+wendigo_bt_device *retrieve_gap_device(wendigo_bt_device *dev) {
+    wendigo_bt_device *result = NULL;
+    int idx = 0;
+    for (; idx < num_gap_devices && memcmp(dev->bda, all_gap_devices[idx].bda, ESP_BD_ADDR_LEN); ++idx) {}
+    if (idx < num_gap_devices) {
+        result = &(all_gap_devices[idx]);
+    }
+    return result;
+}
+
+wendigo_bt_device *retrieve_gap_by_bda(esp_bd_addr_t bda) {
+    wendigo_bt_device dev;
+    memcpy(dev.bda, bda, ESP_BD_ADDR_LEN);
+    return retrieve_gap_device(&dev);
+}
+
+/* Adds the specified device to all_gap_devices[] if not already present.
+   Updates the attributes of the specified device in all_gap_devices[]
+   if it already exists. */
+esp_err_t add_gap_device(wendigo_bt_device *dev) {
+    esp_err_t result = ESP_OK;
+    wendigo_bt_device *existingDevice = retrieve_gap_device(dev);
+    if (existingDevice == NULL) {
+        /* Device not found - add it to all_gap_devices[] */
+        if (num_gap_devices == gap_capacity) {
+            /* No spare array capacity - malloc more */
+            wendigo_bt_device *new_gap_devices = realloc(all_gap_devices, sizeof(wendigo_bt_device) * (gap_capacity + 10));
+            if (new_gap_devices != NULL) {
+                if (gap_capacity > 0 && all_gap_devices != NULL) {
+                    free(all_gap_devices);
+                }
+                gap_capacity += 10;
+                all_gap_devices = new_gap_devices;
+            }
+        }
+        /* Check again whether we have capacity because the malloc might have failed */
+        if (num_gap_devices < gap_capacity) {
+            memcpy(&(all_gap_devices[num_gap_devices]), dev, sizeof(wendigo_bt_device));
+            gettimeofday(&(all_gap_devices[num_gap_devices].lastSeen), NULL);
+            ++num_gap_devices;
+        }
+    } else {
+        /* Device exists. Update RSSI, lastSeen, and anything else that has changed */
+        existingDevice->rssi = dev->rssi;
+        gettimeofday(&(existingDevice->lastSeen), NULL);
+        if (dev->bdname_len > 0) {
+            if (existingDevice->bdname_len > 0 && existingDevice->bdname != NULL) {
+                free(existingDevice->bdname);
+                existingDevice->bdname_len = 0;
+            }
+            existingDevice->bdname = malloc(dev->bdname_len + 1);
+            if (existingDevice->bdname == NULL) {
+                result = outOfMemory();
+            } else {
+                memcpy(existingDevice->bdname, dev->bdname, dev->bdname_len);
+                existingDevice->bdname[dev->bdname_len] = '\0';
+                existingDevice->bdname_len = dev->bdname_len;
+            }
+        }
+        if (dev->eir_len > 0) {
+            if (existingDevice->eir_len > 0 && existingDevice->eir != NULL) {
+                free(existingDevice->eir);
+            }
+            existingDevice->eir = malloc(dev->eir_len);
+            if (existingDevice->eir == NULL) {
+                result = outOfMemory();
+            } else {
+                memcpy(existingDevice->eir, dev->eir, dev->eir_len);
+                existingDevice->eir_len = dev->eir_len;
+            }
+        }
+        if (dev->cod != 0) {
+            existingDevice->cod = dev->cod;
+        }
+        existingDevice->tagged = dev->tagged;
+        existingDevice->scanType = dev->scanType;
+        // TODO: Think about whether I should malloc memory for services or use previously-allocated memory
+        //       bt_uuid **known_services will make malloc'ing more difficult
+        // TODO: Decide how to merge services - Should probably be done with a separate function
+    }
+    return result;
+}
+
+/* Display the specified Bluetooth (Classic or LE) device */
 esp_err_t display_gap_device(wendigo_bt_device *dev) {
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         return display_gap_interactive(dev);
@@ -360,6 +423,8 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 strncpy(dev.bdname, param->get_dev_name_cmpl.name, strlen(param->get_dev_name_cmpl.name) + 1);
                 // TODO: Can I get anything else out of these structs?
                 display_gap_device(&dev);
+                /* Add to or update all_gap_devices[] */
+                add_gap_device(&dev);
                 free_gap_device(&dev);
                 break;
         case ESP_GAP_BLE_SCAN_RESULT_EVT:
@@ -406,6 +471,8 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     // TODO: Can I find the COD (Class Of Device) anywhere?
                     bda2str(dev.bda, bdaStr, MAC_STRLEN + 1);
                     display_gap_device(&dev);
+                    /* Add to or update all_gap_devices[] */
+                    add_gap_device(&dev);
                     free_gap_device(&dev);
                     break;
                 default:
@@ -737,6 +804,8 @@ static void bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
                 ESP_LOGE(BT_TAG, "Failed to obtain device from event parameters :(");
             }
             display_gap_device(dev);
+            /* Add to or update all_gap_devices[] */
+            add_gap_device(dev);
             free_gap_device(dev);
             free(dev);
             break;

@@ -52,5 +52,7 @@ esp_err_t wendigo_bt_disable();
 esp_err_t wendigo_ble_enable();
 esp_err_t wendigo_ble_disable();
 esp_err_t display_gap_device(wendigo_bt_device *dev);
+wendigo_bt_device *retrieve_gap_device(wendigo_bt_device *dev);
+wendigo_bt_device *retrieve_gap_by_bda(esp_bd_addr_t bda);
 
 #endif

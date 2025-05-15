@@ -136,32 +136,35 @@ ActionType parseCommand(int argc, char **argv) {
     }
 }
 
-/* Tag syntax is tag <MAC> <ActionType>, where ActionType :== 0 | 1 | 2 (or 3 for ACTION_INVALID) */
-ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr) {
-    if (argc == 1 || argc > 3) {
+/* Tag syntax is t[ag] ( b[t] | w[ifi] ) <MAC> <ActionType>, where ActionType :== 0 | 1 | 2 (or 3 for ACTION_INVALID) */
+ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr, ScanType *radio) {
+    if (argc != 4) {
         return ACTION_INVALID;
     }
-    /* argv[1] must be a MAC/BDA - Check it has the right number of bytes
+    /* argv[1] must be b, bt, w, or wifi */
+    if ((!strcasecmp(argv[1], "b")) || (!strcasecmp(argv[1], "bt"))) {
+        *radio = SCAN_HCI;
+    } else if ((!strcasecmp(argv[1], "w")) || (!strcasecmp(argv[1], "wifi"))) {
+        *radio = SCAN_WIFI;
+    } else {
+        return ACTION_INVALID;
+    }
+    /* argv[2] must be a MAC/BDA - Check it has the right number of bytes
        (and won't buffer overflow etc).
     */
-    if ((strlen(argv[1] + 1) / 3) != ESP_BD_ADDR_LEN) {
+    if ((strlen(argv[2] + 1) / 3) != ESP_BD_ADDR_LEN) {
         return ACTION_INVALID;
     }
-    esp_err_t result = wendigo_string_to_bytes(argv[1], addr);
+    esp_err_t result = wendigo_string_to_bytes(argv[2], addr);
     if (result != ESP_OK) {
         return ACTION_INVALID;
     }
-    /* argv[2], if it exists, must contain a valid ActionType enum */
-    if (argc == 3) {
-        uint8_t action = strtol(argv[2], NULL, 10);
-        if (strlen(argv[2]) == 1 && action < ACTION_INVALID) {
-            return (ActionType)action;
-        } else {
-            return ACTION_INVALID;
-        }
+    /* argv[3] must contain a valid ActionType enum */
+    uint8_t action = strtol(argv[2], NULL, 10);
+    if (strlen(argv[2]) == 1 && action < ACTION_INVALID) {
+        return (ActionType)action;
     } else {
-        /* If no action specified, return the status */
-        return ACTION_STATUS;
+        return ACTION_INVALID;
     }
 }
 
@@ -335,19 +338,57 @@ esp_err_t cmd_interactive(int argc, char **argv) {
     return ESP_OK;
 }
 
-/* Usage: tag <MAC> [ 0 | 1 | 2 ]
-   If no action specified, toggle the tag state.
-*/
+/* Usage: t[ag] ( b[t] | w[ifi] ) <MAC> [ 0 | 1 | 2 ] */
 esp_err_t cmd_tag(int argc, char **argv) {
+    esp_err_t result = ESP_OK;
     esp_bd_addr_t addr;
-    ActionType action = parse_command_tag(argc, argv, addr);
+    ScanType radio = SCAN_COUNT;
+    send_response(argv[0], argv[1], MSG_ACK);
+    ActionType action = parse_command_tag(argc, argv, addr, &radio);
     if (action == ACTION_INVALID) {
         invalid_command(argv[0], argv[1], syntaxTip[SCAN_TAG]);
-        return ESP_ERR_INVALID_ARG;
+        result = ESP_ERR_INVALID_ARG;
     }
-    send_response(argv[0], argv[1], MSG_ACK);
-    // TODO: Finish this - find specified device and set/get tag status
+    if (result == ESP_OK && radio == SCAN_HCI) {
+        /* Fetch the specified device */
+        wendigo_bt_device *device = retrieve_gap_by_bda(addr);
+        if (device == NULL) {
+            if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                ESP_LOGE(TAG, "Failed to retrieve device %s\n", argv[2]);
+            }
+            invalid_command(argv[0], argv[1], syntaxTip[SCAN_TAG]);
+            result = ESP_ERR_INVALID_ARG;
+        }
+        if (result == ESP_OK) {
+            switch (action) {
+                case ACTION_DISABLE:
+                    device->tagged = false;
+                    break;
+                case ACTION_ENABLE:
+                    device->tagged = true;
+                    break;
+                case ACTION_STATUS:
+                    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                        ESP_LOGI(TAG, "Device %s IS %stagged.", argv[2], (device->tagged)?"":"NOT ");
+                    } else {
+                        printf("%s %stagged\n", argv[2], (device->tagged)?"":"NOT ");
+                    }
+                    break;
+                default:
+                    invalid_command(argv[0], argv[1], syntaxTip[SCAN_TAG]);
+                    result = ESP_ERR_INVALID_ARG;
+                    break;
+            }
+        }
+    } else if (result == ESP_OK && radio == SCAN_WIFI) {
+        // TODO: Implement WiFi tagging
+    }
 
+    if (result == ESP_OK) {
+        send_response(argv[0], argv[1], MSG_OK);
+    } else {
+        send_response(argv[0], argv[1], MSG_FAIL);
+    }
     return ESP_OK;
 }
 
