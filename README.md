@@ -218,6 +218,7 @@ Because Wendigo is still in early development the following changes are core to 
 * [ ] Flipper settings
   * [ ] ESP32 integration
   * [ ] Ability to flash ESP32 firmware from Flipper?
+  * [ ] Use FZ LED to provide status info
 * [ ] Target and monitor devices
   * [X] **Focus** mode that restricts received data to devices of interest only
   * [X] **Tag** command to select devices
