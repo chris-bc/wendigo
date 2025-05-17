@@ -1,4 +1,5 @@
 #include "../wendigo_app_i.h"
+#include <dolphin/dolphin.h>
 
 // SETUP_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
 static const WendigoItem items[SETUP_MENU_ITEMS] = {
@@ -22,6 +23,9 @@ static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t 
     const int selected_option_index = app->setup_selected_option_index[index];
     furi_assert(selected_option_index < item->num_options_menu);
     app->setup_selected_menu_index = index;
+
+    /* Reward Dolphin for running a command */
+    dolphin_deed(DolphinDeedGpioUartBridge);
 
     switch(item->action) {
     case OPEN_SETUP:
