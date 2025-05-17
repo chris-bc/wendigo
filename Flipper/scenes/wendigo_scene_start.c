@@ -45,11 +45,13 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
             myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
             variable_item_set_locked(myItem, true, "Cannot change settings while scanning");
             //      start scanning
+            app->is_scanning = true;
         } else if(selected_option_index == SCAN_STOP_IDX && app->is_scanning) {
             //      as above to unlock settings
             myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
             variable_item_set_locked(myItem, false, NULL);
             // stop scanning
+            app->is_scanning = false;
         }
         break;
     case LIST_DEVICES:
