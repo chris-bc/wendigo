@@ -41,18 +41,28 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
         return;
     case OPEN_SCAN:
         VariableItem* myItem;
-        if(selected_option_index == SCAN_START_IDX && !app->is_scanning) {
-            myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
-            variable_item_set_locked(myItem, true, "Cannot change settings while scanning");
-            //      start scanning
-            app->is_scanning = true;
-        } else if(selected_option_index == SCAN_STOP_IDX && app->is_scanning) {
-            //      as above to unlock settings
-            myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
-            variable_item_set_locked(myItem, false, NULL);
-            // stop scanning
-            app->is_scanning = false;
+        /* Quit now if there's nothing to do */
+        if ((selected_option_index == SCAN_START_IDX && app->is_scanning) ||
+            (selected_option_index == SCAN_STOP_IDX && !app->is_scanning)) {
+            break;
         }
+        bool starting = (selected_option_index == SCAN_START_IDX);
+        /* Enable or disable settings when starting/stopping scanning */
+        myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
+        variable_item_set_locked(myItem, starting, "Stop scanning first");
+        char cmd;
+        uint8_t arg;
+        const uint8_t CMD_LEN = 5;
+        char cmdString[5]; // Magic number beats needings to declare this outside the scope
+        for (int i = 0; i < IF_COUNT; ++i) {
+            /* Set command */
+            cmd = (i == IF_BLE) ? 'b' : (i == IF_BT_CLASSIC) ? 'h' : 'w';
+            /* arg */
+            arg = (starting && app->interfaces[i].active) ? 1 : 0;
+            snprintf(cmdString, CMD_LEN, "%c %d\n", cmd, arg);
+            wendigo_uart_tx(app->uart, (uint8_t *)cmdString, CMD_LEN);
+        }
+        app->is_scanning = starting;
         break;
     case LIST_DEVICES:
         app->is_command = true;
