@@ -207,13 +207,25 @@ Because Wendigo is still in early development the following changes are core to 
   * [ ] Consider applying similar caching to FZ
 * [ ] Create Flipper data model
 * [ ] Create Flipper UI
+  * [X] Settings
+    * [ ] Retrieve and change MACs
+    * [ ] Enable/Disable radios
+    * [ ] Enable/Disable channels
+    * [ ] Scan Start/Stop/Status
+  * [ ] Device display
+  * [ ] Device selection
+  * [ ] Focus Mode
 * [ ] Flipper settings
   * [ ] ESP32 integration
   * [ ] Ability to flash ESP32 firmware from Flipper?
 * [ ] Target and monitor devices
-  * [ ] **Focus** mode that restricts received data to devices of interest only
-  * [ ] **Tag** command to select devices
-  * [ ] Designed to be usable from console as well as from Flipper
+  * [X] **Focus** mode that restricts received data to devices of interest only
+  * [X] **Tag** command to select devices
+  * [X] Designed to be usable from console as well as from Flipper
+  * [ ] Sort results by
+    * [ ] Name
+    * [ ] LastSeen
+    * [ ] RSSI
 
 See the [open issues](https://github.com/chris-bc/wendigo/issues) for a full list of proposed features (and known issues).
 
