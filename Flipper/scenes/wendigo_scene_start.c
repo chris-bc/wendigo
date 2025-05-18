@@ -50,19 +50,7 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
         /* Disable/Enable settings menu when starting/stopping scanning */
         myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
         variable_item_set_locked(myItem, starting, "Stop\nScanning\nFirst!");
-        char cmd;
-        uint8_t arg;
-        const uint8_t CMD_LEN = 5;
-        char cmdString[5]; // Magic number beats needing to declare this in function scope
-        for (int i = 0; i < IF_COUNT; ++i) {
-            /* Set command */
-            cmd = (i == IF_BLE) ? 'b' : (i == IF_BT_CLASSIC) ? 'h' : 'w';
-            /* arg */
-            arg = (starting && app->interfaces[i].active) ? 1 : 0;
-            snprintf(cmdString, CMD_LEN, "%c %d\n", cmd, arg);
-            wendigo_uart_tx(app->uart, (uint8_t *)cmdString, CMD_LEN);
-        }
-        app->is_scanning = starting;
+        wendigo_set_scanning_active(app, starting);        
         break;
     case LIST_DEVICES:
         app->is_command = true;

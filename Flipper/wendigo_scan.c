@@ -1,73 +1,24 @@
 #include "wendigo_scan.h"
 
-bool wendigo_scan_start(WendigoApp* app) {
-    // Get variables to store the active status of each radio (wifi, bt, ble)
-    bool radios[NUM_RADIOS];
-    for(int i = 0; i < NUM_RADIOS; ++i) {
-        radios[i] = app->setup_selected_option_index[i] == RADIO_ON;
+/* Enable or disable Wendigo scanning on all interfaces, using app->interfaces
+   to determine which radios should be enabled/disabled when starting to scan.
+   This function is called by the UI handler (wendigo_scene_start) when scanning
+   is started or stopped. app->interfaces is updated via the Setup menu.
+   Because wendigo_uart_tx returns void there is no way to identify failure,
+   so this function also returns void.
+*/
+void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
+    char cmd;
+    uint8_t arg;
+    const uint8_t CMD_LEN = 5; // e.g. "b 1\n\0"
+    char cmdString[CMD_LEN];
+    for (int i = 0; i < IF_COUNT; ++i) {
+        /* Set command */
+        cmd = (i == IF_BLE) ? 'b' : (i == IF_BT_CLASSIC) ? 'h' : 'w';
+        /* arg */
+        arg = (starting && app->interfaces[i].active) ? 1 : 0;
+        snprintf(cmdString, CMD_LEN, "%c %d\n", cmd, arg);
+        wendigo_uart_tx(app->uart, (uint8_t *)cmdString, CMD_LEN);
     }
-
-    bool result = true;
-    if(radios[SETUP_RADIO_WIFI_IDX]) {
-        result = (result && wendigo_scan_wifi_start(app));
-    }
-    if(radios[SETUP_RADIO_BT_IDX]) {
-        result = (result && wendigo_scan_bt_start(app));
-    }
-    if(radios[SETUP_RADIO_BLE_IDX]) {
-        result = (result && wendigo_scan_ble_start(app));
-    }
-
-    return result;
-}
-
-bool wendigo_scan_stop(WendigoApp* app) {
-    /* Get active status of each radio */
-    bool radios[NUM_RADIOS];
-    for(int i = 0; i < NUM_RADIOS; ++i) {
-        radios[i] = app->setup_selected_option_index[i] == RADIO_ON;
-    }
-
-    bool result = true;
-    if(radios[SETUP_RADIO_WIFI_IDX]) {
-        result = (result && wendigo_scan_wifi_stop(app));
-    }
-    if(radios[SETUP_RADIO_BT_IDX]) {
-        result = (result && wendigo_scan_bt_stop(app));
-    }
-    if(radios[SETUP_RADIO_BLE_IDX]) {
-        result = (result && wendigo_scan_ble_stop(app));
-    }
-
-    return result;
-}
-
-bool wendigo_scan_wifi_start(WendigoApp* app) {
-    UNUSED(app);
-    return true;
-}
-
-bool wendigo_scan_bt_start(WendigoApp* app) {
-    UNUSED(app);
-    return true;
-}
-
-bool wendigo_scan_ble_start(WendigoApp* app) {
-    UNUSED(app);
-    return true;
-}
-
-bool wendigo_scan_wifi_stop(WendigoApp* app) {
-    UNUSED(app);
-    return true;
-}
-
-bool wendigo_app_bt_stop(WendigoApp* app) {
-    UNUSED(app);
-    return true;
-}
-
-bool wendigo_app_ble_stop(WendigoApp* app) {
-    UNUSED(app);
-    return true;
+    app->is_scanning = starting;
 }
