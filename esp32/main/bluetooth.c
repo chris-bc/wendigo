@@ -173,6 +173,8 @@ esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     send_bytes(dev->eir, dev->eir_len);
     send_bytes(&cod_len, 1);
     send_bytes((uint8_t *)cod_short, cod_len);
+    /* Mark the end of transmission with a newline */
+    // YAGNI: Consider something more formal, e.g. 8 NULL bytes.
     putc('\n', stdout);
     fflush(stdout);
 

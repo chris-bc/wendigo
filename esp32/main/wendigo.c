@@ -55,6 +55,13 @@ void invalid_command(char *cmd, char *arg, char *syntax) {
 /* Sends a `result` message corresponding to the command `cmd` with optional argument `arg` over UART
    unless interactive mode is enabled, in which case a more readable result is printed to the console. */
 esp_err_t send_response(char *cmd, char *arg, MsgType result) {
+    // TODO: Decide whether or not to keep this and refactor as appropriate
+    // As I begin implementing the FZ side of Wendigo I'm reconsidering the
+    // usefulness of the ACK/OK/INVALID/FAIL protocol. Disable these for now
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_DISABLE) {
+        return ESP_OK;
+    }
+
     char resultMsg[17];
     bool isError = false;
     switch (result) {
