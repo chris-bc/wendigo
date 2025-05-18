@@ -48,9 +48,11 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
         }
         bool starting = (selected_option_index == SCAN_START_IDX);
         /* Disable/Enable settings menu when starting/stopping scanning */
-        myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
-        variable_item_set_locked(myItem, starting, "Stop\nScanning\nFirst!");
-        wendigo_set_scanning_active(app, starting);        
+        if (selected_option_index == SCAN_START_IDX || selected_option_index == SCAN_STOP_IDX) {
+            myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
+            variable_item_set_locked(myItem, starting, "Stop\nScanning\nFirst!");
+            wendigo_set_scanning_active(app, starting);
+        }
         break;
     case LIST_DEVICES:
         app->is_command = true;
