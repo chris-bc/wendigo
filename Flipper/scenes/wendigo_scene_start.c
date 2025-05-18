@@ -47,13 +47,13 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
             break;
         }
         bool starting = (selected_option_index == SCAN_START_IDX);
-        /* Enable or disable settings when starting/stopping scanning */
+        /* Disable/Enable settings menu when starting/stopping scanning */
         myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
-        variable_item_set_locked(myItem, starting, "Stop scanning first");
+        variable_item_set_locked(myItem, starting, "Stop\nScanning\nFirst!");
         char cmd;
         uint8_t arg;
         const uint8_t CMD_LEN = 5;
-        char cmdString[5]; // Magic number beats needings to declare this outside the scope
+        char cmdString[5]; // Magic number beats needing to declare this in function scope
         for (int i = 0; i < IF_COUNT; ++i) {
             /* Set command */
             cmd = (i == IF_BLE) ? 'b' : (i == IF_BT_CLASSIC) ? 'h' : 'w';

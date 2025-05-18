@@ -192,6 +192,7 @@ Because Wendigo is still in early development the following changes are core to 
   * [ ] Logs which go directly to a buffer or file;
   * [ ] Device info which goes directly to display
 * [ ] Consider creating a Wireshark plugin to monitor the protocol
+* [X] Obtain BLE device information
 * [X] Deliver BLE results to ESP32 dispatcher
 * [X] Obtain BT Classic device information
 * [X] Deliver BT Classic results to dispatcher
@@ -209,11 +210,13 @@ Because Wendigo is still in early development the following changes are core to 
 * [ ] Create Flipper UI
   * [X] Settings
     * [ ] Retrieve and change MACs
-    * [ ] Enable/Disable radios
+    * [X] Enable/Disable radios
     * [ ] Enable/Disable channels
-    * [ ] Scan Start/Stop/Status
-  * [ ] Device display
-  * [ ] Device selection
+  * [X] Scan Start/Stop
+  * [ ] Scanning status (popup?)
+  * [ ] ESP Version (popup)
+  * [ ] Display devices
+  * [ ] Device tagging
   * [ ] Focus Mode
 * [ ] Flipper settings
   * [ ] ESP32 integration
