@@ -146,18 +146,6 @@ esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
     return result;
 }
 
-void repeat_bytes(uint8_t byte, uint8_t count) {
-    for (int i = 0; i < count; ++i) {
-        putc(byte, stdout);
-    }
-}
-
-void send_bytes(uint8_t *bytes, uint8_t size) {
-    for (int i = 0; i < size; ++i) {
-        putc(bytes[i], stdout);
-    }
-}
-
 /* Send device info to stdout to transmit over UART
    * Sends 4 bytes of 0xFF followed by 4 bytes of 0xAA to begin the transmission
    * Sends the device structure (sizeof(wendigo_bt_device))

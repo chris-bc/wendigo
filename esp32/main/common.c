@@ -70,3 +70,15 @@ esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
     }
     return ESP_OK;
 }
+
+void repeat_bytes(uint8_t byte, uint8_t count) {
+    for (int i = 0; i < count; ++i) {
+        putc(byte, stdout);
+    }
+}
+
+void send_bytes(uint8_t *bytes, uint8_t size) {
+    for (int i = 0; i < size; ++i) {
+        putc(bytes[i], stdout);
+    }
+}
