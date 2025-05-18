@@ -54,8 +54,23 @@ uint16_t parseBufferWifi() {
    remove consumed bytes, this must be handled by the calling function. */
 uint16_t parseBufferVersion() {
     // TODO
+    // Create a char[] of bufferLen
+    // Copy bytes across, replacing newline with NULL terminator
+    // Call a UI method (can I access wendigo_scene_help's scope from here?) to display a popup
+    char versionStr[bufferLen];
+    int i = 0;
+    for (; i < bufferLen && buffer[i] != '\n'; ++i) {
+        versionStr[i] = buffer[i];
+    }
+    // TODO: Consider handling a missing newline more elegantly - Although it's currently
+    //       the end-of-transmission marker so not possible to get here without one
+    if (i == bufferLen) {
+        --i; // Replace the last byte with NULL. This should never happen.
+    }
+    versionStr[i] = '\0';
+    // TODO: Call a UI method to display versionStr in a popup
 
-    return 0;
+    return i + 1;
 }
 
 /* When the end of a transmission is reached this function is called to parse the
