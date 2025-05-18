@@ -39,7 +39,7 @@ void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
 uint16_t parseBufferBluetooth() {
     // TODO
 
-    return true;
+    return 0;
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT
@@ -47,7 +47,7 @@ uint16_t parseBufferBluetooth() {
 uint16_t parseBufferWifi() {
     // TODO
 
-    return true;
+    return 0;
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT
@@ -55,7 +55,7 @@ uint16_t parseBufferWifi() {
 uint16_t parseBufferVersion() {
     // TODO
 
-    return true;
+    return 0;
 }
 
 /* When the end of a transmission is reached this function is called to parse the
@@ -85,21 +85,15 @@ void parseBuffer() {
         // TODO: Diagnose why, communicate something useful
         return;
     }
-    if (consumedBytes == bufferLen) {
-        /* The easy case - reset bufferLen */
-        // NULL out the buffer to be nice
-        memset(buffer, '\0', bufferCap);
-        bufferLen = 0;
-    } else {
-        /* Remove `consumedBytes` bytes from the beginning of the buffer */
-        memset(buffer, '\0', consumedBytes);
-        /* Copy memory into buffer from buffer+consumedBytes to buffer+bufferLen */
-        memcpy(buffer, buffer + consumedBytes, bufferLen - consumedBytes);
-        /* Null what remains */
-        memset(buffer + bufferLen - consumedBytes, '\0', consumedBytes);
-        /* Buffer is now bufferLen - consumedBytes */
-        bufferLen -= consumedBytes;
-    }
+    /* Remove `consumedBytes` bytes from the beginning of the buffer */
+    memset(buffer, '\0', consumedBytes);
+    /* Copy memory into buffer from buffer+consumedBytes to buffer+bufferLen.
+       This should be OK when the buffer is exhausted because it copies 0 bytes */
+    memcpy(buffer, buffer + consumedBytes, bufferLen - consumedBytes);
+    /* Null what remains */
+    memset(buffer + bufferLen - consumedBytes, '\0', consumedBytes);
+    /* Buffer is now bufferLen - consumedBytes */
+    bufferLen -= consumedBytes;
 }
 
 /* Callback invoked when UART data is received. When an end-of-message packet is
@@ -122,7 +116,7 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
 
     /* Extend the buffer if necessary */
     if (bufferLen + len >= bufferCap) {
-        /* Extend it by the larger of len and 128 - wendigo_bt_device is 72 bytes + name + EIR */
+        /* Extend it by the larger of len and 128 - wendigo_bt_device is 72 bytes + name + EIR + preamble */
         uint16_t newCapacity = bufferCap + ((len > 128) ? len : 128);
         uint8_t *newBuffer = realloc(buffer, newCapacity); // Behaves like malloc() when buffer==NULL
         if (newBuffer == NULL) {

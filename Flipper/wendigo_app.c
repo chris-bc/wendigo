@@ -73,6 +73,7 @@ WendigoApp* wendigo_app_alloc() {
     /* Initialise the channel bitmasks */
     app->CH_MASK[0] = 0;
     for(int i = 1; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
+        // TODO YAGNI: pow() is slow. Seed CH_MASK[1] and calculate the rest by multiplying the previous element by 2
         app->CH_MASK[i] = pow(2, i - 1);
     }
 
