@@ -213,7 +213,7 @@ esp_err_t add_gap_device(wendigo_bt_device *dev) {
             if (new_gap_devices != NULL) {
                 gap_capacity += 10;
                 all_gap_devices = new_gap_devices;
-            }
+            } // Ignoring realloc() failure because we can still transmit `dev` to FZ
         }
         /* Check again whether we have capacity because the malloc might have failed */
         if (num_gap_devices < gap_capacity) {

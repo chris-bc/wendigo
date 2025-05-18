@@ -320,6 +320,8 @@ esp_err_t cmd_status(int argc, char **argv) {
         print_status_row_end(4);
         print_empty_row(53);
         print_star(53, true);
+        // Some extra stuff for development
+        printf("sizeof(wendigo_bt_device): %d\tsizeof(wendigo_bt_svc): %d\n", sizeof(wendigo_bt_device), sizeof(wendigo_bt_svc));
     } else {
         /* This command is not valid unless running interactively */
         send_response(argv[0], argv[1], MSG_INVALID);
@@ -335,6 +337,7 @@ esp_err_t cmd_version(int argc, char **argv) {
         ESP_LOGI(TAG, "%s", msg);
     } else {
         printf(msg);
+        fflush(stdout);
     }
     send_response(argv[0], NULL, MSG_OK);
     return ESP_OK;
