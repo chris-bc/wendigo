@@ -23,6 +23,23 @@ static void wendigo_app_tick_event_callback(void* context) {
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
+/* Generic handler for app->popup that restored the previous view */
+void wendigo_popup_callback(void *context) {
+    WendigoApp *app = (WendigoApp *)context;
+    scene_manager_previous_scene(app->scene_manager);
+}
+
+void wendigo_display_popup(WendigoApp *app, char *header, char*body) {
+    popup_set_header(app->popup, header, 64, 3, AlignCenter, AlignTop);
+    popup_set_text(app->popup, body, 64, 22, AlignCenter, AlignTop);
+    popup_set_icon(app->popup, -1, -1, NULL);
+    popup_set_timeout(app->popup, 2000);
+    popup_enable_timeout(app->popup);
+    popup_set_callback(app->popup, wendigo_popup_callback);
+    popup_set_context(app->popup, app);
+    view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
+}
+
 /* Initialise app->interfaces - Default all radios to on */
 void wendigo_interface_init(WendigoApp* app) {
     for(int i = 0; i < IF_COUNT; ++i) {

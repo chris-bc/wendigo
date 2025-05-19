@@ -36,23 +36,23 @@ void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes from the buffer, this must be handled by
    the calling function. */
-uint16_t parseBufferBluetooth() {
+uint16_t parseBufferBluetooth(WendigoApp *app) {
     // TODO
-
+    UNUSED(app);
     return 0;
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes, this must be handled by the calling function. */
-uint16_t parseBufferWifi() {
+uint16_t parseBufferWifi(WendigoApp *app) {
     // TODO
-
+    UNUSED(app);
     return 0;
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes, this must be handled by the calling function. */
-uint16_t parseBufferVersion() {
+uint16_t parseBufferVersion(WendigoApp *app) {
     // TODO
     // Create a char[] of bufferLen
     // Copy bytes across, replacing newline with NULL terminator
@@ -69,7 +69,7 @@ uint16_t parseBufferVersion() {
     }
     versionStr[i] = '\0';
     // TODO: Call a UI method to display versionStr in a popup
-
+    wendigo_display_popup(app, "ESP32 Version", versionStr);
     return i + 1;
 }
 
@@ -79,7 +79,7 @@ uint16_t parseBufferVersion() {
     * Begin with 0x99,0x99,0x99,0x99,0x11,0x11,0x11,0x11: WiFi packet
     * Begin with "Wendigo "                              : Version message
 */
-void parseBuffer() {
+void parseBuffer(WendigoApp *app) {
     /* It should be impossible to reach here with fewer than 8 bytes in the buffer */
     if (bufferLen < 8) {
         // TODO: Panic
@@ -87,11 +87,11 @@ void parseBuffer() {
     }
     uint16_t consumedBytes = 0;
     if (!memcmp(PREAMBLE_BT_BLE, buffer, PREAMBLE_LEN)) {
-        consumedBytes = parseBufferBluetooth();
+        consumedBytes = parseBufferBluetooth(app);
     } else if (!memcmp(PREAMBLE_WIFI, buffer, PREAMBLE_LEN)) {
-        consumedBytes = parseBufferWifi();
+        consumedBytes = parseBufferWifi(app);
     } else if (!memcmp(PREAMBLE_VER, buffer, PREAMBLE_LEN)) {
-        consumedBytes = parseBufferVersion();
+        consumedBytes = parseBufferVersion(app);
     } else {
         // TODO: Panic
     }
@@ -127,7 +127,6 @@ void parseBuffer() {
 void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
     furi_assert(context);
     WendigoApp* app = context;
-    UNUSED(app);
 
     /* Extend the buffer if necessary */
     if (bufferLen + len >= bufferCap) {
@@ -149,7 +148,7 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
     if (buffer[bufferLen - 1] == '\n') { // TODO: Test whether multiple messages can be received at once even though stdout is flushed after each message
                                          //       Or a complete message followed by part of the next message (which would require finding a newline in
                                          //       the buffer, parsing the first part and shuffling bytes forward).
-        parseBuffer();
+        parseBuffer(app);
     }
 
 }
