@@ -114,13 +114,13 @@ When in **Interactive Mode** this displays a summary of key ESP32-Wendigo inform
 
 #### tag
 
-**Not yet implemented**
+**Only available in Interactive Mode**
 
 Tags a device of interest. When viewing scan results tagged devices are highlighted to make them readily-identifiable; when **Follow Mode** is enabled only tagged devices will be displayed.
 
 #### follow
 
-**Not yet implemented**
+**Only available in Interactive Mode**
 
 Controls ESP32-Wendigo's Follow Mode. In Follow Mode ESP32-Wendigo only displays information about devices that have been **tagged**, and restructures the interface from chronological ("which devices have I seen most recently?") to spatial ("how strong is the signal from these devices?"). This makes it possible to locate the source of wireless signals that are of interest.
 

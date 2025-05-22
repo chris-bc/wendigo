@@ -67,11 +67,11 @@ Wendigo is a Flipper Zero application to detect, monitor and track nearby wirele
 <a id="getting-started"></a>
 ## Getting Started
 
-Wendigo is in its early stages of development. The Flipper Zero application provides an initial outline of its expected functionality, but does not yet communicate with its companion ESP32 firmware in any way at all.
+Wendigo is in its early stages of development. The Flipper Zero application provides an initial outline of its expected functionality, but is not yet able to display devices found during scanning.
 
-**The Flipper Zero application currently does not function**.
+**The Flipper Zero application does not yet display scan results and device information**.
 
-Once the Flipper and ESP32 applications have a functional base binaries will be made available under *Releases*. Alternatively, especially if you want the latest features or to contribute to the development, you can compile the application yourself, as described below.
+Once the Flipper and ESP32 applications have a more complete base, binaries will be made available under *Releases*. Alternatively, especially if you want the latest features or to contribute to the development, you can compile the application yourself, as described below.
 
 <a id="prerequisites"></a>
 ### Prerequisites
@@ -145,7 +145,7 @@ These instructions are written under the assumption that the above packages have
    ```
 5. Install the Flipper Zero toolchain and compile firmware
    ```sh
-   cd ~/flipper
+   cd ~/flipperzero
    ./fbt
    ```
 6. Remove the ESP32, connect a Flipper Zero, and verify it has been detected by the OS
@@ -154,7 +154,7 @@ These instructions are written under the assumption that the above packages have
    ```
 7. Link Flipper-Wendigo into the Flipper Zero firmware, build and flash the firmware
    ```sh
-   ln -s ~/wendigo/flipper ~/flipper/applications_user/wendigo
+   ln -s ~/wendigo/flipper ~/flipperzero/applications_user/wendigo
    ./fbt firmware_all flash_usb_full
    ```
 
@@ -214,7 +214,7 @@ Because Wendigo is still in early development the following changes are core to 
     * [ ] Enable/Disable channels
   * [X] Scan Start/Stop
   * [ ] Scanning status (popup?)
-  * [ ] ESP Version (popup)
+  * [X] ESP Version (popup)
   * [ ] Display devices
   * [ ] Device tagging
   * [ ] Focus Mode
