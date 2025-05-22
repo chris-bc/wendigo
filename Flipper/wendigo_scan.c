@@ -1,5 +1,11 @@
 #include "wendigo_scan.h"
 
+/* Device caches */
+flipper_bt_device **bt_devices = NULL;
+uint16_t bt_devices_count = 0;
+uint16_t bt_devices_capacity = 0;
+// TODO: WiFi
+
 uint8_t *buffer = NULL;
 uint16_t bufferLen = 0; // 65535 should be plenty of length
 uint16_t bufferCap = 0; // Buffer capacity - I don't want to allocate 65kb, but don't want to constantly realloc
@@ -54,25 +60,179 @@ void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
     app->is_scanning = starting;
 }
 
+/* Returns the index into bt_devices[] of the device with BDA matching dev->bda.
+   Returns bt_devices_count if the device was not found. */
+uint16_t bt_device_index(flipper_bt_device *dev) {
+    uint16_t result;
+    for (result = 0; result < bt_devices_count && memcmp(dev->dev.bda, bt_devices[result]->dev.bda, BDA_LEN); ++result) { }
+    return result;
+}
+
+/* Determines whether a device with the BDA dev->bda exists in bt_devices[] */
+bool bt_device_exists(flipper_bt_device *dev) {
+    return bt_device_index(dev) < bt_devices_count;
+}
+
+/* Adds the specified device to bt_devices[], extending the length of bt_devices[] if necessary.
+   DOES NOT check to ensure the device is not already present in bt_devices[].
+   Return true if the device was successfully added to bt_devices[].
+   NOTE: The provided flipper_bt_device object is retained in bt_devices[] - It MUST NOT be freed by the caller */
+bool wendigo_add_bt_device(flipper_bt_device *dev) {
+    /* Increase capacity of bt_devices[] by an additional 10 if necessary */
+    if (bt_devices == NULL || bt_devices_capacity == bt_devices_count) {
+        flipper_bt_device **new_devices = realloc(bt_devices, sizeof(flipper_bt_device *) * (bt_devices_capacity + 10));
+        if (new_devices == NULL) {
+            /* Can't store the device */
+            return false;
+        }
+        bt_devices = new_devices;
+        bt_devices_capacity += 10;
+    }
+    bt_devices[bt_devices_count++] = dev;
+    return true;
+}
+
+/* Locates a device in bt_devices[] with the same BDA as `dev` and updates the object's fields to match `dev`.
+   If the specified device does not exist in bt_devices[], or another error occurs, the function returns false,
+   otherwise true is returned to indicate success. */
+bool wendigo_update_bt_device(flipper_bt_device *dev) {
+    uint16_t idx = bt_device_index(dev);
+    if (idx == bt_devices_count) {
+        /* Device doesn't exist in bt_devices[] */
+        return false;
+    }
+    /* Update bt_devices[idx] */
+    if (dev->cod_str != NULL) {
+        if (bt_devices[idx]->cod_str != NULL) {
+            free(bt_devices[idx]->cod_str);
+        }
+        bt_devices[idx]->cod_str = dev->cod_str;
+    }
+    if (dev->dev.bdname_len > 0 && dev->dev.bdname != NULL) {
+        if (bt_devices[idx]->dev.bdname_len > 0 && bt_devices[idx]->dev.bdname != NULL) {
+            free(bt_devices[idx]->dev.bdname);
+        }
+        bt_devices[idx]->dev.bdname_len = dev->dev.bdname_len;
+        bt_devices[idx]->dev.bdname = dev->dev.bdname;
+    }
+    if (dev->dev.cod != 0) {
+        bt_devices[idx]->dev.cod = dev->dev.cod;
+    }
+    if (dev->dev.eir_len > 0 && dev->dev.eir != NULL) {
+        if (bt_devices[idx]->dev.eir_len > 0 && bt_devices[idx]->dev.eir != NULL) {
+            free(bt_devices[idx]->dev.eir);
+        }
+        bt_devices[idx]->dev.eir_len = dev->dev.eir_len;
+        bt_devices[idx]->dev.eir = dev->dev.eir;
+    }
+    bt_devices[idx]->dev.lastSeen = dev->dev.lastSeen;
+    bt_devices[idx]->dev.rssi = dev->dev.rssi;
+    bt_devices[idx]->dev.scanType = dev->dev.scanType;
+    bt_devices[idx]->dev.tagged = dev->dev.tagged;
+    /* Now update service descriptors */
+    if (dev->dev.bt_services.num_services > 0 && dev->dev.bt_services.num_services != bt_devices[idx]->dev.bt_services.num_services) {
+        if (bt_devices[idx]->dev.bt_services.num_services > 0 && bt_devices[idx]->dev.bt_services.service_uuids != NULL) {
+            free(bt_devices[idx]->dev.bt_services.service_uuids);
+        }
+        bt_devices[idx]->dev.bt_services.num_services = dev->dev.bt_services.num_services;
+        bt_devices[idx]->dev.bt_services.service_uuids = dev->dev.bt_services.service_uuids;
+    }
+    if (dev->dev.bt_services.known_services_len > 0 && dev->dev.bt_services.known_services_len != bt_devices[idx]->dev.bt_services.known_services_len) {
+        if (bt_devices[idx]->dev.bt_services.known_services_len > 0 && bt_devices[idx]->dev.bt_services.known_services != NULL) {
+            free(bt_devices[idx]->dev.bt_services.known_services);
+        }
+        bt_devices[idx]->dev.bt_services.known_services_len = dev->dev.bt_services.known_services_len;
+        bt_devices[idx]->dev.bt_services.known_services = dev->dev.bt_services.known_services;
+    }
+    return true;
+}
+
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes from the buffer, this must be handled by
    the calling function.
    The received packet must follow this structure:
    * 4 bytes of 0xFF followed by 4 bytes of 0xAA
    * Device structure (sizeof(wendigo_bt_device))
-   * bdname_len (1 byte)
-   * bdname if present (wendigo_bt_device.bdname_len bytes)
-   * eir_len (1 byte)
+   * bdname if present (wendigo_bt_device.bdname_len + 1 bytes)
    * eir if present (wendigo_bt_device.eir_len bytes)
    * strlen(cod_short) (1 byte)
-   * cod_short (strlen(cod_short) bytes)
+   * cod_short (strlen(cod_short) + 1 bytes)
    * Newline ('\n')
 */
 uint16_t parseBufferBluetooth(WendigoApp *app) {
     /* Skip the preamble */
     uint16_t index = PREAMBLE_LEN;
-    UNUSED(app); UNUSED(index);
-    return 0;
+    /* Ensure we have enough bytes for a wendigo_bt_device */
+    if (bufferLen >= index + sizeof(wendigo_bt_device)) {
+        flipper_bt_device *dev = malloc(sizeof(flipper_bt_device));
+        if (dev == NULL) {
+            // TODO: Panic. For now just skip the device
+            return bytes_contains_newline(buffer, bufferLen);
+        }
+        /* Copy bytes into `dev->dev` */
+        memcpy(&(dev->dev), buffer + index, sizeof(wendigo_bt_device));
+        index += sizeof(wendigo_bt_device);
+        dev->dev.bdname = NULL;
+        dev->dev.bt_services.known_services = NULL;
+        dev->dev.bt_services.service_uuids = NULL;
+        dev->dev.bt_services.known_services_len = 0;
+        dev->dev.bt_services.num_services = 0;
+        dev->dev.eir = NULL;
+        dev->dev.cod = 0;
+        dev->cod_str = NULL;
+        /* Do we have a bdname? */
+        if (dev->dev.bdname_len > 0 && bufferLen >= (index + dev->dev.bdname_len + 1)) {
+            dev->dev.bdname = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
+            if (dev->dev.bdname == NULL) {
+                // TODO: Panic. For now just skip the name
+                index += (dev->dev.bdname_len + 1);
+                dev->dev.bdname_len = 0;
+            } else {
+                memcpy(dev->dev.bdname, buffer + index, dev->dev.bdname_len + 1); // Include NULL terminator
+                index += (dev->dev.bdname_len + 1);
+            }
+        }
+        /* Do we have EIR? */
+        if (dev->dev.eir_len > 0 && bufferLen >= index + dev->dev.eir_len) {
+            dev->dev.eir = malloc(dev->dev.eir_len);
+            if (dev->dev.eir == NULL) {
+                // TODO: Panic. For now just skip EIR
+                index += dev->dev.eir_len;
+                dev->dev.eir_len = 0;
+            } else {
+                memcpy(dev->dev.eir, buffer + index, dev->dev.eir_len);
+                index += dev->dev.eir_len;
+            }
+        }
+        /* Do we have class of device? */
+        if (bufferLen >= index) {
+            uint8_t cod_len = buffer[index++];
+            if (cod_len > 0 && bufferLen >= (index + cod_len + 1)) {
+                dev->cod_str = malloc(sizeof(char) * (cod_len + 1));
+                if (dev->cod_str == NULL) {
+                    // TODO: Panic. For now just skip the field
+                } else {
+                    memcpy(dev->cod_str, buffer + index, cod_len + 1);
+                }
+                index += (cod_len + 1);
+            }
+        }
+        // TODO: Services to go here
+
+        if (buffer[index] != '\n') {
+            // TODO: Panic & recover
+        }
+        ++index;
+
+        /* Does this device already exist in bt_devices[]? */
+        if (bt_device_exists(dev)) {
+            wendigo_update_bt_device(dev);
+        } else {
+            wendigo_add_bt_device(dev);
+        }
+    }
+    UNUSED(app);
+    return index;
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT

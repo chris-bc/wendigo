@@ -3,6 +3,8 @@
 #include "wendigo_app_i.h"
 #include <sys/time.h>
 
+#define BDA_LEN 6
+
 void wendigo_set_scanning_active(WendigoApp *app, bool starting);
 void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context);
 void wendigo_free_uart_buffer();
@@ -44,3 +46,9 @@ typedef struct {
     struct timeval lastSeen;
     wendigo_bt_svc bt_services;
 } wendigo_bt_device;
+
+/* Encapsulating struct so I have somewhere to store the class of device string */
+typedef struct {
+    wendigo_bt_device dev;
+    char *cod_str;
+} flipper_bt_device;
