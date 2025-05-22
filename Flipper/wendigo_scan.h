@@ -9,6 +9,7 @@ void wendigo_set_scanning_active(WendigoApp *app, bool starting);
 void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context);
 void wendigo_free_uart_buffer();
 void wendigo_esp_version(WendigoApp *app);
+void wendigo_free_bt_devices();
 
 /* The following enum and structs MUST REMAIN IN SYNC with their counterparts in ESP32-Wendigo (bluetooth.h) */
 typedef enum {

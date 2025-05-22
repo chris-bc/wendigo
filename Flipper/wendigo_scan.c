@@ -147,6 +147,45 @@ bool wendigo_update_bt_device(flipper_bt_device *dev) {
     return true;
 }
 
+void wendigo_free_bt_devices() {
+    flipper_bt_device *dev;
+    if (bt_devices_capacity > 0 && bt_devices != NULL) {
+        for (int i = 0; i < bt_devices_count; ++i) {
+            dev = bt_devices[i];
+            if (dev->cod_str != NULL) {
+                free(dev->cod_str);
+            }
+            if (dev->dev.bdname_len > 0 && dev->dev.bdname != NULL) {
+                free(dev->dev.bdname);
+                dev->dev.bdname = NULL;
+                dev->dev.bdname_len = 0;
+            }
+            if (dev->dev.eir_len > 0 && dev->dev.eir != NULL) {
+                free(dev->dev.eir);
+                dev->dev.eir = NULL;
+                dev->dev.eir_len = 0;
+            }
+            if (dev->dev.bt_services.known_services_len > 0 && dev->dev.bt_services.known_services != NULL) {
+                // TODO: This is a ** - Loop through it's contents when services are implemented
+                free(dev->dev.bt_services.known_services);
+                dev->dev.bt_services.known_services = NULL;
+                dev->dev.bt_services.known_services_len = 0;
+            }
+            if (dev->dev.bt_services.num_services > 0 && dev->dev.bt_services.service_uuids != NULL) {
+                free(dev->dev.bt_services.service_uuids);
+                dev->dev.bt_services.service_uuids = NULL;
+                dev->dev.bt_services.num_services = 0;
+            }
+            dev = NULL;
+            free(bt_devices[i]);
+        }
+        free(bt_devices);
+        bt_devices = NULL;
+        bt_devices_count = 0;
+        bt_devices_capacity = 0;
+    }
+}
+
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes from the buffer, this must be handled by
    the calling function.

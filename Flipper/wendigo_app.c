@@ -176,8 +176,10 @@ void wendigo_app_free(WendigoApp* app) {
     scene_manager_free(app->scene_manager);
 
     /* Free device cache and UART buffer */
-    // TODO After device caches are implemented
     wendigo_free_uart_buffer();
+    wendigo_free_bt_devices();
+    // TODO: WiFi device cache
+
 
     wendigo_uart_free(app->uart);
 
