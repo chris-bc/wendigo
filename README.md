@@ -187,7 +187,7 @@ Because Wendigo is still in early development the following changes are core to 
 * [X] First cut combined bluetooth protocol
   * [X] Probably start with a fully-encapsulated, primitive-based struct
   * [X] Serialise from ESP32
-  * [ ] Deserialise from Flipper
+  * [X] Deserialise from Flipper
 * [ ] Develop a Flipper-based logging mechanism and support for multiple streams of data
   * [ ] Logs which go directly to a buffer or file;
   * [ ] Device info which goes directly to display
@@ -207,6 +207,9 @@ Because Wendigo is still in early development the following changes are core to 
   * [X] Reduce scan output in interactive mode by caching device details
   * [ ] Consider applying similar caching to FZ
 * [ ] Create Flipper data model
+  * [X] Bluetooth
+  * [ ] Bluetooth services
+  * [ ] WiFi
 * [ ] Create Flipper UI
   * [X] Settings
     * [ ] Retrieve and change MACs
