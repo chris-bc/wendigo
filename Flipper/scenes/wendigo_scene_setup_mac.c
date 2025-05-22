@@ -89,16 +89,7 @@ void wendigo_scene_setup_mac_input_callback(void* context) {
                 "Failed to Update %s MAC!",
                 result_if_text);
         }
-        /* Configure popup */
-        popup_set_header(app->popup, popup_header_text, 64, 3, AlignCenter, AlignTop);
-        popup_set_text(app->popup, popup_text, 64, 22, AlignCenter, AlignTop);
-        popup_set_icon(app->popup, -1, -1, NULL);
-        popup_set_timeout(app->popup, 2000); // 3 secondsn
-        popup_enable_timeout(app->popup);
-        popup_set_callback(app->popup, wendigo_scene_setup_mac_popup_callback);
-        popup_set_context(app->popup, app);
-
-        view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
+        wendigo_display_popup(app, popup_header_text, popup_text);
     } else {
         // Should this also be run after the popup?
         scene_manager_handle_back_event(app->scene_manager);

@@ -75,6 +75,8 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
                 view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartHelp);
                 break;
             case ESP_VER_IDX:
+                /* Ensure wendigo_scan.c receives the reply */
+                wendigo_uart_set_binary_cb(app->uart);
                 wendigo_esp_version(app);
                 break;
             default:

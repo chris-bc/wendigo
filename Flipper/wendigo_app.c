@@ -5,6 +5,9 @@
 #include <expansion/expansion.h>
 #include <math.h>
 
+/* UART rx callback for Console Output scene */
+extern void wendigo_console_output_handle_rx_data_cb(uint8_t* buf, size_t len, void* context);
+
 static bool wendigo_app_custom_event_callback(void* context, uint32_t event) {
     furi_assert(context);
     WendigoApp* app = context;
@@ -23,10 +26,14 @@ static void wendigo_app_tick_event_callback(void* context) {
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
-/* Generic handler for app->popup that restored the previous view */
+/* Generic handler for app->popup that restores the previous view */
 void wendigo_popup_callback(void *context) {
     WendigoApp *app = (WendigoApp *)context;
-    scene_manager_previous_scene(app->scene_manager);
+    bool done = scene_manager_previous_scene(app->scene_manager);
+    if (!done) {
+        /* No previous scene - Switch back to the menu view */
+        view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
+    }
 }
 
 void wendigo_display_popup(WendigoApp *app, char *header, char*body) {
@@ -187,7 +194,7 @@ int32_t wendigo_app(void* p) {
 
     wendigo_app->uart = wendigo_uart_init(wendigo_app);
     /* Set UART callback using wendigo_scan */
-    wendigo_uart_set_handle_rx_data_cb(wendigo_app->uart, wendigo_scan_handle_rx_data_cb);
+    wendigo_uart_set_binary_cb(wendigo_app->uart);
 
     view_dispatcher_run(wendigo_app->view_dispatcher);
 
@@ -198,4 +205,12 @@ int32_t wendigo_app(void* p) {
     furi_record_close(RECORD_EXPANSION);
 
     return 0;
+}
+
+void wendigo_uart_set_binary_cb(Wendigo_Uart *uart) {
+    wendigo_uart_set_handle_rx_data_cb(uart, wendigo_scan_handle_rx_data_cb);
+}
+
+void wendigo_uart_set_console_cb(Wendigo_Uart *uart) {
+    wendigo_uart_set_handle_rx_data_cb(uart, wendigo_console_output_handle_rx_data_cb);
 }

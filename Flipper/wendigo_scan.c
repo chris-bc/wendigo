@@ -3,12 +3,33 @@
 uint8_t *buffer = NULL;
 uint16_t bufferLen = 0; // 65535 should be plenty of length
 uint16_t bufferCap = 0; // Buffer capacity - I don't want to allocate 65kb, but don't want to constantly realloc
+char *wendigo_popup_text = NULL; // I suspect the popup text is going out of scope when declared at function scope
 
 /* Packet identifiers */
 uint8_t PREAMBLE_LEN = 8;
 uint8_t PREAMBLE_BT_BLE[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xAA, 0xAA, 0xAA, 0xAA};
 uint8_t PREAMBLE_WIFI[]   = {0x99, 0x99, 0x99, 0x99, 0x11, 0x11, 0x11, 0x11};
 uint8_t PREAMBLE_VER[]    = {'W', 'e', 'n', 'd', 'i', 'g', 'o', ' '};
+
+/* Returns the index of the first occurrence of `\n` in `theString`, searching the first `size` characters.
+   Returns size if not found (which is outside the array bounds). */
+uint16_t bytes_contains_newline(uint8_t *theBytes, uint16_t size) {
+    uint16_t result = 0;
+    for (; result < size && theBytes[result] != '\n'; ++result) { }
+    return result;
+}
+
+/* Returns the index of the first occurrence of '\n' in `theString`, or strlen(theString) if not found.
+   This function requires `theString` to be null terminated. */
+uint16_t string_contains_newline(char *theString) {
+    return bytes_contains_newline((uint8_t *)theString, strlen(theString));
+}
+
+/* Send the version command to ESP32 */
+void wendigo_esp_version(WendigoApp *app) {
+    char cmd[] = "v\n";
+    wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
+}
 
 /* Enable or disable Wendigo scanning on all interfaces, using app->interfaces
    to determine which radios should be enabled/disabled when starting to scan.
@@ -53,22 +74,24 @@ uint16_t parseBufferWifi(WendigoApp *app) {
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes, this must be handled by the calling function. */
 uint16_t parseBufferVersion(WendigoApp *app) {
-    // TODO
-    // Create a char[] of bufferLen
-    // Copy bytes across, replacing newline with NULL terminator
-    // Call a UI method (can I access wendigo_scene_help's scope from here?) to display a popup
-    char versionStr[bufferLen];
+    char *versionStr = realloc(wendigo_popup_text, sizeof(char) * bufferLen);
+    if (versionStr == NULL) {
+        // TODO: Panic
+        // For now just consume this message
+        return bytes_contains_newline(buffer, bufferLen);
+    }
+    wendigo_popup_text = versionStr;
     int i = 0;
     for (; i < bufferLen && buffer[i] != '\n'; ++i) {
-        versionStr[i] = buffer[i];
+        wendigo_popup_text[i] = buffer[i];
     }
     // TODO: Consider handling a missing newline more elegantly - Although it's currently
     //       the end-of-transmission marker so not possible to get here without one
     if (i == bufferLen) {
         --i; // Replace the last byte with NULL. This should never happen.
     }
-    versionStr[i] = '\0';
-    wendigo_display_popup(app, "ESP32 Version", versionStr);
+    wendigo_popup_text[i] = '\0';
+    wendigo_display_popup(app, "ESP32 Version", wendigo_popup_text);
     return i + 1;
 }
 
@@ -79,20 +102,23 @@ uint16_t parseBufferVersion(WendigoApp *app) {
     * Begin with "Wendigo "                              : Version message
 */
 void parseBuffer(WendigoApp *app) {
-    /* It should be impossible to reach here with fewer than 8 bytes in the buffer */
-    if (bufferLen < 8) {
-        // TODO: Panic
-        return;
-    }
     uint16_t consumedBytes = 0;
-    if (!memcmp(PREAMBLE_BT_BLE, buffer, PREAMBLE_LEN)) {
+    if (bufferLen >= 8 && !memcmp(PREAMBLE_BT_BLE, buffer, PREAMBLE_LEN)) {
         consumedBytes = parseBufferBluetooth(app);
-    } else if (!memcmp(PREAMBLE_WIFI, buffer, PREAMBLE_LEN)) {
+    } else if (bufferLen >= 8 && !memcmp(PREAMBLE_WIFI, buffer, PREAMBLE_LEN)) {
         consumedBytes = parseBufferWifi(app);
-    } else if (!memcmp(PREAMBLE_VER, buffer, PREAMBLE_LEN)) {
+    } else if (bufferLen >= 8 && !memcmp(PREAMBLE_VER, buffer, PREAMBLE_LEN)) {
         consumedBytes = parseBufferVersion(app);
     } else {
-        // TODO: Panic
+        /* Extraneous content - Remove everything up to and including the first newline */
+        for (consumedBytes = 0; consumedBytes < bufferLen && buffer[consumedBytes] != '\n'; ++consumedBytes) {}
+        if (consumedBytes < bufferLen) {
+            /* Found a newline at buffer[consumedBytes] - Also consume the newline */
+            ++consumedBytes;
+        } else {
+            /* No newline found. This should never occur with the existing implementation */
+            consumedBytes = 0;
+        }
     }
     if (consumedBytes == 0) {
         // That was a bit of a waste
@@ -143,13 +169,12 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
     memcpy(buffer + bufferLen, buf, len);
     bufferLen += len;
 
-    /* Have we reached the end of transmission? */
-    if (buffer[bufferLen - 1] == '\n') { // TODO: Test whether multiple messages can be received at once even though stdout is flushed after each message
-                                         //       Or a complete message followed by part of the next message (which would require finding a newline in
-                                         //       the buffer, parsing the first part and shuffling bytes forward).
+    /* Parse any complete transmissions we have received */
+    uint16_t newline = bytes_contains_newline(buffer, bufferLen);
+    while (newline != bufferLen) {
         parseBuffer(app);
+        newline = bytes_contains_newline(buffer, bufferLen);
     }
-
 }
 
 void wendigo_free_uart_buffer() {
@@ -159,10 +184,8 @@ void wendigo_free_uart_buffer() {
         bufferCap = 0;
         buffer = NULL;
     }
-}
-
-/* Send the version command to ESP32 */
-void wendigo_esp_version(WendigoApp *app) {
-    char cmd[] = "v\n";
-    wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
+    if (wendigo_popup_text != NULL) {
+        free(wendigo_popup_text);
+        wendigo_popup_text = NULL;
+    }
 }
