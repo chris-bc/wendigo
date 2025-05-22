@@ -6,7 +6,7 @@ static const WendigoItem items[START_MENU_ITEMS] = {
     {"Setup", {""}, 1, OPEN_SETUP, BOTH_MODES},
     {"Scan", {"Start", "Stop", "Status"}, 3, OPEN_SCAN, TEXT_MODE},
     {"Devices", {""}, 1, LIST_DEVICES, BOTH_MODES},
-    {"Selected Devices", {""}, 1, LIST_DEVICES, BOTH_MODES},
+    {"Selected Devices", {""}, 1, LIST_SELECTED_DEVICES, BOTH_MODES},
     {"Track Selected", {""}, 1, TRACK_DEVICES, TEXT_MODE},
     {"Help", {"About", "ESP Version"}, 2, OPEN_HELP, TEXT_MODE},
 };
@@ -61,6 +61,15 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
         }
         break;
     case LIST_DEVICES:
+        // Set state somewhere so it knows to display all devices
+        // Create a new scene for device display
+        // Send a new custom event to display devices
+        // Try to fit name, BDA and CoD on the var_list
+        // Allow selecting a device to obtain more information: remaining attributes, tag/untag, services, maybe some transmit options
+
+        // Thought: Merge these two case statements - initialise state variable (selected_only) to false, move LIST_SELECTED_DEVICES forward and change selected_only, then flow continues into LIST_DEVICES.
+        break;
+    case LIST_SELECTED_DEVICES:
         app->is_command = true;
 
         if(app->hex_mode) {

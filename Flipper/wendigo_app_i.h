@@ -44,6 +44,7 @@ typedef enum {
     OPEN_SETUP,
     OPEN_SCAN,
     LIST_DEVICES,
+    LIST_SELECTED_DEVICES,
     TRACK_DEVICES,
     OPEN_MAC,
     OPEN_HELP
