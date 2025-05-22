@@ -149,9 +149,7 @@ esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
 /* Send device info to stdout to transmit over UART
    * Sends 4 bytes of 0xFF followed by 4 bytes of 0xAA to begin the transmission
    * Sends the device structure (sizeof(wendigo_bt_device))
-   * bdname_len (1 byte)
-   * Sends bdname if present (wendigo_bt_device.bdname_len bytes)
-   * eir_len (1 byte)
+   * Sends bdname if present (wendigo_bt_device.bdname_len + 1 bytes)
    * Sends eir if present (wendigo_bt_device.eir_len bytes)
    * Sends strlen(cod_short) (1 byte) followed by cod_short
    * Ends the transmission with a newline ('\n')
@@ -169,15 +167,15 @@ esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     uint8_t *devBytes = (uint8_t *)dev;
     send_bytes(devBytes, sizeof(*dev));
     /* bdname */
-    send_bytes(&dev->bdname_len, 1);
     if (dev->bdname_len > 0) {
-        send_bytes((uint8_t *)(dev->bdname), dev->bdname_len);
+        send_bytes((uint8_t *)(dev->bdname), dev->bdname_len + 1); // Don't forget the NULL terminator!
     }
     /* EIR */
-    send_bytes(&dev->eir_len, 1);
     send_bytes(dev->eir, dev->eir_len);
     send_bytes(&cod_len, 1);
-    send_bytes((uint8_t *)cod_short, cod_len);
+    if (cod_len > 0) {
+        send_bytes((uint8_t *)cod_short, cod_len + 1);
+    }
     /* Mark the end of transmission with a newline */
     // YAGNI: Consider something more formal, e.g. 8 NULL bytes.
     putc('\n', stdout);
