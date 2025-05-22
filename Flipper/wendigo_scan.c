@@ -56,10 +56,22 @@ void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes from the buffer, this must be handled by
-   the calling function. */
+   the calling function.
+   The received packet must follow this structure:
+   * 4 bytes of 0xFF followed by 4 bytes of 0xAA
+   * Device structure (sizeof(wendigo_bt_device))
+   * bdname_len (1 byte)
+   * bdname if present (wendigo_bt_device.bdname_len bytes)
+   * eir_len (1 byte)
+   * eir if present (wendigo_bt_device.eir_len bytes)
+   * strlen(cod_short) (1 byte)
+   * cod_short (strlen(cod_short) bytes)
+   * Newline ('\n')
+*/
 uint16_t parseBufferBluetooth(WendigoApp *app) {
-    // TODO
-    UNUSED(app);
+    /* Skip the preamble */
+    uint16_t index = PREAMBLE_LEN;
+    UNUSED(app); UNUSED(index);
     return 0;
 }
 
