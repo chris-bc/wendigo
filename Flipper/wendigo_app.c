@@ -31,8 +31,9 @@ void wendigo_popup_callback(void *context) {
     WendigoApp *app = (WendigoApp *)context;
     bool done = scene_manager_previous_scene(app->scene_manager);
     if (!done) {
-        /* No previous scene - Switch back to the menu view */
-        view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
+        /* No previous scene - Start the main menu scene */
+        // TODO: Alongside wendigo_display_popup() (below), restore the scene that was actually running prior to the popup
+        scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
     }
 }
 
@@ -44,6 +45,8 @@ void wendigo_display_popup(WendigoApp *app, char *header, char*body) {
     popup_enable_timeout(app->popup);
     popup_set_callback(app->popup, wendigo_popup_callback);
     popup_set_context(app->popup, app);
+    // TODO: Check which scene is active so we can restore it later. For now assuming we're on the main menu.
+    scene_manager_set_scene_state(app->scene_manager, WendigoSceneStart, app->selected_menu_index);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
 }
 
