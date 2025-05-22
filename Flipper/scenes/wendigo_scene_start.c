@@ -7,13 +7,15 @@ static const WendigoItem items[START_MENU_ITEMS] = {
     {"Devices", {""}, 1, LIST_DEVICES, BOTH_MODES},
     {"Selected Devices", {""}, 1, LIST_DEVICES, BOTH_MODES},
     {"Track Selected", {""}, 1, TRACK_DEVICES, TEXT_MODE},
-    {"Help", {"About"}, 1, OPEN_HELP, TEXT_MODE},
+    {"Help", {"About", "ESP Version"}, 2, OPEN_HELP, TEXT_MODE},
 };
 
 #define SETUP_IDX       (0)
 #define SCAN_START_IDX  (0)
 #define SCAN_STOP_IDX   (1)
 #define SCAN_STATUS_IDX (2)
+#define ABOUT_IDX       (0)
+#define ESP_VER_IDX     (1)
 
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
@@ -68,7 +70,17 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
         view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
         return;
     case OPEN_HELP:
-        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartHelp);
+        switch (selected_option_index) {
+            case ABOUT_IDX:
+                view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartHelp);
+                break;
+            case ESP_VER_IDX:
+                wendigo_esp_version(app);
+                break;
+            default:
+                // TODO: Panic
+                break;
+        }
         return;
     default:
         return;

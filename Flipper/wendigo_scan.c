@@ -68,7 +68,6 @@ uint16_t parseBufferVersion(WendigoApp *app) {
         --i; // Replace the last byte with NULL. This should never happen.
     }
     versionStr[i] = '\0';
-    // TODO: Call a UI method to display versionStr in a popup
     wendigo_display_popup(app, "ESP32 Version", versionStr);
     return i + 1;
 }
@@ -160,4 +159,10 @@ void wendigo_free_uart_buffer() {
         bufferCap = 0;
         buffer = NULL;
     }
+}
+
+/* Send the version command to ESP32 */
+void wendigo_esp_version(WendigoApp *app) {
+    char cmd[] = "v\n";
+    wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
 }
