@@ -1,4 +1,5 @@
 #include "../wendigo_app_i.h"
+#include <dolphin/dolphin.h>
 
 // NUM_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
 static const WendigoItem items[START_MENU_ITEMS] = {
@@ -36,6 +37,9 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
     app->is_command = false;
     app->is_custom_tx_string = false;
     app->selected_menu_index = index;
+
+    /* Reward Dolphin for running a command */
+    dolphin_deed(DolphinDeedGpioUartBridge);
 
     switch(item->action) {
     case OPEN_SETUP:
