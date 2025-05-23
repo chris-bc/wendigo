@@ -171,7 +171,7 @@ Connect the ESP32 to the Flipper Zero by connecting the following pins:
 * Flipper Zero GND (8 or 18) to ESP32 GND
 * Flipper Zero 3V3 (9) to ESP32 3V3 (sometimes labelled VCC)
 
-Launch the Wendigo application from Apps -> GPIO -> ESP -> [ESP32] Wendigo.
+Launch the Wendigo application from Apps -> GPIO -> ESP -> [ESP32] Wendigo BT+BLE+WiFi Monitor.
 
 _For more examples, please refer to the [Documentation](https://example.com)_
 
