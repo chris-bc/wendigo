@@ -219,8 +219,15 @@ Because Wendigo is still in early development the following changes are core to 
   * [ ] Scanning status (popup?)
   * [X] ESP Version (popup)
   * [ ] Display devices
+  * [ ] Display device details
   * [ ] Device tagging
   * [ ] Focus Mode
+  * [ ] "Display Settings" menu
+    * [ ] Enable/Disable device types
+    * [ ] Sort results by
+      * [ ] Name
+      * [ ] LastSeen
+      * [ ] RSSI
 * [ ] Flipper settings
   * [ ] ESP32 integration
   * [ ] Ability to flash ESP32 firmware from Flipper?
@@ -229,10 +236,6 @@ Because Wendigo is still in early development the following changes are core to 
   * [X] **Focus** mode that restricts received data to devices of interest only
   * [X] **Tag** command to select devices
   * [X] Designed to be usable from console as well as from Flipper
-  * [ ] Sort results by
-    * [ ] Name
-    * [ ] LastSeen
-    * [ ] RSSI
 
 See the [open issues](https://github.com/chris-bc/wendigo/issues) for a full list of proposed features (and known issues).
 
