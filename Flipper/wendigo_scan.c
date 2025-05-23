@@ -5,6 +5,12 @@ uint16_t bufferLen = 0; // 65535 should be plenty of length
 uint16_t bufferCap = 0; // Buffer capacity - I don't want to allocate 65kb, but don't want to constantly realloc
 char *wendigo_popup_text = NULL; // I suspect the popup text is going out of scope when declared at function scope
 
+/* Device caches */
+flipper_bt_device **bt_devices = NULL;
+uint16_t bt_devices_count = 0;
+uint16_t bt_devices_capacity = 0;
+// TODO: WiFi
+
 /* Packet identifiers */
 uint8_t PREAMBLE_LEN = 8;
 uint8_t PREAMBLE_BT_BLE[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xAA, 0xAA, 0xAA, 0xAA};
@@ -58,7 +64,7 @@ void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
    Returns bt_devices_count if the device was not found. */
 uint16_t bt_device_index(flipper_bt_device *dev) {
     uint16_t result;
-    for (result = 0; result < bt_devices_count && memcmp(dev->dev.bda, bt_devices[result]->dev.bda, BDA_LEN); ++result) { }
+    for (result = 0; result < bt_devices_count && memcmp(dev->dev.bda, bt_devices[result]->dev.bda, MAC_BYTES); ++result) { }
     return result;
 }
 

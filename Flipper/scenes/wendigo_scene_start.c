@@ -1,4 +1,5 @@
 #include "../wendigo_app_i.h"
+#include "../wendigo_scan.h"
 #include <dolphin/dolphin.h>
 
 // NUM_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!

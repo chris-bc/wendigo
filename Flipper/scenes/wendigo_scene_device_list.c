@@ -1,4 +1,5 @@
 #include "../wendigo_app_i.h"
+#include "../wendigo_scan.h"
 
 static void wendigo_scene_device_list_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
@@ -21,7 +22,8 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
     WendigoApp* app = variable_item_get_context(item);
     furi_assert(app);
 
-    const flipper_bt_device *menu_item = items[app->device_list_selected_menu_index];
+    const flipper_bt_device *menu_item = bt_devices[app->device_list_selected_menu_index];
+    UNUSED(menu_item);
     uint8_t item_index = variable_item_get_current_value_index(item);
     furi_assert(item_index < bt_devices_count);
     // TODO: The following will be useful for managing tag options (on/off)
@@ -54,6 +56,7 @@ void wendigo_scene_device_list_on_enter(void* context) {
             1, // TODO: Change this for menu items with options (although I don't think there are any?)
             wendigo_scene_device_list_var_list_change_callback,
             app);
+        UNUSED(item);
         // TODO: Should I free bda_str now? If I have to free it later it's going to be a right pain :/
         // TODO: Support device_list_selected_option_index and tagged_devices_selected_option_index
         /* Actually I don't think any menu items will have options

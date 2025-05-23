@@ -3,15 +3,7 @@
 #include "wendigo_app_i.h"
 #include <sys/time.h>
 
-#define BDA_LEN 6
-
-void wendigo_set_scanning_active(WendigoApp *app, bool starting);
-void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context);
-void wendigo_free_uart_buffer();
-void wendigo_esp_version(WendigoApp *app);
-void wendigo_free_bt_devices();
-
-/* The following enum and structs MUST REMAIN IN SYNC with their counterparts in ESP32-Wendigo (bluetooth.h) */
+/* ********** MUST REMAIN IN SYNC with counterparts in ESP32-Wendigo (bluetooth.h) ********** */
 typedef enum {
     SCAN_HCI = 0,
     SCAN_BLE,
@@ -48,8 +40,22 @@ typedef struct {
     wendigo_bt_svc bt_services;
 } wendigo_bt_device;
 
+/* ********** End of shared objects ********** */
+
 /* Encapsulating struct so I have somewhere to store the class of device string */
 typedef struct {
     wendigo_bt_device dev;
     char *cod_str;
 } flipper_bt_device;
+
+/* Device caches - Declared extern to get around header spaghetti */
+extern flipper_bt_device **bt_devices;
+extern uint16_t bt_devices_count;
+extern uint16_t bt_devices_capacity;
+// TODO: WiFi
+
+void wendigo_set_scanning_active(WendigoApp *app, bool starting);
+void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context);
+void wendigo_free_uart_buffer();
+void wendigo_esp_version(WendigoApp *app);
+void wendigo_free_bt_devices();

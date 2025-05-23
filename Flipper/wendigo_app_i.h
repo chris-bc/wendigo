@@ -1,6 +1,4 @@
 #pragma once
-#ifndef WENDIGO_APP_I_H
-#define WENDIGO_APP_I_H
 
 #include "wendigo_app.h"
 #include "scenes/wendigo_scene.h"
@@ -17,8 +15,6 @@
 #include <gui/modules/byte_input.h>
 #include <gui/modules/popup.h>
 #include "wendigo_hex_input.h"
-
-#include "wendigo_scan.h"
 
 #define START_MENU_ITEMS         (6)
 #define SETUP_MENU_ITEMS         (4)
@@ -40,12 +36,6 @@
 
 #define MAC_BYTES   (6)
 #define MAC_STRLEN  (17)
-
-/* Device caches */
-flipper_bt_device **bt_devices = NULL;
-uint16_t bt_devices_count = 0;
-uint16_t bt_devices_capacity = 0;
-// TODO: WiFi
 
 // Command action type
 typedef enum {
@@ -148,5 +138,3 @@ void wendigo_display_popup(WendigoApp *app, char *header, char*body);
 void wendigo_uart_set_binary_cb(Wendigo_Uart *uart);
 void wendigo_uart_set_console_cb(Wendigo_Uart *uart);
 void bytes_to_string(uint8_t* bytes, uint16_t bytesCount, char* strBytes);
-
-#endif

@@ -1,4 +1,5 @@
 #include "wendigo_app_i.h"
+#include "wendigo_scan.h"
 
 #include <furi.h>
 #include <furi_hal.h>
