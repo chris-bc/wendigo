@@ -52,7 +52,7 @@ void wendigo_scene_device_list_on_enter(void* context) {
 
     variable_item_list_reset(var_item_list);
     VariableItem* item;
-    char *bda_str;
+    char *item_str;
     uint16_t device_count;
     flipper_bt_device **devices;
     if (display_selected_only) {
@@ -63,20 +63,28 @@ void wendigo_scene_device_list_on_enter(void* context) {
         devices = bt_devices;
     }
     for(int i = 0; i < device_count; ++i) {
-        bda_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
-        if (bda_str == NULL) {
-            // TODO: Panic
-            break; // TODO: I wonder whether this will drop out of the for loop entirely...
+        /* Label with the name if we have a name, otherwise use the BDA */
+// TODO: Re-enable name logic when I figure out why they're not coming out correctly
+        if (false && devices[i]->dev.bdname_len > 0 && devices[i]->dev.bdname != NULL) {
+            item_str = devices[i]->dev.bdname;
+        } else {
+            item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
+            if (item_str == NULL) {
+                // TODO: Panic
+                continue; // Maybe the next device will have a name so we won't need to malloc
+            }
+            bytes_to_string(devices[i]->dev.bda, MAC_BYTES, item_str);
         }
-        bytes_to_string(devices[i]->dev.bda, MAC_BYTES, bda_str);
         item = variable_item_list_add(
             var_item_list,
-            bda_str,
+            item_str,
             1,
             wendigo_scene_device_list_var_list_change_callback,
             app);
         UNUSED(item);
-        free(bda_str);
+        if (true || devices[i]->dev.bdname_len == 0 || devices[i]->dev.bdname == NULL) {
+            free(item_str);
+        }
     }
     // TODO: Display WiFi devices
 
