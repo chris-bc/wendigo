@@ -50,8 +50,11 @@ typedef struct {
 
 /* Device caches - Declared extern to get around header spaghetti */
 extern flipper_bt_device **bt_devices;
+extern flipper_bt_device **bt_selected_devices;
 extern uint16_t bt_devices_count;
+extern uint16_t bt_selected_devices_count;
 extern uint16_t bt_devices_capacity;
+extern uint16_t bt_selected_devices_capacity;
 // TODO: WiFi
 
 void wendigo_set_scanning_active(WendigoApp *app, bool starting);
@@ -59,3 +62,5 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context);
 void wendigo_free_uart_buffer();
 void wendigo_esp_version(WendigoApp *app);
 void wendigo_free_bt_devices();
+bool wendigo_set_bt_device_selected(flipper_bt_device *device, bool selected);
+uint16_t bt_custom_device_index(flipper_bt_device *dev, flipper_bt_device **array, uint16_t array_count);

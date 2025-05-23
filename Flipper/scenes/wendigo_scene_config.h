@@ -1,5 +1,6 @@
 ADD_SCENE(wendigo, start, Start)
 ADD_SCENE(wendigo, device_list, DeviceList)
+ADD_SCENE(wendigo, device_detail, DeviceDetail)
 ADD_SCENE(wendigo, setup, Setup)
 ADD_SCENE(wendigo, console_output, ConsoleOutput)
 ADD_SCENE(wendigo, text_input, TextInput)

@@ -147,7 +147,6 @@ void wendigo_scene_setup_on_enter(void* context) {
 }
 
 bool wendigo_scene_setup_on_event(void* context, SceneManagerEvent event) {
-    UNUSED(context);
     WendigoApp* app = context;
     bool consumed = false;
 

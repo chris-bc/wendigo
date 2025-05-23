@@ -219,7 +219,9 @@ Because Wendigo is still in early development the following changes are core to 
   * [ ] Scanning status (popup?)
   * [X] ESP Version (popup)
   * [ ] Display devices
+    * [ ] Dynamically update device list on new/updated devices
   * [ ] Display device details
+    * [ ] Update details when device updated
   * [ ] Device tagging
   * [ ] Focus Mode
   * [ ] "Display Settings" menu
@@ -228,6 +230,7 @@ Because Wendigo is still in early development the following changes are core to 
       * [ ] Name
       * [ ] LastSeen
       * [ ] RSSI
+      * [ ] Device Type
 * [ ] Flipper settings
   * [ ] ESP32 integration
   * [ ] Ability to flash ESP32 firmware from Flipper?

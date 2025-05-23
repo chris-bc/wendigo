@@ -93,14 +93,16 @@ struct WendigoApp {
     Widget* widget;
     VariableItemList* var_item_list;
     VariableItemList *devices_var_item_list;
+    VariableItemList *detail_var_item_list;
     Wendigo_Uart* uart;
     ByteInput* setup_mac;
     Popup* popup; // Avoid continual allocation and freeing of Popup by initialising at launch
     WendigoRadio interfaces[IF_COUNT];
     InterfaceType active_interface;
-
+// TODO: Revise these attributes - Remove what I can, change ints (32 bits) to uint8 or uint16
     int setup_selected_menu_index;
     int device_list_selected_menu_index;
+    int device_detail_selected_menu_index;
     int setup_selected_option_index[SETUP_MENU_ITEMS];
     int selected_menu_index;
     int selected_option_index[START_MENU_ITEMS];
@@ -123,6 +125,7 @@ struct WendigoApp {
 typedef enum {
     WendigoAppViewVarItemList,
     WendigoAppViewDeviceList,
+    WendigoAppViewDeviceDetail,
     WendigoAppViewConsoleOutput,
     WendigoAppViewTextInput,
     WendigoAppViewHexInput,

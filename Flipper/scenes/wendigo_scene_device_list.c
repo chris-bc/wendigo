@@ -1,6 +1,9 @@
 #include "../wendigo_app_i.h"
 #include "../wendigo_scan.h"
 
+/* Public method from wendigo_scene_device_detail.c */
+extern void wendigo_scene_device_detail_set_device(flipper_bt_device *d);
+
 /* This scene is used to both display all devices and display selected devices */
 bool display_selected_only = false;
 
@@ -8,17 +11,19 @@ static void wendigo_scene_device_list_var_list_enter_callback(void* context, uin
     furi_assert(context);
     WendigoApp* app = context;
 
-    furi_assert(index < bt_devices_count);
-    // TODO: Use the same scene for device_list and tagged_devices
-    const flipper_bt_device *item = bt_devices[index];
+    furi_assert(index < ((display_selected_only) ? bt_selected_devices_count : bt_devices_count));
+
+    flipper_bt_device *item = (display_selected_only) ? bt_selected_devices[index] : bt_devices[index];
     UNUSED(item);
 
     app->device_list_selected_menu_index = index;
 
-    // TODO: Display a new "device info" scene
-
+    /* Display details for `item` */
+    wendigo_scene_device_detail_set_device(item);
+    view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
 }
 
+// TODO: Consider removing this entirely
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem* item) {
     furi_assert(item);
 
@@ -35,6 +40,9 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
 
 }
 
+/* Initialise the device list
+   TODO: When "display options" are implemented include consideration of selected device types and sorting options
+*/
 void wendigo_scene_device_list_on_enter(void* context) {
     WendigoApp* app = context;
     VariableItemList* var_item_list = app->devices_var_item_list;
@@ -43,30 +51,34 @@ void wendigo_scene_device_list_on_enter(void* context) {
         var_item_list, wendigo_scene_device_list_var_list_enter_callback, app);
 
     variable_item_list_reset(var_item_list);
-    // TODO: Update this to support either all or tagged devices
     VariableItem* item;
     char *bda_str;
-    for(int i = 0; i < bt_devices_count; ++i) {
+    uint16_t device_count;
+    flipper_bt_device **devices;
+    if (display_selected_only) {
+        device_count = bt_selected_devices_count;
+        devices = bt_selected_devices;
+    } else {
+        device_count = bt_devices_count;
+        devices = bt_devices;
+    }
+    for(int i = 0; i < device_count; ++i) {
         bda_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
         if (bda_str == NULL) {
             // TODO: Panic
             break; // TODO: I wonder whether this will drop out of the for loop entirely...
         }
-        bytes_to_string(bt_devices[i]->dev.bda, MAC_BYTES, bda_str);
+        bytes_to_string(devices[i]->dev.bda, MAC_BYTES, bda_str);
         item = variable_item_list_add(
             var_item_list,
             bda_str,
-            1, // TODO: Change this for menu items with options (although I don't think there are any?)
+            1,
             wendigo_scene_device_list_var_list_change_callback,
             app);
         UNUSED(item);
-        // TODO: Should I free bda_str now? If I have to free it later it's going to be a right pain :/
-        // TODO: Support device_list_selected_option_index and tagged_devices_selected_option_index
-        /* Actually I don't think any menu items will have options
-        variable_item_set_current_value_index(item, app->device_list_selected_option_index[i]);
-        variable_item_set_current_value_text(
-            item, items[i].options_menu[app->device_list_selected_option_index[i]]); */
+        free(bda_str);
     }
+    // TODO: Display WiFi devices
 
     variable_item_list_set_selected_item(
         var_item_list, scene_manager_get_scene_state(app->scene_manager, WendigoSceneDeviceList));
@@ -75,20 +87,19 @@ void wendigo_scene_device_list_on_enter(void* context) {
 }
 
 bool wendigo_scene_device_list_on_event(void* context, SceneManagerEvent event) {
-    UNUSED(context);
     WendigoApp* app = context;
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
-        if(event.event == Wendigo_EventSetup) {
-            /* Save scene state */
-            scene_manager_set_scene_state(
-                app->scene_manager, WendigoSceneDeviceList, app->device_list_selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, WendigoSceneSetupChannel);
-        } else if(event.event == Wendigo_EventMAC) {
-            scene_manager_set_scene_state(
-                app->scene_manager, WendigoSceneDeviceList, app->device_list_selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, WendigoSceneSetupMAC);
+        switch (event.event) {
+            case Wendigo_EventListDevices:
+                scene_manager_set_scene_state(
+                    app->scene_manager, WendigoSceneDeviceList, app->device_list_selected_menu_index);
+                scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceDetail);
+                break;
+            default:
+                // TODO: Panic
+                break;
         }
         consumed = true;
     } else if(event.type == SceneManagerEventTypeTick) {
@@ -96,7 +107,6 @@ bool wendigo_scene_device_list_on_event(void* context, SceneManagerEvent event) 
             variable_item_list_get_selected_item_index(app->devices_var_item_list);
         consumed = true;
     }
-
     return consumed;
 }
 

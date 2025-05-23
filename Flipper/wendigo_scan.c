@@ -7,8 +7,11 @@ char *wendigo_popup_text = NULL; // I suspect the popup text is going out of sco
 
 /* Device caches */
 flipper_bt_device **bt_devices = NULL;
+flipper_bt_device **bt_selected_devices = NULL;
 uint16_t bt_devices_count = 0;
+uint16_t bt_selected_devices_count = 0;
 uint16_t bt_devices_capacity = 0;
+uint16_t bt_selected_devices_capacity = 0;
 // TODO: WiFi
 
 /* Packet identifiers */
@@ -37,6 +40,39 @@ void wendigo_esp_version(WendigoApp *app) {
     wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
 }
 
+/* Manage the tagged/selected status of the specified flipper_bt_device
+   Maintains bt_selected_devices[] as needed */
+bool wendigo_set_bt_device_selected(flipper_bt_device *device, bool selected) {
+    if (selected && !device->dev.tagged) {
+        /* Add device to bt_selected_devices[] */
+        if (bt_selected_devices_capacity == bt_selected_devices_count) {
+            /* Extend bt_selected_devices[] */
+            flipper_bt_device **new_devices = realloc(bt_selected_devices, sizeof(flipper_bt_device *) * (bt_selected_devices_capacity + 1));
+            if (new_devices == NULL) {
+                // TODO: Panic - Display an error popup or something
+                return false;
+            }
+            bt_selected_devices = new_devices;
+            ++bt_selected_devices_capacity;
+        }
+        bt_selected_devices[bt_selected_devices_count++] = device;
+        // TODO: Sort
+    } else if (device->dev.tagged && !selected) {
+        /* Remove device from bt_selected_devices[] */
+        /* Not using 16 bits because nobody's going to select 255 devices */
+        uint8_t index = (uint8_t)bt_custom_device_index(device, bt_selected_devices, bt_selected_devices_count);
+        if (index < bt_selected_devices_count) {
+            /* Shuffle forward all subsequent devices, replacing device at `index` */
+            for(++index; index < bt_selected_devices_count; ++index) {
+                bt_selected_devices[index - 1] = bt_selected_devices[index];
+            }
+            bt_selected_devices[bt_selected_devices_count--] = NULL;
+        }
+    }
+    device->dev.tagged = selected;
+    return true;
+}
+
 /* Enable or disable Wendigo scanning on all interfaces, using app->interfaces
    to determine which radios should be enabled/disabled when starting to scan.
    This function is called by the UI handler (wendigo_scene_start) when scanning
@@ -60,12 +96,18 @@ void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
     app->is_scanning = starting;
 }
 
-/* Returns the index into bt_devices[] of the device with BDA matching dev->bda.
+/* Returns the index into `array` of the device with BDA matching dev->dev.bda.
+   Returns `array_count` if the device was not found. */
+uint16_t bt_custom_device_index(flipper_bt_device *dev, flipper_bt_device **array, uint16_t array_count) {
+    uint16_t result;
+    for (result = 0; result < array_count && memcmp(dev->dev.bda, array[result]->dev.bda, MAC_BYTES); ++result) { }
+    return result;
+}
+
+/* Returns the index into bt_devices[] of the device with BDA matching dev->dev.bda.
    Returns bt_devices_count if the device was not found. */
 uint16_t bt_device_index(flipper_bt_device *dev) {
-    uint16_t result;
-    for (result = 0; result < bt_devices_count && memcmp(dev->dev.bda, bt_devices[result]->dev.bda, MAC_BYTES); ++result) { }
-    return result;
+    return bt_custom_device_index(dev, bt_devices, bt_devices_count);
 }
 
 /* Determines whether a device with the BDA dev->bda exists in bt_devices[] */
@@ -149,6 +191,14 @@ bool wendigo_update_bt_device(flipper_bt_device *dev) {
 
 void wendigo_free_bt_devices() {
     flipper_bt_device *dev;
+    /* Start by freeing bt_selected_devices[] */
+    if (bt_selected_devices_capacity > 0 && bt_selected_devices != NULL) {
+        free(bt_selected_devices);
+        bt_selected_devices = NULL;
+        bt_selected_devices_count = 0;
+        bt_selected_devices_capacity = 0;
+    }
+    /* For bt_devices[] we also want to free device attributes and the device itself */
     if (bt_devices_capacity > 0 && bt_devices != NULL) {
         for (int i = 0; i < bt_devices_count; ++i) {
             dev = bt_devices[i];
