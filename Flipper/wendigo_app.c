@@ -57,11 +57,11 @@ void wendigo_interface_init(WendigoApp* app) {
         app->interfaces[i].mutable = true;
     }
     // TODO: Retrieve actual MAC
-    const uint8_t mac_wifi[NUM_MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xac};
-    const uint8_t mac_bt[NUM_MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xaf};
-    memcpy(app->interfaces[IF_WIFI].mac_bytes, mac_wifi, NUM_MAC_BYTES);
-    memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, mac_bt, NUM_MAC_BYTES);
-    memcpy(app->interfaces[IF_BLE].mac_bytes, mac_bt, NUM_MAC_BYTES);
+    const uint8_t mac_wifi[MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xac};
+    const uint8_t mac_bt[MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xaf};
+    memcpy(app->interfaces[IF_WIFI].mac_bytes, mac_wifi, MAC_BYTES);
+    memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, mac_bt, MAC_BYTES);
+    memcpy(app->interfaces[IF_BLE].mac_bytes, mac_bt, MAC_BYTES);
 }
 
 WendigoApp* wendigo_app_alloc() {
@@ -144,6 +144,11 @@ WendigoApp* wendigo_app_alloc() {
     app->popup = popup_alloc();
     view_dispatcher_add_view(
         app->view_dispatcher, WendigoAppViewPopup, popup_get_view(app->popup));
+    
+    /* Device list (all and tagged) */
+    app->devices_var_item_list = variable_item_list_alloc();
+    view_dispatcher_add_view(app->view_dispatcher, WendigoAppViewDeviceList,
+        variable_item_list_get_view(app->devices_var_item_list));
 
     scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
 
@@ -161,6 +166,7 @@ void wendigo_app_free(WendigoApp* app) {
     view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewHexInput);
     view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewSetupMAC);
     view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewPopup);
+    view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewDeviceList);
 
     variable_item_list_free(app->var_item_list);
     widget_free(app->widget);
@@ -170,6 +176,7 @@ void wendigo_app_free(WendigoApp* app) {
     wendigo_hex_input_free(app->hex_input);
     byte_input_free(app->setup_mac);
     popup_free(app->popup);
+    variable_item_list_free(app->devices_var_item_list);
 
     // View dispatcher
     view_dispatcher_free(app->view_dispatcher);
@@ -218,4 +225,19 @@ void wendigo_uart_set_binary_cb(Wendigo_Uart *uart) {
 
 void wendigo_uart_set_console_cb(Wendigo_Uart *uart) {
     wendigo_uart_set_handle_rx_data_cb(uart, wendigo_console_output_handle_rx_data_cb);
+}
+
+/* Convert an array of bytesCount uint8_ts into a colon-separated string of bytes.
+   strBytes must be initialised with sufficient space to hold the output string.
+   For a MAC this is 18 bytes. In general it is 3 * byteCount */
+void bytes_to_string(uint8_t* bytes, uint16_t bytesCount, char* strBytes) {
+    uint8_t* p_in = bytes;
+    const char* hex = "0123456789ABCDEF";
+    char* p_out = strBytes;
+    for(; p_in < bytes + bytesCount; p_out += 3, ++p_in) {
+        p_out[0] = hex[(*p_in >> 4) & 0xF];
+        p_out[1] = hex[*p_in & 0xF];
+        p_out[2] = ':';
+    }
+    p_out[-1] = 0;
 }

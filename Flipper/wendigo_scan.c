@@ -1,11 +1,5 @@
 #include "wendigo_scan.h"
 
-/* Device caches */
-flipper_bt_device **bt_devices = NULL;
-uint16_t bt_devices_count = 0;
-uint16_t bt_devices_capacity = 0;
-// TODO: WiFi
-
 uint8_t *buffer = NULL;
 uint16_t bufferLen = 0; // 65535 should be plenty of length
 uint16_t bufferCap = 0; // Buffer capacity - I don't want to allocate 65kb, but don't want to constantly realloc
