@@ -1,6 +1,9 @@
 #include "../wendigo_app_i.h"
 #include "../wendigo_scan.h"
 
+/* This scene is used to both display all devices and display selected devices */
+bool display_selected_only = false;
+
 static void wendigo_scene_device_list_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
     WendigoApp* app = context;

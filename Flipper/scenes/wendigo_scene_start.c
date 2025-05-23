@@ -22,6 +22,10 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
 
+/* Determine whether we're displaying all, or only tagged, devices
+   Defined and used in wendigo_scene_device_list.c */
+extern bool display_selected_only;
+
 /* Callback invoked when the action button is pressed on a menu item */
 static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
@@ -62,23 +66,14 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
         }
         break;
     case LIST_DEVICES:
-        // Set state somewhere so it knows to display all devices
-        // Create a new scene for device display
-        // Send a new custom event to display devices
         // Try to fit name, BDA and CoD on the var_list
         // Allow selecting a device to obtain more information: remaining attributes, tag/untag, services, maybe some transmit options
-
-        // Thought: Merge these two case statements - initialise state variable (selected_only) to false, move LIST_SELECTED_DEVICES forward and change selected_only, then flow continues into LIST_DEVICES.
-        break;
+        display_selected_only = false;
+        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
+        return;
     case LIST_SELECTED_DEVICES:
-        app->is_command = true;
-
-        if(app->hex_mode) {
-            view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartKeyboardHex);
-        } else {
-            view_dispatcher_send_custom_event(
-                app->view_dispatcher, Wendigo_EventStartKeyboardText);
-        }
+        display_selected_only = true;
+        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
         return;
     case TRACK_DEVICES:
         view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
@@ -89,7 +84,8 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
                 view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartHelp);
                 break;
             case ESP_VER_IDX:
-                /* Ensure wendigo_scan.c receives the reply */
+                /* Ensure wendigo_scan.c receives transmitted data */
+                // TODO: The UART callback is only modified by wendigo_app.c and wendigo_scene_console_output.c - If ConsoleOutput is removed then this can be
                 wendigo_uart_set_binary_cb(app->uart);
                 wendigo_esp_version(app);
                 break;
@@ -169,33 +165,46 @@ bool wendigo_scene_start_on_event(void* context, SceneManagerEvent event) {
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
-        if(event.event == Wendigo_EventSetup) {
-            scene_manager_set_scene_state(
-                app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, WendigoSceneSetup);
-        } else if(event.event == Wendigo_EventStartKeyboardText) {
-            scene_manager_set_scene_state(
-                app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, WendigoSceneTextInput);
-        } else if(event.event == Wendigo_EventStartKeyboardHex) {
-            scene_manager_set_scene_state(
-                app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, WendigoSceneHexInput);
-        } else if(event.event == Wendigo_EventStartConsole) {
-            scene_manager_set_scene_state(
-                app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, WendigoSceneConsoleOutput);
-        } else if(event.event == Wendigo_EventStartHelp) {
-            scene_manager_set_scene_state(
-                app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-            scene_manager_next_scene(app->scene_manager, WendigoSceneHelp);
+        switch (event.event) {
+            case Wendigo_EventSetup:
+                scene_manager_set_scene_state(
+                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager, WendigoSceneSetup);
+                break;
+            case Wendigo_EventStartKeyboardText:
+                scene_manager_set_scene_state(
+                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager, WendigoSceneTextInput);
+                break;
+            case Wendigo_EventStartKeyboardHex:
+                scene_manager_set_scene_state(
+                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager, WendigoSceneHexInput);
+                break;
+            case Wendigo_EventStartConsole:
+                scene_manager_set_scene_state(
+                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager, WendigoSceneConsoleOutput);
+                break;
+            case Wendigo_EventStartHelp:
+                scene_manager_set_scene_state(
+                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager, WendigoSceneHelp);
+                break;
+            case Wendigo_EventListDevices:
+                scene_manager_set_scene_state(
+                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceList);
+                break;
+            default:
+                // Do nothing
+                break;
         }
         consumed = true;
     } else if(event.type == SceneManagerEventTypeTick) {
         app->selected_menu_index = variable_item_list_get_selected_item_index(app->var_item_list);
         consumed = true;
     }
-
     return consumed;
 }
 
