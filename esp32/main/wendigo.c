@@ -36,9 +36,11 @@
 
 /* Display command syntax when in interactive mode */
 void display_syntax(char *command) {
-    printf("Usage: %s ( %d | %d | %d )\n%d: %s\n%d: %s\n%d: %s\n", command, ACTION_DISABLE,
-           ACTION_ENABLE, ACTION_STATUS, ACTION_DISABLE, STRING_DISABLE, ACTION_ENABLE,
-           STRING_ENABLE, ACTION_STATUS, STRING_STATUS);
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+        printf("Usage: %s ( %d | %d | %d )\n%d: %s\n%d: %s\n%d: %s\n", command, ACTION_DISABLE,
+               ACTION_ENABLE, ACTION_STATUS, ACTION_DISABLE, STRING_DISABLE, ACTION_ENABLE,
+               STRING_ENABLE, ACTION_STATUS, STRING_STATUS);
+    }
 }
 
 /* Inform the caller of an invalid command
@@ -385,7 +387,7 @@ esp_err_t cmd_tag(int argc, char **argv) {
         invalid_command(argv[0], argv[1], syntaxTip[SCAN_TAG]);
         result = ESP_ERR_INVALID_ARG;
     }
-    if (result == ESP_OK && radio == SCAN_HCI) {
+    if (result == ESP_OK && (radio == SCAN_HCI || radio == SCAN_BLE)) {
         /* Fetch the specified device */
         wendigo_bt_device *device = retrieve_gap_by_bda(addr);
         if (device == NULL) {
@@ -413,7 +415,8 @@ esp_err_t cmd_tag(int argc, char **argv) {
                     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
                         ESP_LOGI(TAG, "Device %s IS %stagged.", argv[2], (device->tagged)?"":"NOT ");
                     } else {
-                        printf("%s %stagged\n", argv[2], (device->tagged)?"":"NOT ");
+                        /* In Flipper mode re-transmit the device to provide status */
+                        result |= display_gap_device(device);
                     }
                     break;
                 default:
@@ -574,6 +577,4 @@ void app_main(void)
     #endif
 
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
-
-    printf("\nREADY\n");
 }

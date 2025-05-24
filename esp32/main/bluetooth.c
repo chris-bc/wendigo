@@ -436,7 +436,8 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     outOfMemory();
                     break;
                 }
-                strncpy(dev.bdname, param->get_dev_name_cmpl.name, strlen(param->get_dev_name_cmpl.name) + 1);
+                strncpy(dev.bdname, param->get_dev_name_cmpl.name, strlen(param->get_dev_name_cmpl.name));
+                dev.bdname[strlen(param->get_dev_name_cmpl.name)] = '\0';
                 // TODO: Can I get anything else out of these structs?
                 display_gap_device(&dev);
                 /* Add to or update all_gap_devices[] */
@@ -447,10 +448,10 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             esp_ble_gap_cb_param_t *scan_result = (esp_ble_gap_cb_param_t *)param;
             switch (scan_result->scan_rst.search_evt) {
                 case ESP_GAP_SEARCH_DISC_RES_EVT:
-                    printf("Discovery result\n");
+                    ESP_LOGI(BLE_TAG, "Discovery result");
                     break;
                 case ESP_GAP_SEARCH_DISC_BLE_RES_EVT:
-                    printf("Discovery BLE result\n");
+                    ESP_LOGI(BLE_TAG, "Discovery BLE result");
                     break;
                 case ESP_GAP_SEARCH_INQ_CMPL_EVT:
                     /* Restart the BLE scanner if it hasn't been disabled */
@@ -828,13 +829,13 @@ static void bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
             break;
         case ESP_BT_GAP_DISC_STATE_CHANGED_EVT:
             if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STOPPED) {
-                printf("ESP_BT_GAP_DSC_STATE_CHANGED_EVT: ESP_BT_GAP_DISCOVERY_STOPPED:\n");
+                ESP_LOGI(BT_TAG, "ESP_BT_GAP_DSC_STATE_CHANGED_EVT: ESP_BT_GAP_DISCOVERY_STOPPED:");
                 if (scanStatus[SCAN_HCI] == ACTION_ENABLE) {
-                    printf("Restarting...\n");
+                    ESP_LOGI(BT_TAG, "Restarting...");
                     esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, CONFIG_BT_SCAN_DURATION, 0);
                 }
             } else if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STARTED) {
-                printf("ESP_BT_GAP_DISC_STATE_CHANGED_EVT: ESP_BT_GAP_DISCOVERY_STARTED\n");
+                ESP_LOGI(BT_TAG, "ESP_BT_GAP_DISC_STATE_CHANGED_EVT: ESP_BT_GAP_DISCOVERY_STARTED");
             }
             break;
         case ESP_BT_GAP_RMT_SRVCS_EVT:
