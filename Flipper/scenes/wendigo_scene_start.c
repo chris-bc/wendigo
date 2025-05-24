@@ -18,6 +18,7 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 #define SCAN_STATUS_IDX (2)
 #define ABOUT_IDX       (0)
 #define ESP_VER_IDX     (1)
+#define LOCKED_MSG      "Stop\nScanning\nFirst!"
 
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
@@ -61,7 +62,7 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
         /* Disable/Enable settings menu when starting/stopping scanning */
         if (selected_option_index == SCAN_START_IDX || selected_option_index == SCAN_STOP_IDX) {
             myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
-            variable_item_set_locked(myItem, starting, "Stop\nScanning\nFirst!");
+            variable_item_set_locked(myItem, starting, LOCKED_MSG);
             wendigo_set_scanning_active(app, starting);
         }
         break;
@@ -150,6 +151,9 @@ void wendigo_scene_start_on_enter(void* context) {
 
             item_indexes[menu_items_num] = i;
             menu_items_num++;
+        }
+        if (i == SETUP_IDX && app->is_scanning) {
+            variable_item_set_locked(item, true, LOCKED_MSG);
         }
     }
 

@@ -11,6 +11,7 @@
 #include "common.h"
 #include "wifi.h"
 #include "bluetooth.h"
+#include <driver/uart_vfs.h>
 
 /*
  * We warn if a secondary serial console is enabled. A secondary serial console is always output-only and
@@ -335,6 +336,9 @@ esp_err_t cmd_status(int argc, char **argv) {
         print_star(53, true);
         // Some extra stuff for development
         printf("sizeof(wendigo_bt_device): %d\tsizeof(wendigo_bt_svc): %d\n", sizeof(wendigo_bt_device), sizeof(wendigo_bt_svc));
+        printf("sizeof(ScanType): %d\tsizeof(struct timeval): %d\n", sizeof(ScanType), sizeof(struct timeval));
+        extern wendigo_bt_device *all_gap_devices;
+        printf("sizeof(char*): %d\tsizeof(*all_gap_devices): %d\n", sizeof(char*), sizeof(all_gap_devices));
     } else {
         /* This command is not valid unless running interactively */
         send_response(argv[0], argv[1], MSG_INVALID);
@@ -563,7 +567,8 @@ void app_main(void)
     #if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
         esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
         ESP_ERROR_CHECK(esp_console_new_repl_uart(&hw_config, &repl_config, &repl));
-
+        /* Terminate lines with LF instead of the default CRLF */
+        uart_vfs_dev_port_set_tx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_LF);
     #elif defined(CONFIG_ESP_CONSOLE_USB_CDC)
         esp_console_dev_usb_cdc_config_t hw_config = ESP_CONSOLE_DEV_CDC_CONFIG_DEFAULT();
         ESP_ERROR_CHECK(esp_console_new_repl_usb_cdc(&hw_config, &repl_config, &repl));
