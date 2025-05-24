@@ -9,3 +9,4 @@ idf_component_register(SRCS "bluetooth.c" "wendigo.c" "common.c" "wifi.c"
 		    PRIV_REQUIRES fatfs
                     INCLUDE_DIRS ".")
 target_link_libraries(${COMPONENT_LIB} -Wl,-zmuldefs)
+target_compile_definitions(${COMPONENT_LIB} PUBLIC "-DLOG_LOCAL_LEVEL=ESP_LOG_INFO")

@@ -175,6 +175,17 @@ ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr, ScanType
     }
 }
 
+/** Sets Wendigo's logging output to the specified level.
+ *  On launch all logging is disabled, to prevent logs being sent over the
+ *  UART interface. This function is used to automatically enable/disable
+ *  logging when Interactive Mode is started/stopped.
+ */
+void wendigo_set_logging(esp_log_level_t level) {
+    esp_log_level_set(BLE_TAG, level);
+    esp_log_level_set(BT_TAG, level);
+    esp_log_level_set(TAG, level);
+}
+
 /* A generic function that is called by the command handlers for the HCI, BLE, WIFI and INTERACTIVE commands.
    Parses the command line to determine and perform the requested action, sending appropriate messages to the UART
    host throughout. If a command requires `radio` to be enabled or disabled the function pointer `enableFunction()`
@@ -344,6 +355,21 @@ esp_err_t cmd_version(int argc, char **argv) {
 }
 
 esp_err_t cmd_interactive(int argc, char **argv) {
+    /* Enable or disable logging based on status of Interactive Mode */
+    ActionType action = parseCommand(argc, argv);
+    switch (action) {
+        case ACTION_ENABLE:
+            wendigo_set_logging(ESP_LOG_INFO);
+            ESP_LOGI(TAG, "Enabling Interactive Mode...Done.");
+            break;
+        case ACTION_DISABLE:
+            ESP_LOGI(TAG, "Disabling Interactive Mode...Done.");
+            wendigo_set_logging(ESP_LOG_NONE);
+            break;
+        default:
+            /* Do nothing for status */
+            break;
+    }
     enableDisableRadios(argc, argv, SCAN_INTERACTIVE, NULL, NULL);
     return ESP_OK;
 }
