@@ -19,6 +19,18 @@ uint8_t PREAMBLE_LEN = 8;
 uint8_t PREAMBLE_BT_BLE[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xAA, 0xAA, 0xAA, 0xAA};
 uint8_t PREAMBLE_WIFI[]   = {0x99, 0x99, 0x99, 0x99, 0x11, 0x11, 0x11, 0x11};
 uint8_t PREAMBLE_VER[]    = {'W', 'e', 'n', 'd', 'i', 'g', 'o', ' '};
+uint8_t PACKET_TERM[]     = {0xAA, 0xAA, 0xAA, 0xAA, 0xFF, 0xFF, 0xFF, 0xFF};
+
+/** Search for the end-of-packet marker in the specified byte array
+ *  A packet is terminated by a sequence of 4 0xAA and 4 0xFF,
+ *  returns the index of the last byte in this sequence, or the
+ *  specified `size` if not found.
+ */
+uint16_t end_of_packet(uint8_t *theBytes, uint16_t size) {
+    uint16_t result = 7; /* Start by checking bytes [0] through [7] */
+    for (; result < size && memcmp(theBytes + result - 7, PACKET_TERM, 8); ++result) { }
+    return result;
+}
 
 /* Returns the index of the first occurrence of `\n` in `theString`, searching the first `size` characters.
    Returns size if not found (which is outside the array bounds). */
@@ -312,7 +324,15 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
             // TODO: Panic & recover
         }
         ++index;
-
+/*
+        // TODO Remove this debugging stuff
+        if (dev->dev.bdname_len > 0 && dev->dev.bdname != NULL) {
+            // Found \"%s\"
+            char *nameStr = malloc(sizeof(char) * (9 + strlen(dev->dev.bdname)));
+            snprintf(nameStr, 9 + strlen(dev->dev.bdname), "Found \"%s\"", dev->dev.bdname);
+            wendigo_display_popup(app, "parseBluetooth()", nameStr);
+        }
+*/
         /* Does this device already exist in bt_devices[]? */
         if (bt_device_exists(dev)) {
             wendigo_update_bt_device(dev);
@@ -335,33 +355,36 @@ uint16_t parseBufferWifi(WendigoApp *app) {
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes, this must be handled by the calling function. */
 uint16_t parseBufferVersion(WendigoApp *app) {
-    char *versionStr = realloc(wendigo_popup_text, sizeof(char) * bufferLen);
+    /* Find the end-of-packet sequence to determine version string length */
+    uint16_t endSeq = end_of_packet(buffer, bufferLen);
+    if (endSeq == bufferLen) {
+        return 0; /* Already been tested twice, don't bother alerting */
+    }
+    endSeq = endSeq - PREAMBLE_LEN + 1; /* Sub 7 to reach first byte in seq */
+    char *versionStr = realloc(wendigo_popup_text, sizeof(char) * endSeq);
     if (versionStr == NULL) {
         // TODO: Panic
         // For now just consume this message
-        return bytes_contains_newline(buffer, bufferLen);
+        return end_of_packet(buffer, bufferLen);
     }
     wendigo_popup_text = versionStr;
-    int i = 0;
-    for (; i < bufferLen && buffer[i] != '\n'; ++i) {
+    for (int i = 0; i < endSeq; ++i) {
         wendigo_popup_text[i] = buffer[i];
     }
-    // TODO: Consider handling a missing newline more elegantly - Although it's currently
-    //       the end-of-transmission marker so not possible to get here without one
-    if (i == bufferLen) {
-        --i; // Replace the last byte with NULL. This should never happen.
-    }
-    wendigo_popup_text[i] = '\0';
+    wendigo_popup_text[endSeq - 1] = '\0'; /* Just in case */
     wendigo_display_popup(app, "ESP32 Version", wendigo_popup_text);
     return i + 1;
 }
 
-/* When the end of a transmission is reached this function is called to parse the
-   buffer and take the appropriate action. We expect to see one of the following:
-    * Begin with 0xFF,0xFF,0xFF,0xFF,0xAA,0xAA,0xAA,0xAA: Bluetooth packet
-    * Begin with 0x99,0x99,0x99,0x99,0x11,0x11,0x11,0x11: WiFi packet
-    * Begin with "Wendigo "                              : Version message
-*/
+/** When the end of a packet is reached this function is called to parse the
+ *  buffer and take the appropriate action. We expect to see one of the following:
+ *   * Begin with 0xFF,0xFF,0xFF,0xFF,0xAA,0xAA,0xAA,0xAA: Bluetooth packet
+ *   * Begin with 0x99,0x99,0x99,0x99,0x11,0x11,0x11,0x11: WiFi packet
+ *   * Begin with "Wendigo "                             : Version packet
+ *  The end of packet is marked by 0xAA,0xAA,0xAA,0xAA,0xFF,0xFF,0xFF,0xFF.
+ *  This function removes the parsed packet from the buffer, including the
+ *  beginning and end of packet markers.
+ */
 void parseBuffer(WendigoApp *app) {
     uint16_t consumedBytes = 0;
     if (bufferLen >= 8 && !memcmp(PREAMBLE_BT_BLE, buffer, PREAMBLE_LEN)) {
@@ -371,15 +394,15 @@ void parseBuffer(WendigoApp *app) {
     } else if (bufferLen >= 8 && !memcmp(PREAMBLE_VER, buffer, PREAMBLE_LEN)) {
         consumedBytes = parseBufferVersion(app);
     } else {
-        /* Extraneous content - Remove everything up to and including the first newline */
-        for (consumedBytes = 0; consumedBytes < bufferLen && buffer[consumedBytes] != '\n'; ++consumedBytes) {}
-        if (consumedBytes < bufferLen) {
-            /* Found a newline at buffer[consumedBytes] - Also consume the newline */
-            ++consumedBytes;
-        } else {
-            /* No newline found. This should never occur with the existing implementation */
-            consumedBytes = 0;
+        /* Extraneous content - Remove everything up to and including the end-of-packet marker */
+        consumedBytes = end_of_packet(buffer, bufferLen);
+        if (consumedBytes == bufferLen) {
+            /* We shouldn't have been called if we can't find a terminator */
+            // TODO: Warning
+            return;
         }
+        /* consumedBytes has the index of the last byte of the packet terminator, bump it */
+        ++consumedBytes;
     }
     if (consumedBytes == 0) {
         // That was a bit of a waste
@@ -431,10 +454,10 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
     bufferLen += len;
 
     /* Parse any complete transmissions we have received */
-    uint16_t newline = bytes_contains_newline(buffer, bufferLen);
-    while (newline != bufferLen) {
+    uint16_t endFound = end_of_packet(buffer, bufferLen);
+    while (endFound != bufferLen) {
         parseBuffer(app);
-        newline = bytes_contains_newline(buffer, bufferLen);
+        endFound = end_of_packet(buffer, bufferLen);
     }
 }
 

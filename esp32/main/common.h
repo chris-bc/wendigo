@@ -75,5 +75,6 @@ void print_star(int size, bool newline);
 void print_space(int size, bool newline);
 void repeat_bytes(uint8_t byte, uint8_t count);
 void send_bytes(uint8_t *bytes, uint8_t size);
+void send_end_of_packet();
 
 #endif

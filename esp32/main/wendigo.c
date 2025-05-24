@@ -348,12 +348,13 @@ esp_err_t cmd_status(int argc, char **argv) {
 
 esp_err_t cmd_version(int argc, char **argv) {
     char msg[17];
-    snprintf(msg, sizeof(msg), "Wendigo v%s\n", WENDIGO_VERSION);
+    snprintf(msg, sizeof(msg), "Wendigo v%s", WENDIGO_VERSION);
     send_response(argv[0], NULL, MSG_ACK);
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         ESP_LOGI(TAG, "%s", msg);
     } else {
-        printf(msg);
+        send_bytes((uint8_t *)msg, strlen(msg) + 1);
+        send_end_of_packet();
         fflush(stdout);
     }
     send_response(argv[0], NULL, MSG_OK);

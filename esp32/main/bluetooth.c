@@ -152,7 +152,7 @@ esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
    * Sends bdname if present (wendigo_bt_device.bdname_len + 1 bytes)
    * Sends eir if present (wendigo_bt_device.eir_len bytes)
    * Sends strlen(cod_short) (1 byte) followed by cod_short
-   * Ends the transmission with a newline ('\n')
+   * Ends the transmission with the reverse of the start: 4*0xAA 4*0xFF
 */
 esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     esp_err_t result = ESP_OK;
@@ -176,9 +176,8 @@ esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     if (cod_len > 0) {
         send_bytes((uint8_t *)cod_short, cod_len + 1);
     }
-    /* Mark the end of transmission with a newline */
-    // YAGNI: Consider something more formal, e.g. 8 NULL bytes.
-    putc('\n', stdout);
+    /* Mark the end of transmission */
+    send_end_of_packet();
     fflush(stdout);
 
     return result;
