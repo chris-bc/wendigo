@@ -258,7 +258,7 @@ void wendigo_free_bt_devices() {
    * eir if present (wendigo_bt_device.eir_len bytes)
    * strlen(cod_short) (1 byte)
    * cod_short (strlen(cod_short) + 1 bytes)
-   * Newline ('\n')
+   * Packet terminator: 4 bytes of 0xAA followed by 4 bytes of 0xFF
 */
 uint16_t parseBufferBluetooth(WendigoApp *app) {
     /* Skip the preamble */
