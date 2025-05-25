@@ -1,4 +1,5 @@
 #include "wendigo_scan.h"
+#include "wendigo_packet_offsets.h"
 
 uint8_t *buffer = NULL;
 uint16_t bufferLen = 0; // 65535 should be plenty of length
@@ -253,77 +254,74 @@ void wendigo_free_bt_devices() {
    the calling function.
    The received packet must follow this structure:
    * 4 bytes of 0xFF followed by 4 bytes of 0xAA
-   * Device structure (sizeof(wendigo_bt_device))
-   * bdname if present (wendigo_bt_device.bdname_len + 1 bytes)
-   * eir if present (wendigo_bt_device.eir_len bytes)
-   * strlen(cod_short) (1 byte)
-   * cod_short (strlen(cod_short) + 1 bytes)
-   * Packet terminator: 4 bytes of 0xAA followed by 4 bytes of 0xFF
+   * Attributes as specified in wendigo_packet_offsets.h
+   * 4 bytes of 0xAA followed by 4 bytes of 0xFF
 */
 uint16_t parseBufferBluetooth(WendigoApp *app) {
-    /* Skip the preamble */
-    uint16_t index = PREAMBLE_LEN;
-    /* Ensure we have enough bytes for a wendigo_bt_device */
-    if (bufferLen >= index + sizeof(wendigo_bt_device)) {
-        flipper_bt_device *dev = malloc(sizeof(flipper_bt_device));
-        if (dev == NULL) {
-            // TODO: Panic. For now just skip the device
-            return bytes_contains_newline(buffer, bufferLen);
+    /* Sanity check - we should have at least 55 bytes including header and footer */
+    uint16_t packetLen = end_of_packet(buffer, bufferLen);
+    if (packetLen < (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN)) {
+        // TODO: I'm not sure what to do in this case
+        wendigo_display_popup(app, "Packet Error", "Bluetooth packet is shorter than expected");
+        // Skip this packet?
+        return packetLen;
+    }
+    flipper_bt_device *dev = malloc(sizeof(flipper_bt_device));
+    if (dev == NULL) {
+        // TODO: Panic. For now just skip the device
+        return packetLen;
+    }
+    dev->dev.bdname = NULL;
+    dev->dev.eir = NULL;
+    dev->dev.bt_services.known_services = NULL;
+    dev->dev.bt_services.service_uuids = NULL;
+    dev->cod_str = NULL;
+    /* Copy fixed-byte members */
+    memcpy(dev->dev.bdname_len, buffer + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
+    memcpy(dev->dev.eir_len, buffer + WENDIGO_OFFSET_BT_EIR_LEN, sizeof(uint8_t));
+    memcpy(dev->dev.rssi, buffer + WENDIGO_OFFSET_BT_RSSI, sizeof(int32_t));
+    memcpy(dev->dev.cod, buffer + WENDIGO_OFFSET_BT_COD, sizeof(uint32_t));
+    memcpy(dev->dev.bda, buffer + WENDIGO_OFFSET_BT_BDA, sizeof(esp_bd_addr_t));
+    memcpy(dev->dev.scanType, buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(ScanType));
+    memcpy(dev->dev.tagged, buffer + WENDIGO_OFFSET_BT_TAGGED, sizeof(bool));
+    memcpy(dev->dev.lastSeen, buffer + WENDIGO_OFFSET_BT_LASTSEEN, sizeof(struct timeval));
+    memcpy(dev->dev.bt_services.num_services, buffer + WENDIGO_OFFSET_BT_NUM_SERVICES, sizeof(uint8_t));
+    memcpy(dev->dev.bt_services.known_services_len, buffer + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN, sizeof(uint8_t));
+    uint8_t cod_len;
+    memcpy(&cod_len, buffer + WENDIGO_OFFSET_BT_COD_LEN, sizeof(uint8_t));
+    /* Do we have a bdname? */
+    // TODO: Need to check bufferLen from here on
+    uint16_t index = WENDIGO_OFFSET_BT_BDNAME;
+    if (dev->dev.bdname_len > 0) {
+        dev->dev.bdname = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
+        if (dev->dev.bdname != NULL) {
+            memcpy(dev->dev.bdname, buffer + index, dev->dev.bdname_len + 1);
         }
-        /* Copy bytes into `dev->dev` */
-        memcpy(&(dev->dev), buffer + index, sizeof(wendigo_bt_device));
-        index += sizeof(wendigo_bt_device);
-        dev->dev.bdname = NULL;
-        dev->dev.bt_services.known_services = NULL;
-        dev->dev.bt_services.service_uuids = NULL;
-        dev->dev.bt_services.known_services_len = 0;
-        dev->dev.bt_services.num_services = 0;
-        dev->dev.eir = NULL;
-        dev->dev.cod = 0;
-        dev->cod_str = NULL;
-        /* Do we have a bdname? */
-        if (dev->dev.bdname_len > 0 && bufferLen >= (index + dev->dev.bdname_len + 1)) {
-            dev->dev.bdname = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
-            if (dev->dev.bdname == NULL) {
-                // TODO: Panic. For now just skip the name
-                index += (dev->dev.bdname_len + 1);
-                dev->dev.bdname_len = 0;
-            } else {
-                memcpy(dev->dev.bdname, buffer + index, dev->dev.bdname_len + 1); // Include NULL terminator
-                index += (dev->dev.bdname_len + 1);
-            }
+        index += (dev->dev.bdname_len + 1);
+    }
+    /* EIR? */
+    if (dev->dev.eir_len > 0) {
+        dev->dev.eir = malloc(sizeof(char) * dev->dev.eir_len);
+        if (dev->dev.eir != NULL) {
+            memcpy(dev->dev.eir, buffer + index, dev->dev.eir_len);
         }
-        /* Do we have EIR? */
-        if (dev->dev.eir_len > 0 && bufferLen >= index + dev->dev.eir_len) {
-            dev->dev.eir = malloc(dev->dev.eir_len);
-            if (dev->dev.eir == NULL) {
-                // TODO: Panic. For now just skip EIR
-                index += dev->dev.eir_len;
-                dev->dev.eir_len = 0;
-            } else {
-                memcpy(dev->dev.eir, buffer + index, dev->dev.eir_len);
-                index += dev->dev.eir_len;
-            }
+        index += dev->dev.eir_len;
+    }
+    /* Class of Device? */
+    if (cod_len > 0) {
+        dev->cod_str = malloc(sizeof(char) * (cod_len + 1));
+        if (dev->cod_str != NULL) {
+            memcpy(dev->cod_str, buffer + index, cod_len + 1);
         }
-        /* Do we have class of device? */
-        if (bufferLen >= index) {
-            uint8_t cod_len = buffer[index++];
-            if (cod_len > 0 && bufferLen >= (index + cod_len + 1)) {
-                dev->cod_str = malloc(sizeof(char) * (cod_len + 1));
-                if (dev->cod_str == NULL) {
-                    // TODO: Panic. For now just skip the field
-                } else {
-                    memcpy(dev->cod_str, buffer + index, cod_len + 1);
-                }
-                index += (cod_len + 1);
-            }
-        }
-        // TODO: Services to go here
+        index += (cod_len + 1);
+    }
+    // TODO: Services to go here
 
-        if (buffer[index] != '\n') {
-            // TODO: Panic & recover
-        }
-        ++index;
+    /* Hopefully `index` now points to the packet terminator */
+    if (memcmp(PACKET_TERM, buffer + index, PREAMBLE_LEN)) {
+        // TODO: Panic & recover
+    }
+
 /*
         // TODO Remove this debugging stuff
         if (dev->dev.bdname_len > 0 && dev->dev.bdname != NULL) {
@@ -333,15 +331,13 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
             wendigo_display_popup(app, "parseBluetooth()", nameStr);
         }
 */
-        /* Does this device already exist in bt_devices[]? */
-        if (bt_device_exists(dev)) {
-            wendigo_update_bt_device(dev);
-        } else {
-            wendigo_add_bt_device(dev);
-        }
+    /* Does this device already exist in bt_devices[]? */
+    if (bt_device_exists(dev)) {
+        wendigo_update_bt_device(dev);
+    } else {
+        wendigo_add_bt_device(dev);
     }
-    UNUSED(app);
-    return index;
+    return index + PREAMBLE_LEN - 1;
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT
