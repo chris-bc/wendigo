@@ -277,16 +277,16 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     dev->dev.bt_services.service_uuids = NULL;
     dev->cod_str = NULL;
     /* Copy fixed-byte members */
-    memcpy(dev->dev.bdname_len, buffer + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
-    memcpy(dev->dev.eir_len, buffer + WENDIGO_OFFSET_BT_EIR_LEN, sizeof(uint8_t));
-    memcpy(dev->dev.rssi, buffer + WENDIGO_OFFSET_BT_RSSI, sizeof(int32_t));
-    memcpy(dev->dev.cod, buffer + WENDIGO_OFFSET_BT_COD, sizeof(uint32_t));
-    memcpy(dev->dev.bda, buffer + WENDIGO_OFFSET_BT_BDA, sizeof(esp_bd_addr_t));
-    memcpy(dev->dev.scanType, buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(ScanType));
-    memcpy(dev->dev.tagged, buffer + WENDIGO_OFFSET_BT_TAGGED, sizeof(bool));
-    memcpy(dev->dev.lastSeen, buffer + WENDIGO_OFFSET_BT_LASTSEEN, sizeof(struct timeval));
-    memcpy(dev->dev.bt_services.num_services, buffer + WENDIGO_OFFSET_BT_NUM_SERVICES, sizeof(uint8_t));
-    memcpy(dev->dev.bt_services.known_services_len, buffer + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN, sizeof(uint8_t));
+    memcpy(&(dev->dev.bdname_len), buffer + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
+    memcpy(&(dev->dev.eir_len), buffer + WENDIGO_OFFSET_BT_EIR_LEN, sizeof(uint8_t));
+    memcpy(&(dev->dev.rssi), buffer + WENDIGO_OFFSET_BT_RSSI, sizeof(int32_t));
+    memcpy(&(dev->dev.cod), buffer + WENDIGO_OFFSET_BT_COD, sizeof(uint32_t));
+    memcpy(dev->dev.bda, buffer + WENDIGO_OFFSET_BT_BDA, MAC_BYTES);
+    memcpy(&(dev->dev.scanType), buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(ScanType));
+    memcpy(&(dev->dev.tagged), buffer + WENDIGO_OFFSET_BT_TAGGED, sizeof(bool));
+    memcpy(&(dev->dev.lastSeen), buffer + WENDIGO_OFFSET_BT_LASTSEEN, sizeof(struct timeval));
+    memcpy(&(dev->dev.bt_services.num_services), buffer + WENDIGO_OFFSET_BT_NUM_SERVICES, sizeof(uint8_t));
+    memcpy(&(dev->dev.bt_services.known_services_len), buffer + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN, sizeof(uint8_t));
     uint8_t cod_len;
     memcpy(&cod_len, buffer + WENDIGO_OFFSET_BT_COD_LEN, sizeof(uint8_t));
     /* Do we have a bdname? */
@@ -369,7 +369,7 @@ uint16_t parseBufferVersion(WendigoApp *app) {
     }
     wendigo_popup_text[endSeq - 1] = '\0'; /* Just in case */
     wendigo_display_popup(app, "ESP32 Version", wendigo_popup_text);
-    return i + 1;
+    return endSeq + PREAMBLE_LEN;
 }
 
 /** When the end of a packet is reached this function is called to parse the

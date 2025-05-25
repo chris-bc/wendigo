@@ -168,12 +168,12 @@ esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     /* Send fix-byte members */
     send_bytes(&(dev->bdname_len), sizeof(dev->bdname_len));
     send_bytes(&(dev->eir_len), sizeof(dev->eir_len));
-    send_bytes(&(dev->rssi), sizeof(dev->rssi));
-    send_bytes(&(dev->cod), sizeof(dev->cod));
+    send_bytes((uint8_t *)&(dev->rssi), sizeof(dev->rssi));
+    send_bytes((uint8_t *)&(dev->cod), sizeof(dev->cod));
     send_bytes(dev->bda, sizeof(dev->bda));
-    send_bytes(&(dev->scanType), sizeof(dev->scanType));
-    send_bytes(&(dev->tagged), sizeof(dev->tagged));
-    send_bytes(&(dev->lastSeen), sizeof(dev->lastSeen));
+    send_bytes((uint8_t *)&(dev->scanType), sizeof(dev->scanType));
+    send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
+    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(dev->lastSeen));
     send_bytes(&(dev->bt_services.num_services), sizeof(dev->bt_services.num_services));
     send_bytes(&(dev->bt_services.known_services_len), sizeof(dev->bt_services.known_services_len));
     send_bytes(&cod_len, sizeof(cod_len));
