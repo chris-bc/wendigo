@@ -159,20 +159,33 @@ esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     char cod_short[SHORT_COD_MAX_LEN];
     uint8_t cod_len;
     cod2shortStr(dev->cod, cod_short, &cod_len);
+    /* Account for NULL terminator on cod_short */
+    ++cod_len;
 
     /* Send a stream of bytes to mark beginning of transmission */
     repeat_bytes(0xFF, 4);
     repeat_bytes(0xAA, 4);
-    /* Send `dev` */
-    uint8_t *devBytes = (uint8_t *)dev;
-    send_bytes(devBytes, sizeof(*dev));
+    /* Send fix-byte members */
+    send_bytes(&(dev->bdname_len), sizeof(dev->bdname_len));
+    send_bytes(&(dev->eir_len), sizeof(dev->eir_len));
+    send_bytes(&(dev->rssi), sizeof(dev->rssi));
+    send_bytes(&(dev->cod), sizeof(dev->cod));
+    send_bytes(dev->bda, sizeof(dev->bda));
+    send_bytes(&(dev->scanType), sizeof(dev->scanType));
+    send_bytes(&(dev->tagged), sizeof(dev->tagged));
+    send_bytes(&(dev->lastSeen), sizeof(dev->lastSeen));
+    send_bytes(&(dev->bt_services.num_services), sizeof(dev->bt_services.num_services));
+    send_bytes(&(dev->bt_services.known_services_len), sizeof(dev->bt_services.known_services_len));
+    send_bytes(&cod_len, sizeof(cod_len));
+
     /* bdname */
     if (dev->bdname_len > 0) {
         send_bytes((uint8_t *)(dev->bdname), dev->bdname_len + 1); // Don't forget the NULL terminator!
     }
     /* EIR */
-    send_bytes(dev->eir, dev->eir_len);
-    send_bytes(&cod_len, 1);
+    if (dev->eir_len > 0) {
+        send_bytes(dev->eir, dev->eir_len);
+    }
     if (cod_len > 0) {
         send_bytes((uint8_t *)cod_short, cod_len + 1);
     }
