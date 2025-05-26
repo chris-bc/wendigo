@@ -18,7 +18,7 @@
     * Status
 * Devices
     * List of discovered devices
-	* [X] BDA
+        * [X] BDA
         * Name
         * RSSI
         * Protocol
