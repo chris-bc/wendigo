@@ -79,10 +79,24 @@ typedef struct {
     ModeMask mode_mask;
 } WendigoItem;
 
+typedef enum {
+    WendigoAppViewVarItemList,
+    WendigoAppViewDeviceList,
+    WendigoAppViewDeviceDetail,
+    WendigoAppViewConsoleOutput,
+    WendigoAppViewTextInput,
+    WendigoAppViewHexInput,
+    WendigoAppViewHelp,
+    WendigoAppViewSetupMAC,
+    WendigoAppViewSetupChannel,
+    WendigoAppViewPopup,
+} WendigoAppView;
+
 struct WendigoApp {
     Gui* gui;
     ViewDispatcher* view_dispatcher;
     SceneManager* scene_manager;
+    WendigoAppView current_view;
 
     char text_input_store[WENDIGO_TEXT_INPUT_STORE_SIZE + 1];
     FuriString* text_box_store;
@@ -121,19 +135,6 @@ struct WendigoApp {
     uint16_t channel_mask;
     uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1];
 };
-
-typedef enum {
-    WendigoAppViewVarItemList,
-    WendigoAppViewDeviceList,
-    WendigoAppViewDeviceDetail,
-    WendigoAppViewConsoleOutput,
-    WendigoAppViewTextInput,
-    WendigoAppViewHexInput,
-    WendigoAppViewHelp,
-    WendigoAppViewSetupMAC,
-    WendigoAppViewSetupChannel,
-    WendigoAppViewPopup,
-} WendigoAppView;
 
 /* Public methods from wendigo_app.c */
 void wendigo_popup_callback(void *context);

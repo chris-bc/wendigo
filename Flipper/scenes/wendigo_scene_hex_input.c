@@ -8,6 +8,7 @@ void wendigo_scene_hex_input_callback(void* context) {
 
 void wendigo_scene_hex_input_on_enter(void* context) {
     WendigoApp* app = context;
+    app->current_view = WendigoAppViewHexInput;
 
     // Setup view
     Wendigo_TextInput* text_input = app->hex_input;

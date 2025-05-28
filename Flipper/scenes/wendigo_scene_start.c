@@ -119,6 +119,7 @@ static void wendigo_scene_start_var_list_change_callback(VariableItem* item) {
 void wendigo_scene_start_on_enter(void* context) {
     WendigoApp* app = context;
     VariableItemList* var_item_list = app->var_item_list;
+    app->current_view = WendigoAppViewVarItemList;
 
     for(int i = 0; i < START_MENU_ITEMS; ++i) {
         app->selected_option_index[i] = 0;

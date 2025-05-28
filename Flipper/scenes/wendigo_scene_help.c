@@ -9,6 +9,7 @@ void wendigo_scene_help_widget_callback(GuiButtonType result, InputType type, vo
 
 void wendigo_scene_help_on_enter(void* context) {
     WendigoApp* app = context;
+    app->current_view = WendigoAppViewHelp;
 
     FuriString* temp_str;
     temp_str = furi_string_alloc();

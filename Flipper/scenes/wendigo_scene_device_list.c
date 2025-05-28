@@ -45,6 +45,7 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
 */
 void wendigo_scene_device_list_on_enter(void* context) {
     WendigoApp* app = context;
+    app->current_view = WendigoAppViewDeviceList;
     VariableItemList* var_item_list = app->devices_var_item_list;
 
     variable_item_list_set_enter_callback(

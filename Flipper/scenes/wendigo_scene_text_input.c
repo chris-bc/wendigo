@@ -8,6 +8,7 @@ void wendigo_scene_text_input_callback(void* context) {
 
 void wendigo_scene_text_input_on_enter(void* context) {
     WendigoApp* app = context;
+    app->current_view = WendigoAppViewTextInput;
 
     if(false == app->is_custom_tx_string) {
         // Fill text input with selected string so that user can add to it

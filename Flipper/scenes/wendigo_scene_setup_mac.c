@@ -92,6 +92,7 @@ void wendigo_scene_setup_mac_changed_callback(void* context) {
 void wendigo_scene_setup_mac_on_enter(void* context) {
     WendigoApp* app = context;
     ByteInput* mac_input = app->setup_mac;
+    app->current_view = WendigoAppViewSetupMAC;
 
     /* Copy app->mac_bytes into a temp array for modification by the view */
     memcpy(view_bytes, app->interfaces[app->active_interface].mac_bytes, MAC_BYTES);

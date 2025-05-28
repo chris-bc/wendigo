@@ -178,6 +178,10 @@ bool wendigo_add_bt_device(flipper_bt_device *dev) {
         bt_devices_capacity += 10;
     }
     bt_devices[bt_devices_count++] = dev;
+
+    /* If the device list scene is currently displayed, add the device to the UI */
+    // TODO
+
     return true;
 }
 

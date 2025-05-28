@@ -10,6 +10,7 @@ void wendigo_scene_device_detail_set_device(flipper_bt_device *d) {
 static void wendigo_scene_device_detail_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
     WendigoApp* app = context;
+    app->current_view = WendigoAppViewDeviceDetail;
 
 //    furi_assert(index < ((display_selected_only) ? bt_selected_devices_count : bt_devices_count));
 

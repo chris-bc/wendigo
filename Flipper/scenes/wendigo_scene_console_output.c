@@ -45,6 +45,7 @@ static uint8_t hex_char_to_byte(const char c) {
 
 void wendigo_scene_console_output_on_enter(void* context) {
     WendigoApp* app = context;
+    app->current_view = WendigoAppViewConsoleOutput;
 
     TextBox* text_box = app->text_box;
     text_box_reset(app->text_box);
