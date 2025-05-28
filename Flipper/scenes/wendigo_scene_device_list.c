@@ -64,8 +64,7 @@ void wendigo_scene_device_list_on_enter(void* context) {
     }
     for(int i = 0; i < device_count; ++i) {
         /* Label with the name if we have a name, otherwise use the BDA */
-// TODO: Re-enable name logic when I figure out why they're not coming out correctly
-        if (false && devices[i]->dev.bdname_len > 0 && devices[i]->dev.bdname != NULL) {
+        if (devices[i]->dev.bdname_len > 0 && devices[i]->dev.bdname != NULL) {
             item_str = devices[i]->dev.bdname;
         } else {
             item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
@@ -82,7 +81,7 @@ void wendigo_scene_device_list_on_enter(void* context) {
             wendigo_scene_device_list_var_list_change_callback,
             app);
         UNUSED(item);
-        if (true || devices[i]->dev.bdname_len == 0 || devices[i]->dev.bdname == NULL) {
+        if (devices[i]->dev.bdname_len == 0 || devices[i]->dev.bdname == NULL) {
             free(item_str);
         }
     }
