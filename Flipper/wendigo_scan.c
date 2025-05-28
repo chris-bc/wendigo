@@ -324,7 +324,6 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     uint8_t cod_len;
     memcpy(&cod_len, buffer + WENDIGO_OFFSET_BT_COD_LEN, sizeof(uint8_t));
     /* Do we have a bdname? */
-    // TODO: Need to check bufferLen from here on
     uint16_t index = WENDIGO_OFFSET_BT_BDNAME;
     if (dev->dev.bdname_len > 0 && bufferLen > index + dev->dev.bdname_len) {
         dev->dev.bdname = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
