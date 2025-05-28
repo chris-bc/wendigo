@@ -151,9 +151,9 @@ void wendigo_scene_start_on_enter(void* context) {
 
             item_indexes[menu_items_num] = i;
             menu_items_num++;
-        }
-        if (i == SETUP_IDX && app->is_scanning) {
-            variable_item_set_locked(item, true, LOCKED_MSG);
+            if (i == SETUP_IDX && app->is_scanning) {
+                variable_item_set_locked(item, true, LOCKED_MSG);
+            }
         }
     }
 

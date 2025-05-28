@@ -152,33 +152,45 @@ esp_err_t display_gap_interactive(wendigo_bt_device *dev) {
    * Sends bdname if present (wendigo_bt_device.bdname_len + 1 bytes)
    * Sends eir if present (wendigo_bt_device.eir_len bytes)
    * Sends strlen(cod_short) (1 byte) followed by cod_short
-   * Ends the transmission with a newline ('\n')
+   * Ends the transmission with the reverse of the start: 4*0xAA 4*0xFF
 */
 esp_err_t display_gap_uart(wendigo_bt_device *dev) {
     esp_err_t result = ESP_OK;
     char cod_short[SHORT_COD_MAX_LEN];
     uint8_t cod_len;
     cod2shortStr(dev->cod, cod_short, &cod_len);
+    /* Account for NULL terminator on cod_short */
+    ++cod_len;
 
     /* Send a stream of bytes to mark beginning of transmission */
     repeat_bytes(0xFF, 4);
     repeat_bytes(0xAA, 4);
-    /* Send `dev` */
-    uint8_t *devBytes = (uint8_t *)dev;
-    send_bytes(devBytes, sizeof(*dev));
+    /* Send fix-byte members */
+    send_bytes(&(dev->bdname_len), sizeof(dev->bdname_len));
+    send_bytes(&(dev->eir_len), sizeof(dev->eir_len));
+    send_bytes((uint8_t *)&(dev->rssi), sizeof(dev->rssi));
+    send_bytes((uint8_t *)&(dev->cod), sizeof(dev->cod));
+    send_bytes(dev->bda, sizeof(dev->bda));
+    send_bytes((uint8_t *)&(dev->scanType), sizeof(dev->scanType));
+    send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
+    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(dev->lastSeen));
+    send_bytes(&(dev->bt_services.num_services), sizeof(dev->bt_services.num_services));
+    send_bytes(&(dev->bt_services.known_services_len), sizeof(dev->bt_services.known_services_len));
+    send_bytes(&cod_len, sizeof(cod_len));
+
     /* bdname */
     if (dev->bdname_len > 0) {
         send_bytes((uint8_t *)(dev->bdname), dev->bdname_len + 1); // Don't forget the NULL terminator!
     }
     /* EIR */
-    send_bytes(dev->eir, dev->eir_len);
-    send_bytes(&cod_len, 1);
+    if (dev->eir_len > 0) {
+        send_bytes(dev->eir, dev->eir_len);
+    }
     if (cod_len > 0) {
         send_bytes((uint8_t *)cod_short, cod_len + 1);
     }
-    /* Mark the end of transmission with a newline */
-    // YAGNI: Consider something more formal, e.g. 8 NULL bytes.
-    putc('\n', stdout);
+    /* Mark the end of transmission */
+    send_end_of_packet();
     fflush(stdout);
 
     return result;

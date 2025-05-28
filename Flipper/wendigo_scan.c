@@ -1,4 +1,5 @@
 #include "wendigo_scan.h"
+#include "wendigo_packet_offsets.h"
 
 uint8_t *buffer = NULL;
 uint16_t bufferLen = 0; // 65535 should be plenty of length
@@ -19,6 +20,52 @@ uint8_t PREAMBLE_LEN = 8;
 uint8_t PREAMBLE_BT_BLE[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xAA, 0xAA, 0xAA, 0xAA};
 uint8_t PREAMBLE_WIFI[]   = {0x99, 0x99, 0x99, 0x99, 0x11, 0x11, 0x11, 0x11};
 uint8_t PREAMBLE_VER[]    = {'W', 'e', 'n', 'd', 'i', 'g', 'o', ' '};
+uint8_t PACKET_TERM[]     = {0xAA, 0xAA, 0xAA, 0xAA, 0xFF, 0xFF, 0xFF, 0xFF};
+
+/** Search for the start-of-packet marker in the specified byte array
+ *  This function is used during parsing to skip past any extraneous bytes
+ *  that are sent prior to the start-of-packet sequence.
+ *  Returns `size` if not found.
+ */
+uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
+    uint16_t result = 0;
+    for (; result + PREAMBLE_LEN <= size && memcmp(bytes + result, PREAMBLE_BT_BLE, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_WIFI, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN); ++result) { }
+    return result;
+}
+
+/** Search for the end-of-packet marker in the specified byte array
+ *  A packet is terminated by a sequence of 4 0xAA and 4 0xFF,
+ *  returns the index of the last byte in this sequence, or the
+ *  specified `size` if not found.
+ */
+uint16_t end_of_packet(uint8_t *theBytes, uint16_t size) {
+    uint16_t result = PREAMBLE_LEN - 1; /* Start by checking bytes [0] through [7] */
+    for (; result < size && memcmp(theBytes + result - PREAMBLE_LEN + 1, PACKET_TERM, PREAMBLE_LEN); ++result) { }
+    return result;
+}
+
+/** Consume `bytes` bytes from `buffer`.
+ *  This function does not alter buffer capacity, but updates buffer and bufferLen
+ *  to remove the specified number of bytes from the beginning of the buffer.
+ */
+void consumeBufferBytes(uint16_t bytes) {
+    if (bytes == 0) {
+        // That was a bit of a waste
+        return;
+    }
+    /* Remove bytes from the beginning of the buffer */
+    memset(buffer, '\0', bytes);
+    /* Copy memory into buffer from buffer+bytes to buffer+bufferLen.
+       This should be OK when the buffer is exhausted because it copies 0 bytes */
+    memcpy(buffer, buffer + bytes, bufferLen - bytes);
+    /* Null what remains */
+    memset(buffer + bufferLen - bytes, '\0', bytes);
+    /* Buffer is now bufferLen - bytes */
+    bufferLen -= bytes;
+
+}
 
 /* Returns the index of the first occurrence of `\n` in `theString`, searching the first `size` characters.
    Returns size if not found (which is outside the array bounds). */
@@ -241,87 +288,90 @@ void wendigo_free_bt_devices() {
    the calling function.
    The received packet must follow this structure:
    * 4 bytes of 0xFF followed by 4 bytes of 0xAA
-   * Device structure (sizeof(wendigo_bt_device))
-   * bdname if present (wendigo_bt_device.bdname_len + 1 bytes)
-   * eir if present (wendigo_bt_device.eir_len bytes)
-   * strlen(cod_short) (1 byte)
-   * cod_short (strlen(cod_short) + 1 bytes)
-   * Newline ('\n')
+   * Attributes as specified in wendigo_packet_offsets.h
+   * 4 bytes of 0xAA followed by 4 bytes of 0xFF
 */
 uint16_t parseBufferBluetooth(WendigoApp *app) {
-    /* Skip the preamble */
-    uint16_t index = PREAMBLE_LEN;
-    /* Ensure we have enough bytes for a wendigo_bt_device */
-    if (bufferLen >= index + sizeof(wendigo_bt_device)) {
-        flipper_bt_device *dev = malloc(sizeof(flipper_bt_device));
-        if (dev == NULL) {
-            // TODO: Panic. For now just skip the device
-            return bytes_contains_newline(buffer, bufferLen);
-        }
-        /* Copy bytes into `dev->dev` */
-        memcpy(&(dev->dev), buffer + index, sizeof(wendigo_bt_device));
-        index += sizeof(wendigo_bt_device);
-        dev->dev.bdname = NULL;
-        dev->dev.bt_services.known_services = NULL;
-        dev->dev.bt_services.service_uuids = NULL;
-        dev->dev.bt_services.known_services_len = 0;
-        dev->dev.bt_services.num_services = 0;
-        dev->dev.eir = NULL;
-        dev->dev.cod = 0;
-        dev->cod_str = NULL;
-        /* Do we have a bdname? */
-        if (dev->dev.bdname_len > 0 && bufferLen >= (index + dev->dev.bdname_len + 1)) {
-            dev->dev.bdname = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
-            if (dev->dev.bdname == NULL) {
-                // TODO: Panic. For now just skip the name
-                index += (dev->dev.bdname_len + 1);
-                dev->dev.bdname_len = 0;
-            } else {
-                memcpy(dev->dev.bdname, buffer + index, dev->dev.bdname_len + 1); // Include NULL terminator
-                index += (dev->dev.bdname_len + 1);
-            }
-        }
-        /* Do we have EIR? */
-        if (dev->dev.eir_len > 0 && bufferLen >= index + dev->dev.eir_len) {
-            dev->dev.eir = malloc(dev->dev.eir_len);
-            if (dev->dev.eir == NULL) {
-                // TODO: Panic. For now just skip EIR
-                index += dev->dev.eir_len;
-                dev->dev.eir_len = 0;
-            } else {
-                memcpy(dev->dev.eir, buffer + index, dev->dev.eir_len);
-                index += dev->dev.eir_len;
-            }
-        }
-        /* Do we have class of device? */
-        if (bufferLen >= index) {
-            uint8_t cod_len = buffer[index++];
-            if (cod_len > 0 && bufferLen >= (index + cod_len + 1)) {
-                dev->cod_str = malloc(sizeof(char) * (cod_len + 1));
-                if (dev->cod_str == NULL) {
-                    // TODO: Panic. For now just skip the field
-                } else {
-                    memcpy(dev->cod_str, buffer + index, cod_len + 1);
-                }
-                index += (cod_len + 1);
-            }
-        }
-        // TODO: Services to go here
-
-        if (buffer[index] != '\n') {
-            // TODO: Panic & recover
-        }
-        ++index;
-
-        /* Does this device already exist in bt_devices[]? */
-        if (bt_device_exists(dev)) {
-            wendigo_update_bt_device(dev);
-        } else {
-            wendigo_add_bt_device(dev);
-        }
+    /* Sanity check - we should have at least 55 bytes including header and footer */
+    uint16_t packetLen = end_of_packet(buffer, bufferLen);
+    if (packetLen < (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN)) {
+        // TODO: I'm not sure what to do in this case
+        wendigo_display_popup(app, "Packet Error", "Bluetooth packet is shorter than expected");
+        // Skip this packet?
+        return packetLen;
     }
-    UNUSED(app);
-    return index;
+    flipper_bt_device *dev = malloc(sizeof(flipper_bt_device));
+    if (dev == NULL) {
+        // TODO: Panic. For now just skip the device
+        return packetLen;
+    }
+    dev->dev.bdname = NULL;
+    dev->dev.eir = NULL;
+    dev->dev.bt_services.known_services = NULL;
+    dev->dev.bt_services.service_uuids = NULL;
+    dev->cod_str = NULL;
+    /* Copy fixed-byte members */
+    memcpy(&(dev->dev.bdname_len), buffer + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
+    memcpy(&(dev->dev.eir_len), buffer + WENDIGO_OFFSET_BT_EIR_LEN, sizeof(uint8_t));
+    memcpy(&(dev->dev.rssi), buffer + WENDIGO_OFFSET_BT_RSSI, sizeof(int32_t));
+    memcpy(&(dev->dev.cod), buffer + WENDIGO_OFFSET_BT_COD, sizeof(uint32_t));
+    memcpy(dev->dev.bda, buffer + WENDIGO_OFFSET_BT_BDA, MAC_BYTES);
+    memcpy(&(dev->dev.scanType), buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(ScanType));
+    memcpy(&(dev->dev.tagged), buffer + WENDIGO_OFFSET_BT_TAGGED, sizeof(bool));
+    memcpy(&(dev->dev.lastSeen), buffer + WENDIGO_OFFSET_BT_LASTSEEN, sizeof(struct timeval));
+    memcpy(&(dev->dev.bt_services.num_services), buffer + WENDIGO_OFFSET_BT_NUM_SERVICES, sizeof(uint8_t));
+    memcpy(&(dev->dev.bt_services.known_services_len), buffer + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN, sizeof(uint8_t));
+    uint8_t cod_len;
+    memcpy(&cod_len, buffer + WENDIGO_OFFSET_BT_COD_LEN, sizeof(uint8_t));
+    /* Do we have a bdname? */
+    // TODO: Need to check bufferLen from here on
+    uint16_t index = WENDIGO_OFFSET_BT_BDNAME;
+    if (dev->dev.bdname_len > 0 && bufferLen > index + dev->dev.bdname_len) {
+        dev->dev.bdname = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
+        if (dev->dev.bdname != NULL) {
+            memcpy(dev->dev.bdname, buffer + index, dev->dev.bdname_len + 1);
+        }
+        index += (dev->dev.bdname_len + 1);
+    }
+    /* EIR? */
+    if (dev->dev.eir_len > 0 && bufferLen >= index + dev->dev.eir_len) {
+        dev->dev.eir = malloc(sizeof(char) * dev->dev.eir_len);
+        if (dev->dev.eir != NULL) {
+            memcpy(dev->dev.eir, buffer + index, dev->dev.eir_len);
+        }
+        index += dev->dev.eir_len;
+    }
+    /* Class of Device? */
+    if (cod_len > 0 && bufferLen > index + cod_len) {
+        dev->cod_str = malloc(sizeof(char) * (cod_len + 1));
+        if (dev->cod_str != NULL) {
+            memcpy(dev->cod_str, buffer + index, cod_len + 1);
+        }
+        index += (cod_len + 1);
+    }
+    // TODO: Services to go here
+
+    /* Hopefully `index` now points to the packet terminator */
+    if (memcmp(PACKET_TERM, buffer + index, PREAMBLE_LEN)) {
+        // TODO: Panic & recover
+    }
+
+/*
+        // TODO Remove this debugging stuff
+        if (dev->dev.bdname_len > 0 && dev->dev.bdname != NULL) {
+            // Found \"%s\"
+            char *nameStr = malloc(sizeof(char) * (9 + strlen(dev->dev.bdname)));
+            snprintf(nameStr, 9 + strlen(dev->dev.bdname), "Found \"%s\"", dev->dev.bdname);
+            wendigo_display_popup(app, "parseBluetooth()", nameStr);
+        }
+*/
+    /* Does this device already exist in bt_devices[]? */
+    if (bt_device_exists(dev)) {
+        wendigo_update_bt_device(dev);
+    } else {
+        wendigo_add_bt_device(dev);
+    }
+    return index + PREAMBLE_LEN - 1;
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT
@@ -335,66 +385,66 @@ uint16_t parseBufferWifi(WendigoApp *app) {
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes, this must be handled by the calling function. */
 uint16_t parseBufferVersion(WendigoApp *app) {
-    char *versionStr = realloc(wendigo_popup_text, sizeof(char) * bufferLen);
+    /* Find the end-of-packet sequence to determine version string length */
+    uint16_t endSeq = end_of_packet(buffer, bufferLen);
+    if (endSeq == bufferLen) {
+        return 0; /* Already been tested twice, don't bother alerting */
+    }
+    endSeq = endSeq - PREAMBLE_LEN + 1; /* Sub 7 to reach first byte in seq */
+    char *versionStr = realloc(wendigo_popup_text, sizeof(char) * endSeq);
     if (versionStr == NULL) {
         // TODO: Panic
         // For now just consume this message
-        return bytes_contains_newline(buffer, bufferLen);
+        endSeq = end_of_packet(buffer, bufferLen);
+        if (endSeq < bufferLen) {
+            ++endSeq;
+        }
+        return endSeq;
     }
     wendigo_popup_text = versionStr;
-    int i = 0;
-    for (; i < bufferLen && buffer[i] != '\n'; ++i) {
+    for (int i = 0; i < endSeq; ++i) {
         wendigo_popup_text[i] = buffer[i];
     }
-    // TODO: Consider handling a missing newline more elegantly - Although it's currently
-    //       the end-of-transmission marker so not possible to get here without one
-    if (i == bufferLen) {
-        --i; // Replace the last byte with NULL. This should never happen.
-    }
-    wendigo_popup_text[i] = '\0';
+    wendigo_popup_text[endSeq - 1] = '\0'; /* Just in case */
     wendigo_display_popup(app, "ESP32 Version", wendigo_popup_text);
-    return i + 1;
+    return endSeq + PREAMBLE_LEN;
 }
 
-/* When the end of a transmission is reached this function is called to parse the
-   buffer and take the appropriate action. We expect to see one of the following:
-    * Begin with 0xFF,0xFF,0xFF,0xFF,0xAA,0xAA,0xAA,0xAA: Bluetooth packet
-    * Begin with 0x99,0x99,0x99,0x99,0x11,0x11,0x11,0x11: WiFi packet
-    * Begin with "Wendigo "                              : Version message
-*/
+/** When the end of a packet is reached this function is called to parse the
+ *  buffer and take the appropriate action. We expect to see one of the following:
+ *   * Begin with 0xFF,0xFF,0xFF,0xFF,0xAA,0xAA,0xAA,0xAA: Bluetooth packet
+ *   * Begin with 0x99,0x99,0x99,0x99,0x11,0x11,0x11,0x11: WiFi packet
+ *   * Begin with "Wendigo "                             : Version packet
+ *  The end of packet is marked by 0xAA,0xAA,0xAA,0xAA,0xFF,0xFF,0xFF,0xFF.
+ *  This function removes the parsed packet from the buffer, including the
+ *  beginning and end of packet markers.
+ */
 void parseBuffer(WendigoApp *app) {
     uint16_t consumedBytes = 0;
-    if (bufferLen >= 8 && !memcmp(PREAMBLE_BT_BLE, buffer, PREAMBLE_LEN)) {
+    /* We get here only after finding an end of packet sequence, so can assume
+       there's a beginning of packet sequence. */
+    consumedBytes = start_of_packet(buffer, bufferLen);
+    /* Remove them now so that the preamble begins at buffer[0] - Or is empty */
+    consumeBufferBytes(consumedBytes);
+
+    if (bufferLen >= PREAMBLE_LEN && !memcmp(PREAMBLE_BT_BLE, buffer, PREAMBLE_LEN)) {
         consumedBytes = parseBufferBluetooth(app);
-    } else if (bufferLen >= 8 && !memcmp(PREAMBLE_WIFI, buffer, PREAMBLE_LEN)) {
+    } else if (bufferLen >= PREAMBLE_LEN && !memcmp(PREAMBLE_WIFI, buffer, PREAMBLE_LEN)) {
         consumedBytes = parseBufferWifi(app);
-    } else if (bufferLen >= 8 && !memcmp(PREAMBLE_VER, buffer, PREAMBLE_LEN)) {
+    } else if (bufferLen >= PREAMBLE_LEN && !memcmp(PREAMBLE_VER, buffer, PREAMBLE_LEN)) {
         consumedBytes = parseBufferVersion(app);
     } else {
-        /* Extraneous content - Remove everything up to and including the first newline */
-        for (consumedBytes = 0; consumedBytes < bufferLen && buffer[consumedBytes] != '\n'; ++consumedBytes) {}
-        if (consumedBytes < bufferLen) {
-            /* Found a newline at buffer[consumedBytes] - Also consume the newline */
-            ++consumedBytes;
-        } else {
-            /* No newline found. This should never occur with the existing implementation */
-            consumedBytes = 0;
+        /* We reached this function by finding an end-of-packet sequence, but can't find
+           a start-of-packet sequence. Throw away everything up to the end-of-packet seq. */
+        consumedBytes = end_of_packet(buffer, bufferLen);
+        if (consumedBytes == bufferLen) {
+            // Hmmmm
+            return;
         }
+        /* Currently points to the last byte in the sequence, move forward */
+        ++consumedBytes;
     }
-    if (consumedBytes == 0) {
-        // That was a bit of a waste
-        // TODO: Diagnose why, communicate something useful
-        return;
-    }
-    /* Remove `consumedBytes` bytes from the beginning of the buffer */
-    memset(buffer, '\0', consumedBytes);
-    /* Copy memory into buffer from buffer+consumedBytes to buffer+bufferLen.
-       This should be OK when the buffer is exhausted because it copies 0 bytes */
-    memcpy(buffer, buffer + consumedBytes, bufferLen - consumedBytes);
-    /* Null what remains */
-    memset(buffer + bufferLen - consumedBytes, '\0', consumedBytes);
-    /* Buffer is now bufferLen - consumedBytes */
-    bufferLen -= consumedBytes;
+    consumeBufferBytes(consumedBytes);
 }
 
 /* Callback invoked when UART data is received. When an end-of-message packet is
@@ -431,11 +481,11 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
     bufferLen += len;
 
     /* Parse any complete transmissions we have received */
-    uint16_t newline = bytes_contains_newline(buffer, bufferLen);
-    while (newline != bufferLen) {
+    uint16_t endFound = end_of_packet(buffer, bufferLen);
+    // TODO: Putting this in a loop results in an infinite loop and I can't figure out why. Fix this (YAGNI).
+    if (endFound < bufferLen) {
         parseBuffer(app);
-        newline = bytes_contains_newline(buffer, bufferLen);
-    }
+   }
 }
 
 void wendigo_free_uart_buffer() {

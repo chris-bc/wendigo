@@ -33,7 +33,7 @@ typedef struct {
     uint32_t cod;
     uint8_t *eir;   // Consider inline - [ESP_BT_GAP_EIR_DATA_LEN]
     char *bdname;   // Consider inline - [ESP_BT_GAP_MAX_BDNAME_LEN + 1]
-    uint8_t bda[6];
+    uint8_t bda[MAC_BYTES];
     ScanType scanType;
     bool tagged;
     struct timeval lastSeen;

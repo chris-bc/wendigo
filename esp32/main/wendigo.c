@@ -12,6 +12,8 @@
 #include "wifi.h"
 #include "bluetooth.h"
 #include <driver/uart_vfs.h>
+/* Required in order to disable command hints */
+#include "linenoise/linenoise.h"
 
 /*
  * We warn if a secondary serial console is enabled. A secondary serial console is always output-only and
@@ -348,12 +350,13 @@ esp_err_t cmd_status(int argc, char **argv) {
 
 esp_err_t cmd_version(int argc, char **argv) {
     char msg[17];
-    snprintf(msg, sizeof(msg), "Wendigo v%s\n", WENDIGO_VERSION);
+    snprintf(msg, sizeof(msg), "Wendigo v%s", WENDIGO_VERSION);
     send_response(argv[0], NULL, MSG_ACK);
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         ESP_LOGI(TAG, "%s", msg);
     } else {
-        printf(msg);
+        send_bytes((uint8_t *)msg, strlen(msg) + 1);
+        send_end_of_packet();
         fflush(stdout);
     }
     send_response(argv[0], NULL, MSG_OK);
@@ -366,9 +369,11 @@ esp_err_t cmd_interactive(int argc, char **argv) {
     switch (action) {
         case ACTION_ENABLE:
             wendigo_set_logging(ESP_LOG_INFO);
+            linenoiseSetDumbMode(0);
             ESP_LOGI(TAG, "Enabling Interactive Mode...Done.");
             break;
         case ACTION_DISABLE:
+            linenoiseSetDumbMode(1);
             ESP_LOGI(TAG, "Disabling Interactive Mode...Done.");
             wendigo_set_logging(ESP_LOG_NONE);
             break;
@@ -580,6 +585,7 @@ void app_main(void)
     #else
         #error Unsupported console type
     #endif
-
+    /* Disable command completion and hints unless in Interactive Mode */
+    linenoiseSetDumbMode(1);
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
 }
