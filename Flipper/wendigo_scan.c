@@ -22,6 +22,19 @@ uint8_t PREAMBLE_WIFI[]   = {0x99, 0x99, 0x99, 0x99, 0x11, 0x11, 0x11, 0x11};
 uint8_t PREAMBLE_VER[]    = {'W', 'e', 'n', 'd', 'i', 'g', 'o', ' '};
 uint8_t PACKET_TERM[]     = {0xAA, 0xAA, 0xAA, 0xAA, 0xFF, 0xFF, 0xFF, 0xFF};
 
+/** Search for the start-of-packet marker in the specified byte array
+ *  This function is used during parsing to skip past any extraneous bytes
+ *  that are sent prior to the start-of-packet sequence.
+ *  Returns `size` if not found.
+ */
+uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
+    uint16_t result = 0;
+    for (; result < size && memcmp(bytes + result, PREAMBLE_BT_BLE, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_WIFI, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN); ++result) { }
+    return result;
+}
+
 /** Search for the end-of-packet marker in the specified byte array
  *  A packet is terminated by a sequence of 4 0xAA and 4 0xFF,
  *  returns the index of the last byte in this sequence, or the
@@ -31,6 +44,27 @@ uint16_t end_of_packet(uint8_t *theBytes, uint16_t size) {
     uint16_t result = 7; /* Start by checking bytes [0] through [7] */
     for (; result < size && memcmp(theBytes + result - 7, PACKET_TERM, 8); ++result) { }
     return result;
+}
+
+/** Consume `bytes` bytes from `buffer`.
+ *  This function does not alter buffer capacity, but updates buffer and bufferLen
+ *  to remove the specified number of bytes from the beginning of the buffer.
+ */
+void consumeBufferBytes(uint16_t bytes) {
+    if (bytes == 0) {
+        // That was a bit of a waste
+        return;
+    }
+    /* Remove bytes from the beginning of the buffer */
+    memset(buffer, '\0', bytes);
+    /* Copy memory into buffer from buffer+bytes to buffer+bufferLen.
+       This should be OK when the buffer is exhausted because it copies 0 bytes */
+    memcpy(buffer, buffer + bytes, bufferLen - bytes);
+    /* Null what remains */
+    memset(buffer + bufferLen - bytes, '\0', bytes);
+    /* Buffer is now bufferLen - bytes */
+    bufferLen -= bytes;
+
 }
 
 /* Returns the index of the first occurrence of `\n` in `theString`, searching the first `size` characters.
@@ -292,7 +326,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     /* Do we have a bdname? */
     // TODO: Need to check bufferLen from here on
     uint16_t index = WENDIGO_OFFSET_BT_BDNAME;
-    if (dev->dev.bdname_len > 0) {
+    if (dev->dev.bdname_len > 0 && bufferLen > index + dev->dev.bdname_len) {
         dev->dev.bdname = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
         if (dev->dev.bdname != NULL) {
             memcpy(dev->dev.bdname, buffer + index, dev->dev.bdname_len + 1);
@@ -300,7 +334,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
         index += (dev->dev.bdname_len + 1);
     }
     /* EIR? */
-    if (dev->dev.eir_len > 0) {
+    if (dev->dev.eir_len > 0 && bufferLen >= index + dev->dev.eir_len) {
         dev->dev.eir = malloc(sizeof(char) * dev->dev.eir_len);
         if (dev->dev.eir != NULL) {
             memcpy(dev->dev.eir, buffer + index, dev->dev.eir_len);
@@ -308,7 +342,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
         index += dev->dev.eir_len;
     }
     /* Class of Device? */
-    if (cod_len > 0) {
+    if (cod_len > 0 && bufferLen > index + cod_len) {
         dev->cod_str = malloc(sizeof(char) * (cod_len + 1));
         if (dev->cod_str != NULL) {
             memcpy(dev->cod_str, buffer + index, cod_len + 1);
@@ -383,37 +417,34 @@ uint16_t parseBufferVersion(WendigoApp *app) {
  */
 void parseBuffer(WendigoApp *app) {
     uint16_t consumedBytes = 0;
-    if (bufferLen >= 8 && !memcmp(PREAMBLE_BT_BLE, buffer, PREAMBLE_LEN)) {
-        consumedBytes = parseBufferBluetooth(app);
-    } else if (bufferLen >= 8 && !memcmp(PREAMBLE_WIFI, buffer, PREAMBLE_LEN)) {
-        consumedBytes = parseBufferWifi(app);
-    } else if (bufferLen >= 8 && !memcmp(PREAMBLE_VER, buffer, PREAMBLE_LEN)) {
-        consumedBytes = parseBufferVersion(app);
-    } else {
-        /* Extraneous content - Remove everything up to and including the end-of-packet marker */
-        consumedBytes = end_of_packet(buffer, bufferLen);
-        if (consumedBytes == bufferLen) {
-            /* We shouldn't have been called if we can't find a terminator */
-            // TODO: Warning
-            return;
-        }
-        /* consumedBytes has the index of the last byte of the packet terminator, bump it */
-        ++consumedBytes;
-    }
-    if (consumedBytes == 0) {
-        // That was a bit of a waste
-        // TODO: Diagnose why, communicate something useful
+    /* We get here only after finding an end of packet sequence, so can assume
+       there's a beginning of packet sequence. */
+    consumedBytes = start_of_packet(buffer, bufferLen);
+    if (consumedBytes == bufferLen) {
+        /* This shouldn't be possible, but I suppose a packet start could be corrupted */
         return;
     }
-    /* Remove `consumedBytes` bytes from the beginning of the buffer */
-    memset(buffer, '\0', consumedBytes);
-    /* Copy memory into buffer from buffer+consumedBytes to buffer+bufferLen.
-       This should be OK when the buffer is exhausted because it copies 0 bytes */
-    memcpy(buffer, buffer + consumedBytes, bufferLen - consumedBytes);
-    /* Null what remains */
-    memset(buffer + bufferLen - consumedBytes, '\0', consumedBytes);
-    /* Buffer is now bufferLen - consumedBytes */
-    bufferLen -= consumedBytes;
+    /* Remove them now so that the preamble begins at buffer[0] */
+    consumeBufferBytes(consumedBytes);
+
+    if (bufferLen >= PREAMBLE_LEN && !memcmp(PREAMBLE_BT_BLE, buffer, PREAMBLE_LEN)) {
+        consumedBytes = parseBufferBluetooth(app);
+    } else if (bufferLen >= PREAMBLE_LEN && !memcmp(PREAMBLE_WIFI, buffer, PREAMBLE_LEN)) {
+        consumedBytes = parseBufferWifi(app);
+    } else if (bufferLen >= PREAMBLE_LEN && !memcmp(PREAMBLE_VER, buffer, PREAMBLE_LEN)) {
+        consumedBytes = parseBufferVersion(app);
+    } else {
+        /* We reached this function by finding an end-of-packet sequence, but can't find
+           a start-of-packet sequence. Throw away everything up to the end-of-packet seq. */
+        consumedBytes = end_of_packet(buffer, bufferLen);
+        if (consumedBytes == bufferLen) {
+            // Hmmmm
+            return;
+        }
+        /* Currently points to the last byte in the sequence, move forward */
+        ++consumedBytes;
+    }
+    consumeBufferBytes(consumedBytes);
 }
 
 /* Callback invoked when UART data is received. When an end-of-message packet is
