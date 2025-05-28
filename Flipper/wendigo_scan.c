@@ -353,6 +353,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     /* Hopefully `index` now points to the packet terminator */
     if (memcmp(PACKET_TERM, buffer + index, PREAMBLE_LEN)) {
         // TODO: Panic & recover
+        wendigo_display_popup(app, "BT Packet Error", "Packet terminator not found where expected");
     }
 
 /*
