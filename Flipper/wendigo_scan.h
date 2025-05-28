@@ -46,7 +46,11 @@ typedef struct {
 typedef struct {
     wendigo_bt_device dev;
     char *cod_str;
+    VariableItem *view;
 } flipper_bt_device;
+
+/* Import from wendigo_scene_device_list.c */
+extern void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev);
 
 /* Device caches - Declared extern to get around header spaghetti */
 extern flipper_bt_device **bt_devices;

@@ -218,7 +218,7 @@ Because Wendigo is still in early development the following changes are core to 
   * [X] ESP Version (popup)
   * [X] Display devices
     * [X] Display device name instead of BDA when present
-    * [ ] Dynamically update device list on new/updated devices
+    * [X] Dynamically update device list on new/updated devices
   * [ ] Display device details
     * [ ] Update details when device updated
   * [ ] Device tagging

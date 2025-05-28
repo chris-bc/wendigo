@@ -40,6 +40,36 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
 
 }
 
+void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
+    char *name;
+    if (dev->dev.bdname_len == 0 || dev->dev.bdname == NULL) {
+        name = malloc(sizeof(char) * (MAC_STRLEN + 1));
+        if (name == NULL) {
+            // TODO: Panic
+            return;
+        }
+        bytes_to_string(dev->dev.bda, MAC_BYTES, name);
+    } else {
+        name = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
+        strncpy(name, dev->dev.bdname, dev->dev.bdname_len + 1);
+        dev->dev.bdname[dev->dev.bdname_len] = '\0'; // Just in case
+    }
+    if (dev->view == NULL) {
+        /* Add a new item */
+        dev->view = variable_item_list_add(
+            app->devices_var_item_list,
+            name,
+            1,
+            wendigo_scene_device_list_var_list_change_callback,
+            app);
+    } else {
+        /* Update dev->view */
+        variable_item_set_item_label(dev->view, name);
+    }
+    // TODO: If this thing crashes it's probably because of this (I can't find the def of furi_string_set to check)
+    free(name);
+}
+
 /* Initialise the device list
    TODO: When "display options" are implemented include consideration of selected device types and sorting options
 */
@@ -52,7 +82,6 @@ void wendigo_scene_device_list_on_enter(void* context) {
         var_item_list, wendigo_scene_device_list_var_list_enter_callback, app);
 
     variable_item_list_reset(var_item_list);
-    VariableItem* item;
     char *item_str;
     uint16_t device_count;
     flipper_bt_device **devices;
@@ -75,13 +104,12 @@ void wendigo_scene_device_list_on_enter(void* context) {
             }
             bytes_to_string(devices[i]->dev.bda, MAC_BYTES, item_str);
         }
-        item = variable_item_list_add(
+        devices[i]->view = variable_item_list_add(
             var_item_list,
             item_str,
             1,
             wendigo_scene_device_list_var_list_change_callback,
             app);
-        UNUSED(item);
         if (devices[i]->dev.bdname_len == 0 || devices[i]->dev.bdname == NULL) {
             free(item_str);
         }
@@ -121,4 +149,7 @@ bool wendigo_scene_device_list_on_event(void* context, SceneManagerEvent event) 
 void wendigo_scene_device_list_on_exit(void* context) {
     WendigoApp* app = context;
     variable_item_list_reset(app->devices_var_item_list);
+    for (int i = 0; i < bt_devices_count; ++i) {
+        bt_devices[i]->view = NULL;
+    }
 }

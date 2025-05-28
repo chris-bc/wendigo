@@ -166,7 +166,7 @@ bool bt_device_exists(flipper_bt_device *dev) {
    DOES NOT check to ensure the device is not already present in bt_devices[].
    Return true if the device was successfully added to bt_devices[].
    NOTE: The provided flipper_bt_device object is retained in bt_devices[] - It MUST NOT be freed by the caller */
-bool wendigo_add_bt_device(flipper_bt_device *dev) {
+bool wendigo_add_bt_device(WendigoApp *app, flipper_bt_device *dev) {
     /* Increase capacity of bt_devices[] by an additional 10 if necessary */
     if (bt_devices == NULL || bt_devices_capacity == bt_devices_count) {
         flipper_bt_device **new_devices = realloc(bt_devices, sizeof(flipper_bt_device *) * (bt_devices_capacity + 10));
@@ -180,7 +180,9 @@ bool wendigo_add_bt_device(flipper_bt_device *dev) {
     bt_devices[bt_devices_count++] = dev;
 
     /* If the device list scene is currently displayed, add the device to the UI */
-    // TODO
+    if (app->current_view == WendigoAppViewDeviceList) {
+        wendigo_scene_device_list_update(app, dev);
+    }
 
     return true;
 }
@@ -188,7 +190,7 @@ bool wendigo_add_bt_device(flipper_bt_device *dev) {
 /* Locates a device in bt_devices[] with the same BDA as `dev` and updates the object's fields to match `dev`.
    If the specified device does not exist in bt_devices[], or another error occurs, the function returns false,
    otherwise true is returned to indicate success. */
-bool wendigo_update_bt_device(flipper_bt_device *dev) {
+bool wendigo_update_bt_device(WendigoApp *app, flipper_bt_device *dev) {
     uint16_t idx = bt_device_index(dev);
     if (idx == bt_devices_count) {
         /* Device doesn't exist in bt_devices[] */
@@ -237,6 +239,14 @@ bool wendigo_update_bt_device(flipper_bt_device *dev) {
         bt_devices[idx]->dev.bt_services.known_services_len = dev->dev.bt_services.known_services_len;
         bt_devices[idx]->dev.bt_services.known_services = dev->dev.bt_services.known_services;
     }
+
+    /* Update the device list if it's currently displayed */
+    if (app->current_view == WendigoAppViewDeviceList) {
+        wendigo_scene_device_list_update(app, bt_devices[idx]);
+    } else if (app->current_view == WendigoAppViewDeviceDetail) { // && selectedDevice == bt_devices[idx]
+        // TODO: Update existing view
+    }
+
     return true;
 }
 
@@ -314,6 +324,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     dev->dev.bt_services.known_services = NULL;
     dev->dev.bt_services.service_uuids = NULL;
     dev->cod_str = NULL;
+    dev->view = NULL;
     /* Copy fixed-byte members */
     memcpy(&(dev->dev.bdname_len), buffer + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
     memcpy(&(dev->dev.eir_len), buffer + WENDIGO_OFFSET_BT_EIR_LEN, sizeof(uint8_t));
@@ -371,9 +382,9 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
 */
     /* Does this device already exist in bt_devices[]? */
     if (bt_device_exists(dev)) {
-        wendigo_update_bt_device(dev);
+        wendigo_update_bt_device(app, dev);
     } else {
-        wendigo_add_bt_device(dev);
+        wendigo_add_bt_device(app, dev);
     }
     return index + PREAMBLE_LEN - 1;
 }
