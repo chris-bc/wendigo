@@ -29,7 +29,7 @@ uint8_t PACKET_TERM[]     = {0xAA, 0xAA, 0xAA, 0xAA, 0xFF, 0xFF, 0xFF, 0xFF};
  */
 uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
     uint16_t result = 0;
-    for (; result < size && memcmp(bytes + result, PREAMBLE_BT_BLE, PREAMBLE_LEN) &&
+    for (; result + PREAMBLE_LEN <= size && memcmp(bytes + result, PREAMBLE_BT_BLE, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_WIFI, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN); ++result) { }
     return result;
@@ -41,8 +41,8 @@ uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
  *  specified `size` if not found.
  */
 uint16_t end_of_packet(uint8_t *theBytes, uint16_t size) {
-    uint16_t result = 7; /* Start by checking bytes [0] through [7] */
-    for (; result < size && memcmp(theBytes + result - 7, PACKET_TERM, 8); ++result) { }
+    uint16_t result = PREAMBLE_LEN - 1; /* Start by checking bytes [0] through [7] */
+    for (; result < size && memcmp(theBytes + result - PREAMBLE_LEN + 1, PACKET_TERM, PREAMBLE_LEN); ++result) { }
     return result;
 }
 
@@ -395,7 +395,11 @@ uint16_t parseBufferVersion(WendigoApp *app) {
     if (versionStr == NULL) {
         // TODO: Panic
         // For now just consume this message
-        return end_of_packet(buffer, bufferLen);
+        endSeq = end_of_packet(buffer, bufferLen);
+        if (endSeq < bufferLen) {
+            ++endSeq;
+        }
+        return endSeq;
     }
     wendigo_popup_text = versionStr;
     for (int i = 0; i < endSeq; ++i) {
@@ -420,11 +424,7 @@ void parseBuffer(WendigoApp *app) {
     /* We get here only after finding an end of packet sequence, so can assume
        there's a beginning of packet sequence. */
     consumedBytes = start_of_packet(buffer, bufferLen);
-    if (consumedBytes == bufferLen) {
-        /* This shouldn't be possible, but I suppose a packet start could be corrupted */
-        return;
-    }
-    /* Remove them now so that the preamble begins at buffer[0] */
+    /* Remove them now so that the preamble begins at buffer[0] - Or is empty */
     consumeBufferBytes(consumedBytes);
 
     if (bufferLen >= PREAMBLE_LEN && !memcmp(PREAMBLE_BT_BLE, buffer, PREAMBLE_LEN)) {
@@ -482,10 +482,10 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
 
     /* Parse any complete transmissions we have received */
     uint16_t endFound = end_of_packet(buffer, bufferLen);
-    while (endFound != bufferLen) {
+    // TODO: Putting this in a loop results in an infinite loop and I can't figure out why. Fix this (YAGNI).
+    if (endFound < bufferLen) {
         parseBuffer(app);
-        endFound = end_of_packet(buffer, bufferLen);
-    }
+   }
 }
 
 void wendigo_free_uart_buffer() {
