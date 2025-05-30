@@ -219,6 +219,7 @@ Because Wendigo is still in early development the following changes are core to 
   * [X] Display devices
     * [X] Display device name instead of BDA when present
     * [X] Dynamically update device list on new/updated devices
+    * [ ] Show RSSI in device list (options menu)
   * [ ] Display device details
     * [ ] Update details when device updated
   * [ ] Device tagging
