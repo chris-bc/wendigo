@@ -274,7 +274,7 @@ bool wendigo_add_bt_device(WendigoApp *app, flipper_bt_device *dev) {
 
     /* If the device list scene is currently displayed, add the device to the UI */
     if (app->current_view == WendigoAppViewDeviceList) {
-        wendigo_scene_device_list_update(app, dev);
+        wendigo_scene_device_list_update(app, new_device);
     }
 
     return true;
