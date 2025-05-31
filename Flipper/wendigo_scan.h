@@ -68,3 +68,5 @@ void wendigo_esp_version(WendigoApp *app);
 void wendigo_free_bt_devices();
 bool wendigo_set_bt_device_selected(flipper_bt_device *device, bool selected);
 uint16_t bt_custom_device_index(flipper_bt_device *dev, flipper_bt_device **array, uint16_t array_count);
+bool wendigo_update_bt_device(WendigoApp *app, flipper_bt_device *dev);
+bool wendigo_add_bt_device(WendigoApp *app, flipper_bt_device *dev);
