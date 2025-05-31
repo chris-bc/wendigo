@@ -275,33 +275,33 @@ void print_empty_row(int lineLength) {
 }
 
 /* The `status` command is intended to provide an overall picture of ESP32-Wendigo's current state:
+   * Support for each radio
    * Scanning status for each radio
    * Compiled with Bluetooth UUID dictionary (CONFIG_DECODE_UUIDS)
-   * ???
-   This is only relevant to interactive use.
+   * Metrics of device caches
 */
 esp_err_t cmd_status(int argc, char **argv) {
+    #if defined(CONFIG_DECODE_UUIDS)
+        const char *uuidDictionary = STRING_YES;
+    #else
+        const char *uuidDictionary = STRING_NO;
+    #endif
+    #if defined(CONFIG_BT_CLASSIC_ENABLED)
+        const char *btClassicSupport = STRING_YES;
+    #else
+        const char *btClassicSupport = STRING_NO;
+    #endif
+    #if defined(CONFIG_BT_BLE_ENABLED)
+        const char *btBLESupport = STRING_YES;
+    #else
+        const char *btBLESupport = STRING_NO;
+    #endif
+    #if defined(CONFIG_ESP_WIFI_ENABLED) || defined(CONFIG_ESP_HOST_WIFI_ENABLED)
+        const char *wifiSupport = STRING_YES;
+    #else
+        const char *wifiSupport = STRING_NO;
+    #endif
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-        #if defined(CONFIG_DECODE_UUIDS)
-            const char *uuidDictionary = STRING_YES;
-        #else
-            const char *uuidDictionary = STRING_NO;
-        #endif
-        #if defined(CONFIG_BT_CLASSIC_ENABLED)
-            const char *btClassicSupport = STRING_YES;
-        #else
-            const char *btClassicSupport = STRING_NO;
-        #endif
-        #if defined(CONFIG_BT_BLE_ENABLED)
-            const char *btBLESupport = STRING_YES;
-        #else
-            const char *btBLESupport = STRING_NO;
-        #endif
-        #if defined(CONFIG_ESP_WIFI_ENABLED) || defined(CONFIG_ESP_HOST_WIFI_ENABLED)
-            const char *wifiSupport = STRING_YES;
-        #else
-            const char *wifiSupport = STRING_NO;
-        #endif
         print_star(53, true);
         print_empty_row(53);
         print_status_row_start(14);

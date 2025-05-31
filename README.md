@@ -223,7 +223,10 @@ Because Wendigo is still in early development the following changes are core to 
     * [X] Enable/Disable radios
     * [ ] Enable/Disable channels
   * [X] Scan Start/Stop
-  * [ ] Scanning status (popup?)
+  * [ ] Scanning status
+    * [ ] Supported radios
+    * [ ] Status of radios
+    * [ ] Devices found
   * [X] ESP Version (popup)
   * [X] Display devices
     * [X] Display device name instead of BDA when present
