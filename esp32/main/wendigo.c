@@ -274,6 +274,71 @@ void print_empty_row(int lineLength) {
     print_star(1, true);
 }
 
+void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupported,
+                                bool btBLESupported, bool wifiSupported) {
+    const char *uuidDictionary = (uuidDictionarySupported) ? STRING_YES : STRING_NO;
+    const char *btClassicSupport = (btClassicSupported) ? STRING_YES : STRING_NO;
+    const char *btBLESupport = (btBLESupported) ? STRING_YES : STRING_NO;
+    const char *wifiSupport = (wifiSupported) ? STRING_YES : STRING_NO;
+
+    print_star(53, true);
+    print_empty_row(53);
+    print_status_row_start(14);
+    printf("Wendigo version %7s", WENDIGO_VERSION);
+    print_status_row_end(14);
+    print_empty_row(53);
+    print_status_row_start(5);
+    printf("Chris Bennetts-Cash   github.com/chris-bc");
+    print_status_row_end(5);
+    print_empty_row(53);
+    print_empty_row(53);
+    print_status_row_start(4);
+    printf("Compiled with Bluetooth Dictionary: %7s", uuidDictionary);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("Bluetooth Classic Supported: %14s", btClassicSupport);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("Bluetooth Low Energy Supported: %11s", btBLESupport);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("WiFi Supported: %27s", wifiSupport);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("Bluetooth Classic Scanning: %15s", (!btClassicSupported) ? STRING_NA : (scanStatus[SCAN_HCI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("Bluetooth Low Energy Scanning: %12s", (!btBLESupported) ? STRING_NA : (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("WiFi Scanning: %28s", (!wifiSupported) ? STRING_NA : (scanStatus[SCAN_WIFI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
+    print_status_row_end(4);
+    print_empty_row(53);
+    print_star(53, true);
+    // Some extra stuff for development
+    printf("sizeof(wendigo_bt_device): %d\tsizeof(wendigo_bt_svc): %d\n", sizeof(wendigo_bt_device), sizeof(wendigo_bt_svc));
+    printf("sizeof(ScanType): %d\tsizeof(struct timeval): %d\n", sizeof(ScanType), sizeof(struct timeval));
+    printf("sizeof(char*): %d\tsizeof(*all_gap_devices): %d\n", sizeof(char*), sizeof(all_gap_devices));
+}
+
+/** Send status information to Flipper Zero.
+ *  A status packet commences with 4 bytes of 0xEE followed by 4 bytes of 0xBB
+ *  This is followed by X bytes of status information, with details described below
+ *  The packet is terminated with the standard packet terminator, consisting of 4
+ *  bytes of 0xAA and 4 bytes of 0xFF.
+ */
+void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
+                                bool btBLESupported, bool wifiSupported) {
+    repeat_bytes(0xEE, 4);
+    repeat_bytes(0xBB, 4);
+    // TODO: Assemble the 4 bool args into a bitmasked byte
+    // num_gap_devices doesn't distinguish between Classic and LE, count them using scanType
+    // TODO: Add WiFi status information.
+
+    repeat_bytes(0xAA, 4);
+    repeat_bytes(0xFF, 4);
+}
+
 /* The `status` command is intended to provide an overall picture of ESP32-Wendigo's current state:
    * Support for each radio
    * Scanning status for each radio
@@ -282,68 +347,29 @@ void print_empty_row(int lineLength) {
 */
 esp_err_t cmd_status(int argc, char **argv) {
     #if defined(CONFIG_DECODE_UUIDS)
-        const char *uuidDictionary = STRING_YES;
+        bool uuidDictionarySupported = true;
     #else
-        const char *uuidDictionary = STRING_NO;
+        bool uuidDictionarySupported = false;
     #endif
     #if defined(CONFIG_BT_CLASSIC_ENABLED)
-        const char *btClassicSupport = STRING_YES;
+        bool btClassicSupported = true;
     #else
-        const char *btClassicSupport = STRING_NO;
+        bool btClassicSupported = false;
     #endif
     #if defined(CONFIG_BT_BLE_ENABLED)
-        const char *btBLESupport = STRING_YES;
+        bool btBLESupported = true;
     #else
-        const char *btBLESupport = STRING_NO;
+        bool btBLESupported = false;
     #endif
     #if defined(CONFIG_ESP_WIFI_ENABLED) || defined(CONFIG_ESP_HOST_WIFI_ENABLED)
-        const char *wifiSupport = STRING_YES;
+        bool wifiSupported = true;
     #else
-        const char *wifiSupport = STRING_NO;
+        bool wifiSupported = false;
     #endif
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-        print_star(53, true);
-        print_empty_row(53);
-        print_status_row_start(14);
-        printf("Wendigo version %7s", WENDIGO_VERSION);
-        print_status_row_end(14);
-        print_empty_row(53);
-        print_status_row_start(5);
-        printf("Chris Bennetts-Cash   github.com/chris-bc");
-        print_status_row_end(5);
-        print_empty_row(53);
-        print_empty_row(53);
-        print_status_row_start(4);
-        printf("Compiled with Bluetooth Dictionary: %7s", uuidDictionary);
-        print_status_row_end(4);
-        print_status_row_start(4);
-        printf("Bluetooth Classic Supported: %14s", btClassicSupport);
-        print_status_row_end(4);
-        print_status_row_start(4);
-        printf("Bluetooth Low Energy Supported: %11s", btBLESupport);
-        print_status_row_end(4);
-        print_status_row_start(4);
-        printf("WiFi Supported: %27s", wifiSupport);
-        print_status_row_end(4);
-        print_status_row_start(4);
-        printf("Bluetooth Classic Scanning: %15s", (strcmp(btClassicSupport, STRING_YES))?STRING_NA:(scanStatus[SCAN_HCI] == ACTION_ENABLE)?STRING_ACTIVE:STRING_IDLE);
-        print_status_row_end(4);
-        print_status_row_start(4);
-        printf("Bluetooth Low Energy Scanning: %12s", (strcmp(btBLESupport, STRING_YES))?STRING_NA:(scanStatus[SCAN_BLE] == ACTION_ENABLE)?STRING_ACTIVE:STRING_IDLE);
-        print_status_row_end(4);
-        print_status_row_start(4);
-        printf("WiFi Scanning: %28s", (strcmp(wifiSupport, STRING_YES))?STRING_NA:(scanStatus[SCAN_WIFI] == ACTION_ENABLE)?STRING_ACTIVE:STRING_IDLE);
-        print_status_row_end(4);
-        print_empty_row(53);
-        print_star(53, true);
-        // Some extra stuff for development
-        printf("sizeof(wendigo_bt_device): %d\tsizeof(wendigo_bt_svc): %d\n", sizeof(wendigo_bt_device), sizeof(wendigo_bt_svc));
-        printf("sizeof(ScanType): %d\tsizeof(struct timeval): %d\n", sizeof(ScanType), sizeof(struct timeval));
-        extern wendigo_bt_device *all_gap_devices;
-        printf("sizeof(char*): %d\tsizeof(*all_gap_devices): %d\n", sizeof(char*), sizeof(all_gap_devices));
+        display_status_interactive(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
     } else {
-        /* This command is not valid unless running interactively */
-        send_response(argv[0], argv[1], MSG_INVALID);
+        display_status_uart(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
     }
     return ESP_OK;
 }
