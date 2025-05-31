@@ -361,8 +361,34 @@ bool wendigo_update_bt_device(WendigoApp *app, flipper_bt_device *dev) {
     return true;
 }
 
+/** Free all memory allocated to the specified device.
+ * After free'ing its members this function will also free `dev` itself.
+ * dev->view will not be touched by this function because it's a scary UI-layer thing.
+ */
+void wendigo_free_bt_device(flipper_bt_device *dev) {
+    if (dev == NULL) {
+        return;
+    }
+    if (dev->cod_str != NULL) {
+        free(dev->cod_str);
+    }
+    if (dev->dev.bdname != NULL) {
+        free(dev->dev.bdname);
+    }
+    if (dev->dev.eir != NULL) {
+        free(dev->dev.eir);
+    }
+    if (dev->dev.bt_services.service_uuids != NULL) {
+        free(dev->dev.bt_services.service_uuids);
+    }
+    if (dev->dev.bt_services.known_services != NULL) {
+        // TODO: After implementing BT services, ensure that the bt_uuid's are free'd somewhere
+        free(dev->dev.bt_services.known_services);
+    }
+    free(dev);
+}
+
 void wendigo_free_bt_devices() {
-    flipper_bt_device *dev;
     /* Start by freeing bt_selected_devices[] */
     if (bt_selected_devices_capacity > 0 && bt_selected_devices != NULL) {
         free(bt_selected_devices);
@@ -373,33 +399,7 @@ void wendigo_free_bt_devices() {
     /* For bt_devices[] we also want to free device attributes and the device itself */
     if (bt_devices_capacity > 0 && bt_devices != NULL) {
         for (int i = 0; i < bt_devices_count; ++i) {
-            dev = bt_devices[i];
-            if (dev->cod_str != NULL) {
-                free(dev->cod_str);
-            }
-            if (dev->dev.bdname_len > 0 && dev->dev.bdname != NULL) {
-                free(dev->dev.bdname);
-                dev->dev.bdname = NULL;
-                dev->dev.bdname_len = 0;
-            }
-            if (dev->dev.eir_len > 0 && dev->dev.eir != NULL) {
-                free(dev->dev.eir);
-                dev->dev.eir = NULL;
-                dev->dev.eir_len = 0;
-            }
-            if (dev->dev.bt_services.known_services_len > 0 && dev->dev.bt_services.known_services != NULL) {
-                // TODO: This is a ** - Loop through it's contents when services are implemented
-                free(dev->dev.bt_services.known_services);
-                dev->dev.bt_services.known_services = NULL;
-                dev->dev.bt_services.known_services_len = 0;
-            }
-            if (dev->dev.bt_services.num_services > 0 && dev->dev.bt_services.service_uuids != NULL) {
-                free(dev->dev.bt_services.service_uuids);
-                dev->dev.bt_services.service_uuids = NULL;
-                dev->dev.bt_services.num_services = 0;
-            }
-            dev = NULL;
-            free(bt_devices[i]);
+            wendigo_free_bt_device(bt_devices[i]);
         }
         free(bt_devices);
         bt_devices = NULL;
@@ -482,12 +482,12 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
         wendigo_display_popup(app, "BT Packet Error", "Packet terminator not found where expected");
     }
 
-    /* Does this device already exist in bt_devices[]? */
-    if (bt_device_exists(dev)) {
-        wendigo_update_bt_device(app, dev);
-    } else {
-        wendigo_add_bt_device(app, dev);
-    }
+    /* Add or update the device in bt_devices[] - No longer need to check
+       whether we're adding or updating, the add/update functions will call
+       each other if required. */
+    wendigo_add_bt_device(app, dev);
+    /* Clean up memory */
+    wendigo_free_bt_device(dev);
 
     /* We've consumed `index` bytes as well as the packet terminator */
     return index + PREAMBLE_LEN - 1;
