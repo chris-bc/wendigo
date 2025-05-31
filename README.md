@@ -210,7 +210,8 @@ Because Wendigo is still in early development the following changes are core to 
 * [ ] Create Flipper UI
   * [ ] Improve FZ memory management
     * [ ] Currently memory is exhausted after approx. 6-7 minutes continuous scanning
-    * [ ] Search, search, search for memory leaks
+    * [X] Search, search, search for memory leaks
+      * [ ] OK, OK, this will never be done but I need to do *something* to celebrate finding that sneaky use-after-free race condition!
     * [ ] Hopefully find a FreeRTOS hook or config so I can provide a function when low on memory
     * [ ] Currently FZ reboots, displaying "Flipper restarted: Out of memory" after boot
     * [ ] Instead, prune device cache when low on memory
