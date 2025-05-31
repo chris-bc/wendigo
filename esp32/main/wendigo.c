@@ -323,17 +323,50 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
 
 /** Send status information to Flipper Zero.
  *  A status packet commences with 4 bytes of 0xEE followed by 4 bytes of 0xBB
- *  This is followed by X bytes of status information, with details described below
- *  The packet is terminated with the standard packet terminator, consisting of 4
- *  bytes of 0xAA and 4 bytes of 0xFF.
+ *  This is followed by:
+ *  * 1 byte each to indicate support for UUID decoding, BT Classic, BLE & WiFi
+ *    (1: supported, 0: unsupported) and status of scanning for BT Classic, BLE
+ *    & WiFi (1: Scanning, 0: Idle).
+ *  * 2 bytes each (uint16_t) for the count of BT Classic, BLE and WiFi devices.
+ *  The packet is terminated with 4 bytes of 0xAA and 4 bytes of 0xFF.
  */
 void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
                                 bool btBLESupported, bool wifiSupported) {
     repeat_bytes(0xEE, 4);
     repeat_bytes(0xBB, 4);
-    // TODO: Assemble the 4 bool args into a bitmasked byte
-    // num_gap_devices doesn't distinguish between Classic and LE, count them using scanType
+    /* Send feature support information */
+    // YAGNI: A single bitmasked byte could replace these 7 bytes, but would introduce another
+    //        point of shared knowledge between ESP32 and Flipper applications and is a trivial reduction.
+    uint8_t on = 1;
+    uint8_t off = 0;
+    send_bytes((uuidDictionarySupported) ? &on : &off, 1);
+    send_bytes((btClassicSupported) ? &on : &off, 1);
+    send_bytes((btBLESupported) ? &on : &off, 1);
+    send_bytes((wifiSupported) ? &on : &off, 1);
+    send_bytes((scanStatus[SCAN_HCI] == ACTION_ENABLE) ? &on : &off, 1);
+    send_bytes((scanStatus[SCAN_BLE] == ACTION_ENABLE) ? &on : &off, 1);
+    send_bytes((scanStatus[SCAN_WIFI] == ACTION_ENABLE) ? &on : &off, 1);
+    /* num_gap_devices counts both Classic and LE devices. Create separate counts instead */
+    uint16_t classicDeviceCount = 0;
+    uint16_t leDeviceCount = 0;
+    for (uint16_t i = 0; i < num_gap_devices; ++i) {
+        switch (all_gap_devices[i].scanType) {
+            case SCAN_HCI:
+                ++classicDeviceCount;
+                break;
+            case SCAN_BLE:
+                ++leDeviceCount;
+                break;
+            default:
+                /* No action required */
+                break;
+        }
+    }
+    send_bytes((uint8_t *)(&classicDeviceCount), 2);
+    send_bytes((uint8_t *)(&leDeviceCount), 2);
     // TODO: Add WiFi status information.
+    uint16_t wifiFakeCount = 0;
+    send_bytes((uint8_t *)(&wifiFakeCount), 2);
 
     repeat_bytes(0xAA, 4);
     repeat_bytes(0xFF, 4);
