@@ -15,6 +15,8 @@
 #include <string.h>
 #include <sys/time.h>
 
+#define WENDIGO_VERSION "0.1.0"
+
 /* Macro to mark a variable as unused to prevent compiler warnings */
 #ifndef UNUSED
     #define UNUSED(x) (void)(x)
