@@ -14,7 +14,6 @@ static void wendigo_scene_device_list_var_list_enter_callback(void* context, uin
     furi_assert(index < ((display_selected_only) ? bt_selected_devices_count : bt_devices_count));
 
     flipper_bt_device *item = (display_selected_only) ? bt_selected_devices[index] : bt_devices[index];
-    UNUSED(item);
 
     app->device_list_selected_menu_index = index;
 
@@ -51,8 +50,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
         bytes_to_string(dev->dev.bda, MAC_BYTES, name);
     } else {
         name = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
-        strncpy(name, dev->dev.bdname, dev->dev.bdname_len + 1);
-        dev->dev.bdname[dev->dev.bdname_len] = '\0'; // Just in case
+        strncpy(name, dev->dev.bdname, dev->dev.bdname_len);
     }
     if (dev->view == NULL) {
         /* Add a new item */
