@@ -30,7 +30,7 @@ enum StatusAttributes {
     ATTR_BT_BLE_COUNT,
     ATTR_WIFI_STA_COUNT,
     ATTR_WIFI_AP_COUNT,
-}
+};
 
 void print_status_row_start(int spaces) {
     print_star(1, false);
