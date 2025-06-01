@@ -11,6 +11,11 @@ char *attribute_names[] = {"Version:", "Chris Bennetts-Cash", "BT UUID Dictionar
                            "BT Low Energy Devices:", "WiFi STA Devices:", "WiFi APs:"};
 char attribute_values[ATTR_COUNT_MAX][VAL_MAX_LEN];
 
+uint16_t classicDeviceCount = 0;
+uint16_t leDeviceCount = 0;
+uint16_t wifiSTACount = 0;
+uint16_t wifiAPCount = 0;
+
 void print_status_row_start(int spaces) {
     print_star(1, false);
     print_space(spaces, false);
@@ -25,8 +30,53 @@ void print_empty_row(int lineLength) {
     print_star(1, true);
 }
 
-void initialise_status_details() {
-    //
+/** Free the initialised details when we're done with them  */
+void free_status_details() {
+    free(attribute_values[9]);
+    free(attribute_values[10]);
+    free(attribute_values[11]);
+    free(attribute_values[12]);
+}
+
+/** Prepares data for display by the status command.
+ * The function populates attribute_values[].
+ */
+void initialise_status_details(bool uuidDictionarySupported, bool btClassicSupported,
+                                bool btBLESupported, bool wifiSupported) {
+    const char github[] = "github.com/chris-bc/wendigo";
+
+    strncpy(attribute_values[0], WENDIGO_VERSION, strlen(WENDIGO_VERSION));
+    strncpy(attribute_values[1], github, strlen(github));
+    strncpy(attribute_values[2], (uuidDictionarySupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[3], (btClassicSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[4], (btBLESupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[5], (wifiSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[6], (scanStatus[SCAN_HCI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
+    strncpy(attribute_values[7], (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
+    strncpy(attribute_values[8], (scanStatus[SCAN_WIFI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
+    /* num_gap_devices counts both Classic and LE devices. Create separate counts instead */
+    classicDeviceCount = 0;
+    leDeviceCount = 0;
+    for (uint16_t i = 0; i < num_gap_devices; ++i) {
+        switch (all_gap_devices[i].scanType) {
+            case SCAN_HCI:
+                ++classicDeviceCount;
+                break;
+            case SCAN_BLE:
+                ++leDeviceCount;
+                break;
+            default:
+                /* No action required */
+                break;
+        }
+    }
+    // TODO: WiFi stuff to set wifiSTACount and wifiAPCount
+
+    /* Need to stringify device counts */
+    snprintf(attribute_values[9], VAL_MAX_LEN, "%d", classicDeviceCount);
+    snprintf(attribute_values[10], VAL_MAX_LEN, "%d", leDeviceCount);
+    snprintf(attribute_values[11], VAL_MAX_LEN, "%d", wifiSTACount);
+    snprintf(attribute_values[12], VAL_MAX_LEN, "%d", wifiAPCount);
 }
 
 void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupported,
@@ -36,7 +86,7 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     const char *btBLESupport = (btBLESupported) ? STRING_YES : STRING_NO;
     const char *wifiSupport = (wifiSupported) ? STRING_YES : STRING_NO;
 
-    initialise_status_details();
+    initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
 
     print_star(53, true);
     print_empty_row(53);
@@ -76,6 +126,8 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     printf("sizeof(wendigo_bt_device): %d\tsizeof(wendigo_bt_svc): %d\n", sizeof(wendigo_bt_device), sizeof(wendigo_bt_svc));
     printf("sizeof(ScanType): %d\tsizeof(struct timeval): %d\n", sizeof(ScanType), sizeof(struct timeval));
     printf("sizeof(char*): %d\tsizeof(*all_gap_devices): %d\n", sizeof(char*), sizeof(all_gap_devices));
+
+    free_status_details();
 }
 
 /** Send status information to Flipper Zero.
@@ -90,7 +142,7 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
  */
 void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
                                 bool btBLESupported, bool wifiSupported) {
-    initialise_status_details();
+    initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
 
     repeat_bytes(0xEE, 4);
     repeat_bytes(0xBB, 4);
@@ -98,40 +150,19 @@ void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
     uint8_t attr_count = ATTR_COUNT_MAX;
     send_bytes(&attr_count, 1);
 
-    /* Send feature support information */
-    // YAGNI: A single bitmasked byte could replace these 7 bytes, but would introduce another
-    //        point of shared knowledge between ESP32 and Flipper applications and is a trivial reduction.
-    uint8_t on = 1;
-    uint8_t off = 0;
-    send_bytes((uuidDictionarySupported) ? &on : &off, 1);
-    send_bytes((btClassicSupported) ? &on : &off, 1);
-    send_bytes((btBLESupported) ? &on : &off, 1);
-    send_bytes((wifiSupported) ? &on : &off, 1);
-    send_bytes((scanStatus[SCAN_HCI] == ACTION_ENABLE) ? &on : &off, 1);
-    send_bytes((scanStatus[SCAN_BLE] == ACTION_ENABLE) ? &on : &off, 1);
-    send_bytes((scanStatus[SCAN_WIFI] == ACTION_ENABLE) ? &on : &off, 1);
-    /* num_gap_devices counts both Classic and LE devices. Create separate counts instead */
-    uint16_t classicDeviceCount = 0;
-    uint16_t leDeviceCount = 0;
-    for (uint16_t i = 0; i < num_gap_devices; ++i) {
-        switch (all_gap_devices[i].scanType) {
-            case SCAN_HCI:
-                ++classicDeviceCount;
-                break;
-            case SCAN_BLE:
-                ++leDeviceCount;
-                break;
-            default:
-                /* No action required */
-                break;
-        }
+    /* Loop ATTR_COUNT_MAX times, sending elements from attribute_names[] and attribute_values[] */
+    uint8_t len;
+    for (uint8_t i = 0; i < ATTR_COUNT_MAX; ++i) {
+        len = strlen(attribute_names[i]);
+        send_bytes(&len, 1);
+        send_bytes((uint8_t *)(attribute_names[i]), len);
+        len = strlen(attribute_values[i]);
+        send_bytes(&len, 1);
+        send_bytes((uint8_t *)(attribute_values[i]), len);
     }
-    send_bytes((uint8_t *)(&classicDeviceCount), 2);
-    send_bytes((uint8_t *)(&leDeviceCount), 2);
-    // TODO: Add WiFi status information.
-    uint16_t wifiFakeCount = 0;
-    send_bytes((uint8_t *)(&wifiFakeCount), 2);
 
     repeat_bytes(0xAA, 4);
     repeat_bytes(0xFF, 4);
+
+    free_status_details();
 }
