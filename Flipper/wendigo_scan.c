@@ -548,8 +548,6 @@ uint16_t parseBufferStatus(WendigoApp *app) {
         return end_of_packet(buffer, bufferLen);
     }
     wendigo_scene_status_begin_layout(app);
-    // TODO Work through packet, calling this a bunch of times:
-    wendigo_scene_status_add_attribute(app, "Test", "Value");
 
     uint8_t attribute_count;
     uint8_t attribute_name_len;
