@@ -1,4 +1,5 @@
 #include "../wendigo_app_i.h"
+#include "../wendigo_scan.h"
 
 static void wendigo_scene_status_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
@@ -25,8 +26,11 @@ void wendigo_scene_status_on_enter(void* context) {
         var_item_list, wendigo_scene_status_var_list_enter_callback, app);
 
     variable_item_list_reset(var_item_list);
-    VariableItem* item = variable_item_list_add(var_item_list, "Foo", 1, wendigo_scene_status_var_list_change_callback, app);
-    UNUSED(item);
+    VariableItem* item = variable_item_list_add(var_item_list, "Loading...", 1,
+        wendigo_scene_status_var_list_change_callback, app);
+    variable_item_set_current_value_index(item, 0);
+    variable_item_set_current_value_text(item, "");
+
     // for(int i = 0; i < SETUP_MENU_ITEMS; ++i) {
     //     item = variable_item_list_add(
     //         var_item_list,
@@ -39,8 +43,12 @@ void wendigo_scene_status_on_enter(void* context) {
     //         item, items[i].options_menu[app->setup_selected_option_index[i]]);
     // }
 
-    variable_item_list_set_selected_item(
-        var_item_list, scene_manager_get_scene_state(app->scene_manager, WendigoSceneStatus));
+    // variable_item_list_set_selected_item(
+    //     var_item_list, scene_manager_get_scene_state(app->scene_manager, WendigoSceneStatus));
+
+    /* Send the UART command */
+    wendigo_uart_set_binary_cb(app->uart);
+    wendigo_esp_status(app);
 
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
 }

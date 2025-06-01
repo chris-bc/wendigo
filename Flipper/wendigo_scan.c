@@ -86,6 +86,12 @@ uint16_t string_contains_newline(char *theString) {
     return bytes_contains_newline((uint8_t *)theString, strlen(theString));
 }
 
+/* Send the status command to ESP32 */
+void wendigo_esp_status(WendigoApp *app) {
+    char cmd[] = "s\n";
+    wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
+}
+
 /* Send the version command to ESP32 */
 void wendigo_esp_version(WendigoApp *app) {
     char cmd[] = "v\n";
