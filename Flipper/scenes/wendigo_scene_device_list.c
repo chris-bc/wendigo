@@ -29,9 +29,15 @@ static void wendigo_scene_device_list_var_list_enter_callback(void* context, uin
 
     app->device_list_selected_menu_index = index;
 
-    /* Display details for `item` */
-    wendigo_scene_device_detail_set_device(item);
-    view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
+    /* If the tag/untag menu item is selected perform that action, otherwise display details for `item` */
+    if (item->view != NULL && variable_item_get_current_value_index(item->view) == WendigoOptionTagUntag) {
+        wendigo_set_bt_device_selected(item, !item->dev.tagged);
+        variable_item_set_current_value_text(item->view, (item->dev.tagged) ? "Untag" : "Tag");
+    } else {
+        /* Display details for `item` */
+        wendigo_scene_device_detail_set_device(item);
+        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
+    }
 }
 
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem* item) {

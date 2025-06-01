@@ -241,7 +241,9 @@ Because Wendigo is still in early development the following changes are core to 
   * [ ] Display device details
     * [ ] Update details when device updated
     * [ ] Use canvas view so properties can be layed out to (hopefully) make everything visible without scrolling
-  * [ ] Device tagging
+  * [X] Device tagging
+    * [ ] Bug: Displaying "selected devices" displays just selected devices, but all subsequent device packets are displayed
+    * [ ] Add logic to wendigo_scene_device_list_update() so that variable items aren't added in this mode unless they're tagged.
   * [ ] Focus Mode
   * [ ] "Display Settings" menu
     * [ ] Enable/Disable device types
