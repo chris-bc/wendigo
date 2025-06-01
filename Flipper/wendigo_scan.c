@@ -543,14 +543,65 @@ uint16_t parseBufferVersion(WendigoApp *app) {
  * This function requires that Wendigo_AppViewStatus be the currently-displayed view.
  */
 uint16_t parseBufferStatus(WendigoApp *app) {
-    uint16_t offset = 0;
-
+    /* Ignore the packet if the status scene isn't displayed */
+    if (app->current_view != WendigoAppViewStatus) {
+        return end_of_packet(buffer, bufferLen);
+    }
     wendigo_scene_status_begin_layout(app);
     // TODO Work through packet, calling this a bunch of times:
     wendigo_scene_status_add_attribute(app, "Test", "Value");
 
+    uint8_t attribute_count;
+    uint8_t attribute_name_len;
+    uint8_t attribute_value_len;
+    char *attribute_name = NULL;
+    char *attribute_value = NULL;
+    uint16_t offset = PREAMBLE_LEN;
+    memcpy(&attribute_count, buffer + offset, sizeof(uint8_t));
+    offset += sizeof(uint8_t);
+    for (uint8_t i = 0; i < attribute_count; ++i) {
+        /* Parse attribute name length */
+        memcpy(&attribute_name_len, buffer + offset, sizeof(uint8_t));
+        if (attribute_name_len == 0) {
+            // TODO: Panic
+            return end_of_packet(buffer, bufferLen);
+        }
+        offset += sizeof(uint8_t);
+        /* Name */
+        attribute_name = malloc(sizeof(char) * (attribute_name_len + 1));
+        if (attribute_name == NULL) {
+            // TODO: panic
+            return end_of_packet(buffer, bufferLen);
+        }
+        memcpy(attribute_name, buffer + offset, attribute_name_len);
+        attribute_name[attribute_name_len] = '\0';
+        offset += attribute_name_len;
+        /* Attribute value length */
+        memcpy(&attribute_value_len, buffer + offset, sizeof(uint8_t));
+        offset += sizeof(uint8_t);
+        /* It's valid for this to have a length of 0 - attribute_value will be "" */
+        attribute_value = malloc(sizeof(char) * (attribute_value_len + 1));
+        if (attribute_value == NULL) {
+            // TODO: Panic
+            free(attribute_name);
+            return end_of_packet(buffer, bufferLen);
+        }
+        memcpy(attribute_value, buffer + offset, attribute_value_len);
+        attribute_value[attribute_value_len] = '\0';
+        offset += attribute_value_len;
+        /* Add the attribute to the var_item_list */
+        wendigo_scene_status_add_attribute(app, attribute_name, attribute_value);
+        free(attribute_name);
+        free(attribute_value);
+    }
     wendigo_scene_status_finish_layout(app);
-    return offset;
+
+    /* buffer + offset should now point to the end of packet sequence */
+    if (memcmp(PACKET_TERM, buffer + offset, PREAMBLE_LEN)) {
+        // TODO: Panic
+        return end_of_packet(buffer, bufferLen);
+    }
+    return offset + PREAMBLE_LEN;
 }
 
 /** When the end of a packet is reached this function is called to parse the
