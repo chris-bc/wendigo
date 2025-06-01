@@ -237,6 +237,7 @@ Because Wendigo is still in early development the following changes are core to 
       * [X] CoD
       * [X] Tag/Untag (status and command in one)
       * [ ] Age since last seen - Implemented but nonsense results.
+        * [ ] When working, update elapsed time where it's displayed during a tick event
   * [ ] Display device details
     * [ ] Update details when device updated
     * [ ] Use canvas view so properties can be layed out to (hopefully) make everything visible without scrolling
