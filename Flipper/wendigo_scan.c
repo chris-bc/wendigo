@@ -544,9 +544,12 @@ uint16_t parseBufferVersion(WendigoApp *app) {
  */
 uint16_t parseBufferStatus(WendigoApp *app) {
     uint16_t offset = 0;
-    //
-    UNUSED(app);
 
+    wendigo_scene_status_begin_layout(app);
+    // TODO Work through packet, calling this a bunch of times:
+    wendigo_scene_status_add_attribute(app, "Test", "Value");
+
+    wendigo_scene_status_finish_layout(app);
     return offset;
 }
 

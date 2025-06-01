@@ -49,8 +49,11 @@ typedef struct {
     VariableItem *view;
 } flipper_bt_device;
 
-/* Import from wendigo_scene_device_list.c */
+/* Function imports from scenes */
 extern void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev);
+extern void wendigo_scene_status_add_attribute(WendigoApp *app, char *name, char *value);
+extern void wendigo_scene_status_finish_layout(WendigoApp *app);
+extern void wendigo_scene_status_begin_layout(WendigoApp *app);
 
 /* Device caches - Declared extern to get around header spaghetti */
 extern flipper_bt_device **bt_devices;
