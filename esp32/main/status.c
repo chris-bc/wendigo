@@ -30,11 +30,6 @@ void print_empty_row(int lineLength) {
     print_star(1, true);
 }
 
-/** Free the initialised details when we're done with them  */
-void free_status_details() {
-    /* Actually there's nothing to do here, I think */
-}
-
 /** Prepares data for display by the status command.
  * The function populates attribute_values[].
  */
@@ -83,8 +78,6 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     const char *btBLESupport = (btBLESupported) ? STRING_YES : STRING_NO;
     const char *wifiSupport = (wifiSupported) ? STRING_YES : STRING_NO;
 
-    initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
-
     print_star(53, true);
     print_empty_row(53);
     print_status_row_start(14);
@@ -123,8 +116,6 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     printf("sizeof(wendigo_bt_device): %d\tsizeof(wendigo_bt_svc): %d\n", sizeof(wendigo_bt_device), sizeof(wendigo_bt_svc));
     printf("sizeof(ScanType): %d\tsizeof(struct timeval): %d\n", sizeof(ScanType), sizeof(struct timeval));
     printf("sizeof(char*): %d\tsizeof(*all_gap_devices): %d\n", sizeof(char*), sizeof(all_gap_devices));
-
-    free_status_details();
 }
 
 /** Send status information to Flipper Zero.
@@ -157,9 +148,6 @@ void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
         send_bytes(&len, 1);
         send_bytes((uint8_t *)(attribute_values[i]), len);
     }
-
     repeat_bytes(0xAA, 4);
     repeat_bytes(0xFF, 4);
-
-    free_status_details();
 }

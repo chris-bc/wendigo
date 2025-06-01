@@ -227,7 +227,6 @@ Because Wendigo is still in early development the following changes are core to 
     * [X] Supported radios
     * [X] Status of radios
     * [X] Devices found
-    * [ ] Refactor interactive status to use newly-developed methods
   * [X] ESP Version (popup)
   * [X] Display devices
     * [X] Display device name instead of BDA when present
