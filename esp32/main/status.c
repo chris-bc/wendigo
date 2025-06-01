@@ -16,6 +16,22 @@ uint16_t leDeviceCount = 0;
 uint16_t wifiSTACount = 0;
 uint16_t wifiAPCount = 0;
 
+enum StatusAttributes {
+    ATTR_VERSION = 0,
+    ATTR_GITHUB,
+    ATTR_UUID_DICTIONARY,
+    ATTR_BT_CLASSIC_SUPPORT,
+    ATTR_BT_BLE_SUPPORT,
+    ATTR_WIFI_SUPPORT,
+    ATTR_BT_CLASSIC_SCANNING,
+    ATTR_BT_BLE_SCANNING,
+    ATTR_WIFI_SCANNING,
+    ATTR_BT_CLASSIC_COUNT,
+    ATTR_BT_BLE_COUNT,
+    ATTR_WIFI_STA_COUNT,
+    ATTR_WIFI_AP_COUNT,
+}
+
 void print_status_row_start(int spaces) {
     print_star(1, false);
     print_space(spaces, false);
@@ -37,15 +53,15 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
                                 bool btBLESupported, bool wifiSupported) {
     const char github[] = "github.com/chris-bc";
 
-    strncpy(attribute_values[0], WENDIGO_VERSION, strlen(WENDIGO_VERSION));
-    strncpy(attribute_values[1], github, strlen(github));
-    strncpy(attribute_values[2], (uuidDictionarySupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
-    strncpy(attribute_values[3], (btClassicSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
-    strncpy(attribute_values[4], (btBLESupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
-    strncpy(attribute_values[5], (wifiSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
-    strncpy(attribute_values[6], (scanStatus[SCAN_HCI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
-    strncpy(attribute_values[7], (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
-    strncpy(attribute_values[8], (scanStatus[SCAN_WIFI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_VERSION], WENDIGO_VERSION, strlen(WENDIGO_VERSION));
+    strncpy(attribute_values[ATTR_GITHUB], github, strlen(github));
+    strncpy(attribute_values[ATTR_UUID_DICTIONARY], (uuidDictionarySupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_BT_CLASSIC_SUPPORT], (btClassicSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_BT_BLE_SUPPORT], (btBLESupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_WIFI_SUPPORT], (wifiSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_BT_CLASSIC_SCANNING], (scanStatus[SCAN_HCI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_BT_BLE_SCANNING], (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_WIFI_SCANNING], (scanStatus[SCAN_WIFI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
     /* num_gap_devices counts both Classic and LE devices. Create separate counts instead */
     classicDeviceCount = 0;
     leDeviceCount = 0;
@@ -65,10 +81,10 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
     // TODO: WiFi stuff to set wifiSTACount and wifiAPCount
 
     /* Need to stringify device counts */
-    snprintf(attribute_values[9], VAL_MAX_LEN, "%d", classicDeviceCount);
-    snprintf(attribute_values[10], VAL_MAX_LEN, "%d", leDeviceCount);
-    snprintf(attribute_values[11], VAL_MAX_LEN, "%d", wifiSTACount);
-    snprintf(attribute_values[12], VAL_MAX_LEN, "%d", wifiAPCount);
+    snprintf(attribute_values[ATTR_BT_CLASSIC_COUNT], VAL_MAX_LEN, "%d", classicDeviceCount);
+    snprintf(attribute_values[ATTR_BT_BLE_COUNT], VAL_MAX_LEN, "%d", leDeviceCount);
+    snprintf(attribute_values[ATTR_WIFI_STA_COUNT], VAL_MAX_LEN, "%d", wifiSTACount);
+    snprintf(attribute_values[ATTR_WIFI_AP_COUNT], VAL_MAX_LEN, "%d", wifiAPCount);
 }
 
 void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupported,
