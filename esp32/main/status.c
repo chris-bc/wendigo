@@ -2,7 +2,7 @@
 #include "common.h"
 
 #define NAME_MAX_LEN   (uint8_t)35
-#define VAL_MAX_LEN    (uint8_t)8
+#define VAL_MAX_LEN    (uint8_t)20
 #define ATTR_COUNT_MAX (uint8_t)13
 
 char *attribute_names[] = {"Version:", "Chris Bennetts-Cash", "BT UUID Dictionary?", "BT Classic Support?",
@@ -40,7 +40,7 @@ void free_status_details() {
  */
 void initialise_status_details(bool uuidDictionarySupported, bool btClassicSupported,
                                 bool btBLESupported, bool wifiSupported) {
-    const char github[] = "github.com/chris-bc/wendigo";
+    const char github[] = "github.com/chris-bc";
 
     strncpy(attribute_values[0], WENDIGO_VERSION, strlen(WENDIGO_VERSION));
     strncpy(attribute_values[1], github, strlen(github));
