@@ -35,6 +35,7 @@ uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
     uint16_t result = 0;
     for (; result + PREAMBLE_LEN <= size && memcmp(bytes + result, PREAMBLE_BT_BLE, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_WIFI, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_STATUS, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN); ++result) { }
     return result;
 }
@@ -530,6 +531,19 @@ uint16_t parseBufferVersion(WendigoApp *app) {
     return endSeq + PREAMBLE_LEN;
 }
 
+/** Parse a status packet and display in the status view.
+ * Returns the number of bytes consumed by the function, including the end-of-packet
+ * bytes. DOES NOT remove these bytes, that is handled by the calling function.
+ * This function requires that Wendigo_AppViewStatus be the currently-displayed view.
+ */
+uint16_t parseBufferStatus(WendigoApp *app) {
+    uint16_t offset = 0;
+    //
+    UNUSED(app);
+
+    return offset;
+}
+
 /** When the end of a packet is reached this function is called to parse the
  *  buffer and take the appropriate action. We expect to see one of the following:
  *   * Begin with 0xFF,0xFF,0xFF,0xFF,0xAA,0xAA,0xAA,0xAA: Bluetooth packet
@@ -551,6 +565,8 @@ void parseBuffer(WendigoApp *app) {
         consumedBytes = parseBufferBluetooth(app);
     } else if (bufferLen >= PREAMBLE_LEN && !memcmp(PREAMBLE_WIFI, buffer, PREAMBLE_LEN)) {
         consumedBytes = parseBufferWifi(app);
+    } else if (bufferLen >= PREAMBLE_LEN && !memcmp(PREAMBLE_STATUS, buffer, PREAMBLE_LEN)) {
+        consumedBytes = parseBufferStatus(app);
     } else if (bufferLen >= PREAMBLE_LEN && !memcmp(PREAMBLE_VER, buffer, PREAMBLE_LEN)) {
         consumedBytes = parseBufferVersion(app);
     } else {

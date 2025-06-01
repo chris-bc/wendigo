@@ -83,7 +83,8 @@ typedef enum {
     WendigoAppViewVarItemList,
     WendigoAppViewDeviceList,
     WendigoAppViewDeviceDetail,
-    WendigoAppViewConsoleOutput,
+    WendigoAppViewStatus, /* This doesn't have a view but is used as a flag in app->current_view */
+    WendigoAppViewConsoleOutput, // TODO: Consider whether there's a better way to flag the status view
     WendigoAppViewTextInput,
     WendigoAppViewHexInput,
     WendigoAppViewHelp,
