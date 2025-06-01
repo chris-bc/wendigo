@@ -1,3 +1,5 @@
+#include <furi_hal_rtc.h>
+
 #include "../wendigo_app_i.h"
 #include "../wendigo_scan.h"
 
@@ -66,7 +68,17 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
             variable_item_set_current_value_text(item, menu_item->cod_str);
             break;
         case WendigoOptionLastSeen:
-            // TODO: Create an age string
+            /* Create an elapsed time string */
+            uint32_t nowTime = furi_hal_rtc_get_timestamp();
+            double elapsed = nowTime - menu_item->dev.lastSeen.tv_sec;
+            if (elapsed < 60) {
+                snprintf(tempStr, sizeof(tempStr), "%fs", elapsed);
+            } else {
+                uint8_t minutes = elapsed / 60;
+                uint8_t seconds = elapsed - (minutes * 60);
+                snprintf(tempStr, sizeof(tempStr), "%d:%02d", minutes, seconds);
+            }
+            variable_item_set_current_value_text(item, tempStr);
             break;
         default:
             // TODO: Panic
@@ -149,7 +161,11 @@ void wendigo_scene_device_list_on_enter(void* context) {
         if (devices[i]->dev.bdname_len == 0 || devices[i]->dev.bdname == NULL) {
             free(item_str);
         }
-        // TODO: Options menu starts here.
+        /* Default to displaying RSSI in options menu */
+        char tempStr[10];
+        snprintf(tempStr, sizeof(tempStr), "%ld dB", devices[i]->dev.rssi);
+        variable_item_set_current_value_text(devices[i]->view, tempStr);
+        variable_item_set_current_value_index(devices[i]->view, WendigoOptionRSSI);
     }
     // TODO: Display WiFi devices
 
