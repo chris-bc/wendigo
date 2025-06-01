@@ -64,6 +64,9 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
             myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
             variable_item_set_locked(myItem, starting, LOCKED_MSG);
             wendigo_set_scanning_active(app, starting);
+        } else if (selected_option_index == SCAN_STATUS_IDX) {
+            view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventDisplayStatus);
+            return;
         }
         break;
     case LIST_DEVICES:
@@ -200,6 +203,11 @@ bool wendigo_scene_start_on_event(void* context, SceneManagerEvent event) {
                 scene_manager_set_scene_state(
                     app->scene_manager, WendigoSceneStart, app->selected_menu_index);
                 scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceList);
+                break;
+            case Wendigo_EventDisplayStatus:
+                scene_manager_set_scene_state(
+                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager, WendigoSceneStatus);
                 break;
             default:
                 // Do nothing
