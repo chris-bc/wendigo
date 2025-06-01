@@ -32,10 +32,7 @@ void print_empty_row(int lineLength) {
 
 /** Free the initialised details when we're done with them  */
 void free_status_details() {
-    free(attribute_values[9]);
-    free(attribute_values[10]);
-    free(attribute_values[11]);
-    free(attribute_values[12]);
+    /* Actually there's nothing to do here, I think */
 }
 
 /** Prepares data for display by the status command.
