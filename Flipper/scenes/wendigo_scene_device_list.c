@@ -100,6 +100,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
         name = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
         strncpy(name, dev->dev.bdname, dev->dev.bdname_len);
     }
+    char tempStr[10];
     if (dev->view == NULL) {
         /* Add a new item */
         dev->view = variable_item_list_add(
@@ -108,14 +109,34 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
             WendigoOptionsCount,
             wendigo_scene_device_list_var_list_change_callback,
             app);
+        variable_item_set_current_value_index(dev->view, WendigoOptionRSSI);
+        snprintf(tempStr, sizeof(tempStr), "%ld dB", dev->dev.rssi);
+        variable_item_set_current_value_text(dev->view, tempStr);
     } else {
         /* Update dev->view */
         variable_item_set_item_label(dev->view, name);
+        /* If RSSI or lastSeen is displayed, update their values */
+        if (variable_item_get_current_value_index(dev->view) == WendigoOptionRSSI) {
+            snprintf(tempStr, sizeof(tempStr), "%ld dB", dev->dev.rssi);
+            variable_item_set_current_value_text(dev->view, tempStr);
+        } else if (variable_item_get_current_value_index(dev->view) == WendigoOptionLastSeen) {
+            uint32_t nowTime = furi_hal_rtc_get_timestamp();
+            double elapsed = nowTime - dev->dev.lastSeen.tv_sec;
+            if (elapsed < 60) {
+                snprintf(tempStr, sizeof(tempStr), "%fs", elapsed);
+            } else {
+                uint8_t minutes = elapsed / 60;
+                uint8_t seconds = elapsed - (minutes * 60);
+                snprintf(tempStr, sizeof(tempStr), "%d:%02d", minutes, seconds);
+            }
+            variable_item_set_current_value_text(dev->view, tempStr);
+        }
     }
     free(name);
 
     // TODO: Add/Update the options menu: display RSSI where adding, check the
     //       selected option index where updating to determine whether anything else needs to be updated
+    variable_item_set_current_value_index(dev->view, WendigoOptionRSSI);
 }
 
 /* Initialise the device list
@@ -164,8 +185,8 @@ void wendigo_scene_device_list_on_enter(void* context) {
         /* Default to displaying RSSI in options menu */
         char tempStr[10];
         snprintf(tempStr, sizeof(tempStr), "%ld dB", devices[i]->dev.rssi);
-        variable_item_set_current_value_text(devices[i]->view, tempStr);
         variable_item_set_current_value_index(devices[i]->view, WendigoOptionRSSI);
+        variable_item_set_current_value_text(devices[i]->view, tempStr);
     }
     // TODO: Display WiFi devices
 
