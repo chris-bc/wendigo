@@ -231,7 +231,12 @@ Because Wendigo is still in early development the following changes are core to 
   * [X] Display devices
     * [X] Display device name instead of BDA when present
     * [X] Dynamically update device list on new/updated devices
-    * [ ] Show RSSI in device list (options menu)
+    * [X] Show attributes in device list (options menu)
+      * [X] RSSI
+      * [X] Device type
+      * [X] CoD
+      * [X] Tag/Untag (status and command in one)
+      * [ ] Age since last seen - Implemented but nonsense results.
   * [ ] Display device details
     * [ ] Update details when device updated
     * [ ] Use canvas view so properties can be layed out to (hopefully) make everything visible without scrolling
