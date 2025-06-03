@@ -1,5 +1,3 @@
-#include <furi_hal_rtc.h>
-
 #include "../wendigo_app_i.h"
 #include "../wendigo_scan.h"
 
@@ -76,7 +74,7 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
         case WendigoOptionLastSeen:
             /* Create an elapsed time string */
             uint32_t nowTime = furi_hal_rtc_get_timestamp();
-            double elapsed = nowTime - menu_item->dev.lastSeen.tv_sec;
+            double elapsed = nowTime - menu_item->dev.lastSeen;
             if (elapsed < 60) {
                 snprintf(tempStr, sizeof(tempStr), "%fs", elapsed);
             } else {
@@ -127,7 +125,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
             variable_item_set_current_value_text(dev->view, tempStr);
         } else if (variable_item_get_current_value_index(dev->view) == WendigoOptionLastSeen) {
             uint32_t nowTime = furi_hal_rtc_get_timestamp();
-            double elapsed = nowTime - dev->dev.lastSeen.tv_sec;
+            double elapsed = nowTime - dev->dev.lastSeen;
             if (elapsed < 60) {
                 snprintf(tempStr, sizeof(tempStr), "%fs", elapsed);
             } else {

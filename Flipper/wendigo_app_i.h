@@ -14,6 +14,8 @@
 #include <gui/modules/text_input.h>
 #include <gui/modules/byte_input.h>
 #include <gui/modules/popup.h>
+#include <furi_hal_rtc.h>
+
 #include "wendigo_hex_input.h"
 
 #define START_MENU_ITEMS         (6)

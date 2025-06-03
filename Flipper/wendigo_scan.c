@@ -207,7 +207,8 @@ bool wendigo_add_bt_device(WendigoApp *app, flipper_bt_device *dev) {
     new_device->dev.scanType = dev->dev.scanType;
     /* Don't copy tagged status - A new device is not tagged. */
     new_device->dev.tagged = false;
-    new_device->dev.lastSeen = dev->dev.lastSeen;
+    /* ESP32 doesn't know the real time/date so overwrite the lastSeen value */
+    new_device->dev.lastSeen = furi_hal_rtc_get_timestamp();
     /* Copy BDA */
     memcpy(new_device->dev.bda, dev->dev.bda, MAC_BYTES);
     new_device->view = dev->view; /* Copy the view pointer if we have one */
