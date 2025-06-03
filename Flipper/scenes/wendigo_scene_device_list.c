@@ -116,8 +116,8 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
         strncpy(name, dev->dev.bdname, dev->dev.bdname_len);
     }
     char tempStr[10];
-    if (dev->view == NULL) {
-        /* Add a new item */
+    if (dev->view == NULL && !display_selected_only) {
+        /* Add a new item if we're not displaying tagged items only */
         dev->view = variable_item_list_add(
             app->devices_var_item_list,
             name,
