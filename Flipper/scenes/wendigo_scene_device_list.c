@@ -79,7 +79,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void* context, uin
     } else {
         /* Display details for `item` */
         wendigo_scene_device_detail_set_device(item);
-        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
+        // TODO Fix detail scene view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
     }
 }
 
@@ -149,6 +149,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
             WendigoOptionsCount,
             wendigo_scene_device_list_var_list_change_callback,
             app);
+        /* Display RSSI in options menu */
         variable_item_set_current_value_index(dev->view, WendigoOptionRSSI);
         snprintf(tempStr, sizeof(tempStr), "%ld dB", dev->dev.rssi);
         variable_item_set_current_value_text(dev->view, tempStr);
@@ -164,11 +165,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
             variable_item_set_current_value_text(dev->view, tempStr);
         }
     } /* Ignore new devices if display_selected_only is true */
-    free(name);
-
-    // TODO: Add/Update the options menu: display RSSI where adding, check the
-    //       selected option index where updating to determine whether anything else needs to be updated
-    variable_item_set_current_value_index(dev->view, WendigoOptionRSSI);
+    free(name);    
 }
 
 /* Initialise the device list
