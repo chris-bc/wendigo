@@ -67,7 +67,7 @@ Wendigo is a Flipper Zero application to detect, monitor and track nearby wirele
 <a id="getting-started"></a>
 ## Getting Started
 
-Wendigo is in its early stages of development. It can currently scan for and display (in list view) Bluetooth Classic and Low Energy devices, but still has some way to go before it provides useful functionality. You can refer to the *roadmap* at the bottom of this page to understand which features are currently available and which are under development.
+Wendigo is in its early stages of development. It can currently scan for and display Bluetooth Classic and Low Energy devices, but still has some way to go before it can scan and display multiple protocols and track devices to their source. You can refer to the *roadmap* at the bottom of this page to understand which features are currently available and which are under development.
 
 Once the Flipper and ESP32 applications have a more complete base, binaries will be made available under *Releases*. Alternatively, especially if you want the latest features or to contribute to the development, you can compile the application yourself, as described below.
 
@@ -179,92 +179,73 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 <a id="roadmap"></a>
 ## Roadmap
-Because Wendigo is still in early development the following changes are core to its initial functionality. Hopefully it won't be too much longer before this is a useful tool and the roadmap is filled with more interesting, and perhaps esoteric, things. :)
+Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some further refinement is required to existing functionality, after which Wendigo will be extended to include WiFi scanning, Bluetooth service discovery, and additional features.
 
-* [X] Change scan menu selected option to stop after starting and start after stopping.
-* [X] BUG: Device list: menu option reverts to RSSI (presumably 0?) every time a new packet is received for that device
 * [ ] BUG: Device list: lastSeen displays seconds with 5 decimal places!
-* [X] BUG: NULL pointer dereference on opening device list :'(
-* [X] BUG: Buffer is in an indeterminate state when scanning is stopped so it displays an 'unrecognised packet' error. Empty the buffer when stopping scanning.
-* [ ] First cut WiFi protocol
-* [X] First cut combined bluetooth protocol
-  * [X] Probably start with a fully-encapsulated, primitive-based struct
-  * [X] Serialise from ESP32
-  * [X] Deserialise from Flipper
-* [ ] Develop a Flipper-based logging mechanism and support for multiple streams of data
+* [X] Combined Bluetooth packet for BT Classic and LE devices
+* [X] Combined Bluetooth data model for Flipper
+* [X] BT Classic and LE device transmission from ESP32 to Flipper
+* [X] BT Classic and LE packet parsing and caching on Flipper Zero
+* [X] Enable/Disable radios
+* [X] Scan Start/Stop
+* [X] Scanning status
+  * [X] Supported radios
+  * [X] Status of radios
+  * [X] Devices found
+* [X] ESP Version (popup)
+* [X] Display devices
+  * [X] Display device name instead of BDA when present
+  * [X] Dynamically update device list on new/updated devices
+  * [X] Show attributes in device list (options menu)
+    * [X] RSSI
+    * [X] Device type
+    * [X] CoD
+    * [X] Tag/Untag (status and command in one)
+    * [X] Age since last seen - Implemented but nonsense results.
+  * [X] Device tagging and displaying only tagged devices
+* [ ] WiFi Features
+  * [ ] WiFi packet
+  * [ ] ESP32 WiFi scanning
+  * [ ] ESP32 WiFi packet transmission
+  * [ ] Flipper WiFi packet parsing
+  * [ ] Flipper WiFi data model
+  * [ ] Channel hopping
+  * [ ] Support for 5GHz channels (ESP32-C5)
+* [ ] Bluetooth Services
+  * [ ] ESP32 service discovery
+  * [ ] ESP32 service transmission
+  * [ ] Flipper service parsing
+  * [ ] Flipper service data model
+* [ ] Settings
+  * [ ] Retrieve and change MACs
+  * [ ] Enable/Disable channels
+* [ ] Display device details
+  * [ ] Update details when device updated
+  * [ ] Use canvas view so properties can be layed out to (hopefully) make everything visible without scrolling
+* [ ] "Display Settings" menu
+  * [ ] Enable/Disable device types
+  * [ ] Sort results by
+    * [ ] Name
+    * [ ] LastSeen
+    * [ ] RSSI
+    * [ ] Device Type
+* [ ] Other Features
+  * [ ] Focus Mode
+  * [ ] Use FZ LED to indicate events
+  * [ ] Ability to flash ESP32 firmware from Flipper?
+* [ ] Flipper Zero logging
+  * [ ] Develop a Flipper-based logging mechanism and support for multiple streams of data from ESP32
   * [ ] Logs which go directly to a buffer or file;
   * [ ] Device info which goes directly to display
-* [X] Obtain BLE device information
-* [X] Deliver BLE results to ESP32 dispatcher
-* [X] Obtain BT Classic device information
-* [X] Deliver BT Classic results to dispatcher
-* [ ] Obtain WiFi device information
-* [ ] Deliver WiFi results to dispatcher
-* [ ] WiFi Channel hopping
-* [ ] Bluetooth service discovery
-* [ ] Expand protocol to support transmission of service details
-* [ ] Refactor all logging, error handling and status functionality
-  * [ ] In FZ mode dispatch to FZ logging mechanism
-* [ ] Consider whether and how to reduce the volume of scan results
-  * [X] Reduce scan output in interactive mode by caching device details
-  * [ ] Consider applying similar caching to FZ
-* [ ] Create Flipper data model
-  * [X] Bluetooth
-  * [ ] Bluetooth services
-  * [ ] WiFi
-* [ ] Create Flipper UI
-  * [ ] Improve FZ memory management
-    * [ ] Currently memory is exhausted after approx. 6-7 minutes continuous scanning
-    * [X] Search, search, search for memory leaks
-      * [ ] OK, OK, this will never be done but I need to do *something* to celebrate finding that sneaky use-after-free race condition!
-    * [ ] Hopefully find a FreeRTOS hook or config so I can provide a function when low on memory
-    * [ ] Currently FZ reboots, displaying "Flipper restarted: Out of memory" after boot
-    * [ ] Instead, prune device cache when low on memory
-      * [ ] Configurable techniques as with Gravity - prune based on RSSI, time since last seen, or tagged status
-      * [ ] Allow different techniques for different radios
-    * [ ] If FreeRTOS or FZ hook can't be found, estimate an upper bound for device cache through trial & error
-  * [X] Settings
-    * [ ] Retrieve and change MACs
-    * [X] Enable/Disable radios
-    * [ ] Enable/Disable channels
-  * [X] Scan Start/Stop
-  * [X] Scanning status
-    * [X] Supported radios
-    * [X] Status of radios
-    * [X] Devices found
-  * [X] ESP Version (popup)
-  * [X] Display devices
-    * [X] Display device name instead of BDA when present
-    * [X] Dynamically update device list on new/updated devices
-    * [X] Show attributes in device list (options menu)
-      * [X] RSSI
-      * [X] Device type
-      * [X] CoD
-      * [X] Tag/Untag (status and command in one)
-      * [X] Age since last seen - Implemented but nonsense results.
-        * [X] When working, update elapsed time where it's displayed during a tick event
-  * [ ] Display device details
-    * [ ] Update details when device updated
-    * [ ] Use canvas view so properties can be layed out to (hopefully) make everything visible without scrolling
-  * [X] Device tagging
-    * [X] Bug: Displaying "selected devices" displays just selected devices, but all subsequent device packets are displayed
-    * [X] Add logic to wendigo_scene_device_list_update() so that variable items aren't added in this mode unless they're tagged.
-  * [ ] Focus Mode
-  * [ ] "Display Settings" menu
-    * [ ] Enable/Disable device types
-    * [ ] Sort results by
-      * [ ] Name
-      * [ ] LastSeen
-      * [ ] RSSI
-      * [ ] Device Type
-* [ ] Flipper settings
-  * [ ] ESP32 integration
-  * [ ] Ability to flash ESP32 firmware from Flipper?
-  * [ ] Use FZ LED to provide status info
-* [ ] Target and monitor devices
-  * [X] **Focus** mode that restricts received data to devices of interest only
-  * [X] **Tag** command to select devices
-  * [X] Designed to be usable from console as well as from Flipper
+  * [ ] Refactor all logging, error handling and status functionality
+    * [ ] In FZ mode dispatch to FZ logging mechanism
+* [ ] Improve FZ memory management if needed
+  * [ ] Continuous scanning no longer seems to exhaust memory, but further testing is needed.
+  * [ ] Hopefully find a FreeRTOS hook or config so I can provide a function when low on memory
+  * [ ] Instead, prune device cache when low on memory
+    * [ ] Configurable techniques as with Gravity - prune based on RSSI, time since last seen, or tagged status
+    * [ ] Allow different techniques for different radios
+  * [ ] If FreeRTOS or FZ hook can't be found, estimate an upper bound for device cache through trial & error
 
 See the [open issues](https://github.com/chris-bc/wendigo/issues) for a full list of proposed features (and known issues).
 
