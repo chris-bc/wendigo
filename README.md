@@ -181,6 +181,8 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 ## Roadmap
 Because Wendigo is still in early development the following changes are core to its initial functionality. Hopefully it won't be too much longer before this is a useful tool and the roadmap is filled with more interesting, and perhaps esoteric, things. :)
 
+* [ ] BUG: NULL pointer dereference on opening device list :'(
+* [ ] BUG: Buffer is in an indeterminate state when scanning is stopped so it displays an 'unrecognised packet' error. Empty the buffer when stopping scanning.
 * [ ] First cut WiFi protocol
 * [X] First cut combined bluetooth protocol
   * [X] Probably start with a fully-encapsulated, primitive-based struct

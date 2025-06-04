@@ -24,7 +24,7 @@ enum wendigo_device_list_options {
  */
 double elapsedTime(flipper_bt_device *dev, char *elapsedStr, int strlen) {
     uint32_t nowTime = furi_hal_rtc_get_timestamp();
-    double elapsed = nowTime - dev->dev.lastSeen;
+    double elapsed = nowTime - dev->dev.lastSeen.tv_sec;
     if (elapsedStr != NULL) {
         if (elapsed < 60) {
             snprintf(elapsedStr, strlen, "%fs", elapsed);
@@ -229,7 +229,7 @@ bool wendigo_scene_device_list_on_event(void* context, SceneManagerEvent event) 
         char elapsedStr[7];
         for (int i = 0; i < (display_selected_only) ? bt_selected_devices_count : bt_devices_count; ++i) {
             /* Update lastSeen */
-            devices[i]->dev.lastSeen = furi_hal_rtc_get_timestamp();
+            devices[i]->dev.lastSeen.tv_sec = furi_hal_rtc_get_timestamp();
             /* Update option text if lastSeen is selected for this device */
             if (variable_item_get_current_value_index(devices[i]->view) == WendigoOptionLastSeen) {
                 elapsedTime(devices[i], elapsedStr, sizeof(elapsedStr));

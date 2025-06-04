@@ -36,7 +36,7 @@ typedef struct {
     uint8_t bda[MAC_BYTES];
     ScanType scanType;
     bool tagged;
-    uint32_t lastSeen;           /* struct timeval in ESP32 */
+    struct timeval lastSeen;
     wendigo_bt_svc bt_services;
 } wendigo_bt_device;
 
