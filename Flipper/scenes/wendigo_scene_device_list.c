@@ -252,18 +252,12 @@ bool wendigo_scene_device_list_on_event(void* context, SceneManagerEvent event) 
         char elapsedStr[7];
         uint32_t now = furi_hal_rtc_get_timestamp();
         for (int i = 0; i < devices_count; ++i) {
-            /* I can probably remove this but I'd rather be certain than have to find this as a bug later */
-            if (devices != NULL && devices[i] != NULL) {
-                /* Update lastSeen */
-                devices[i]->dev.lastSeen.tv_sec = (time_t)now; /* casting to a long long int is OK */
+            if (devices != NULL && devices[i] != NULL && devices[i]->view != NULL &&
+                    variable_item_get_current_value_index(devices[i]->view) == WendigoOptionLastSeen) {
                 /* Update option text if lastSeen is selected for this device */
-                if (devices[i]->view != NULL &&
-                        variable_item_get_current_value_index(devices[i]->view) == WendigoOptionLastSeen) {
-                    _elapsedTime((uint32_t *)&(devices[i]->dev.lastSeen.tv_sec), &now, elapsedStr, sizeof(elapsedStr));
-                    variable_item_set_current_value_text(devices[i]->view, elapsedStr);
-                    UNUSED(elapsedStr);
-                }
-            } /* Maybe the next device won't be empty */
+                _elapsedTime((uint32_t *)&(devices[i]->dev.lastSeen.tv_sec), &now, elapsedStr, sizeof(elapsedStr));
+                variable_item_set_current_value_text(devices[i]->view, elapsedStr);
+            }
         }
     }
     return consumed;
