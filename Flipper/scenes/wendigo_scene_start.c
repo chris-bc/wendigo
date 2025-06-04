@@ -13,6 +13,7 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 };
 
 #define SETUP_IDX       (0)
+#define SCAN_IDX        (1)
 #define SCAN_START_IDX  (0)
 #define SCAN_STOP_IDX   (1)
 #define SCAN_STATUS_IDX (2)
@@ -39,6 +40,7 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
 
     const int selected_option_index = app->selected_option_index[index];
     furi_assert(selected_option_index < item->num_options_menu);
+    // TODO: Remove these (I think)
     app->selected_tx_string = item->options_menu[selected_option_index];
     app->is_command = false;
     app->is_custom_tx_string = false;
@@ -63,6 +65,12 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
         if (selected_option_index == SCAN_START_IDX || selected_option_index == SCAN_STOP_IDX) {
             myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
             variable_item_set_locked(myItem, starting, LOCKED_MSG);
+            /* Set selected option to Stop when starting and Start when stopping */
+            myItem = variable_item_list_get(app->var_item_list, SCAN_IDX);
+            uint8_t newOption = (starting) ? SCAN_STOP_IDX : SCAN_START_IDX;
+            app->selected_option_index[index] = newOption;
+            variable_item_set_current_value_index(myItem, newOption);
+            variable_item_set_current_value_text(myItem, item->options_menu[newOption]);
             wendigo_set_scanning_active(app, starting);
         } else if (selected_option_index == SCAN_STATUS_IDX) {
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventDisplayStatus);

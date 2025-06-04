@@ -181,6 +181,7 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 ## Roadmap
 Because Wendigo is still in early development the following changes are core to its initial functionality. Hopefully it won't be too much longer before this is a useful tool and the roadmap is filled with more interesting, and perhaps esoteric, things. :)
 
+* [X] Change scan menu selected option to stop after starting and start after stopping.
 * [X] BUG: Device list: menu option reverts to RSSI (presumably 0?) every time a new packet is received for that device
 * [ ] BUG: Device list: lastSeen displays seconds with 5 decimal places!
 * [X] BUG: NULL pointer dereference on opening device list :'(
