@@ -31,10 +31,10 @@ double _elapsedTime(uint32_t *from, uint32_t *to, char *elapsedStr, uint8_t strl
         }
         return 0;
     }
-    double elapsed = to - from;
+    uint16_t elapsed = (uint16_t)(to - from);
     if (elapsedStr != NULL && strlen > 0) {
         if (elapsed < 60) {
-            snprintf(elapsedStr, strlen, "%fs", elapsed);
+            snprintf(elapsedStr, strlen, "%ds", elapsed);
         } else {
             uint8_t minutes = elapsed / 60;
             uint8_t seconds = elapsed - (minutes * 60);

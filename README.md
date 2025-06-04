@@ -184,7 +184,7 @@ Because Wendigo is still in early development the following changes are core to 
 * [X] BUG: Device list: menu option reverts to RSSI (presumably 0?) every time a new packet is received for that device
 * [ ] BUG: Device list: lastSeen displays seconds with 5 decimal places!
 * [X] BUG: NULL pointer dereference on opening device list :'(
-* [ ] BUG: Buffer is in an indeterminate state when scanning is stopped so it displays an 'unrecognised packet' error. Empty the buffer when stopping scanning.
+* [X] BUG: Buffer is in an indeterminate state when scanning is stopped so it displays an 'unrecognised packet' error. Empty the buffer when stopping scanning.
 * [ ] First cut WiFi protocol
 * [X] First cut combined bluetooth protocol
   * [X] Probably start with a fully-encapsulated, primitive-based struct
