@@ -134,6 +134,53 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
     }
 }
 
+/** Re-render the variable item list. This function exists because there is no method to remove
+ * items from a variable_item_list, but that is sometimes necessary (e.g. when viewing selected
+ * devices and de-selecting a device).
+ */
+void wendigo_scene_device_list_redraw(WendigoApp *app) {
+    variable_item_list_reset(app->devices_var_item_list);
+    char *item_str;
+    uint16_t device_count;
+    flipper_bt_device **devices;
+    if (display_selected_only) {
+        device_count = bt_selected_devices_count;
+        devices = bt_selected_devices;
+    } else {
+        device_count = bt_devices_count;
+        devices = bt_devices;
+    }
+    variable_item_list_set_selected_item(app->devices_var_item_list, 0);
+    for(uint16_t i = 0; i < device_count; ++i) {
+        /* Label with the name if we have a name, otherwise use the BDA */
+        if (devices[i]->dev.bdname_len > 0 && devices[i]->dev.bdname != NULL) {
+            item_str = devices[i]->dev.bdname;
+        } else {
+            item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
+            if (item_str == NULL) {
+                // TODO: Panic
+                continue; // Maybe the next device will have a name so we won't need to malloc
+            }
+            bytes_to_string(devices[i]->dev.bda, MAC_BYTES, item_str);
+        }
+        devices[i]->view = variable_item_list_add(
+            app->devices_var_item_list,
+            item_str,
+            WendigoOptionsCount,
+            wendigo_scene_device_list_var_list_change_callback,
+            app);
+        if (devices[i]->dev.bdname_len == 0 || devices[i]->dev.bdname == NULL) {
+            free(item_str);
+        }
+        /* Default to displaying RSSI in options menu */
+        char tempStr[10];
+        snprintf(tempStr, sizeof(tempStr), "%ld dB", devices[i]->dev.rssi);
+        variable_item_set_current_value_index(devices[i]->view, WendigoOptionRSSI);
+        variable_item_set_current_value_text(devices[i]->view, tempStr);
+    }
+    // TODO: Display WiFi devices
+}
+
 static void wendigo_scene_device_list_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
     WendigoApp* app = context;
@@ -151,6 +198,12 @@ static void wendigo_scene_device_list_var_list_enter_callback(void* context, uin
     if (item->view != NULL && variable_item_get_current_value_index(item->view) == WendigoOptionTagUntag) {
         wendigo_set_bt_device_selected(item, !item->dev.tagged);
         variable_item_set_current_value_text(item->view, (item->dev.tagged) ? "Untag" : "Tag");
+        /* If the device is now untagged and we're viewing tagged devices only, remove the device from view */
+        if (display_selected_only && !item->dev.tagged) {
+            /* Bugger - There's no method to remove an item from a variable_item_list */
+            item->view = NULL;
+            wendigo_scene_device_list_redraw(app);
+        }
     } else {
         /* Display details for `item` */
         wendigo_scene_device_detail_set_device(item);
@@ -203,59 +256,21 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
 void wendigo_scene_device_list_on_enter(void* context) {
     WendigoApp* app = context;
     app->current_view = WendigoAppViewDeviceList;
-    VariableItemList* var_item_list = app->devices_var_item_list;
 
     variable_item_list_set_enter_callback(
-        var_item_list, wendigo_scene_device_list_var_list_enter_callback, app);
+        app->devices_var_item_list, wendigo_scene_device_list_var_list_enter_callback, app);
 
-    variable_item_list_reset(var_item_list);
-    char *item_str;
-    uint16_t device_count;
-    flipper_bt_device **devices;
-    if (display_selected_only) {
-        device_count = bt_selected_devices_count;
-        devices = bt_selected_devices;
-    } else {
-        device_count = bt_devices_count;
-        devices = bt_devices;
-    }
-    for(uint16_t i = 0; i < device_count; ++i) {
-        /* Label with the name if we have a name, otherwise use the BDA */
-        if (devices[i]->dev.bdname_len > 0 && devices[i]->dev.bdname != NULL) {
-            item_str = devices[i]->dev.bdname;
-        } else {
-            item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
-            if (item_str == NULL) {
-                // TODO: Panic
-                continue; // Maybe the next device will have a name so we won't need to malloc
-            }
-            bytes_to_string(devices[i]->dev.bda, MAC_BYTES, item_str);
-        }
-        devices[i]->view = variable_item_list_add(
-            var_item_list,
-            item_str,
-            WendigoOptionsCount,
-            wendigo_scene_device_list_var_list_change_callback,
-            app);
-        if (devices[i]->dev.bdname_len == 0 || devices[i]->dev.bdname == NULL) {
-            free(item_str);
-        }
-        /* Default to displaying RSSI in options menu */
-        char tempStr[10];
-        snprintf(tempStr, sizeof(tempStr), "%ld dB", devices[i]->dev.rssi);
-        variable_item_set_current_value_index(devices[i]->view, WendigoOptionRSSI);
-        variable_item_set_current_value_text(devices[i]->view, tempStr);
-    }
-    // TODO: Display WiFi devices
+    /* Reset and re-populate the list */
+    wendigo_scene_device_list_redraw(app);
 
     /* Restore the selected device index if it's there to restore (e.g. if we're returning from
        the device detail scene). But first test that it's in bounds, unless we've moved from all
        devices to selected only. */
     uint8_t selected_item = scene_manager_get_scene_state(app->scene_manager, WendigoSceneDeviceList);
-    if (selected_item >= device_count) {
+    if (selected_item >= (display_selected_only) ? bt_selected_devices_count : bt_devices_count) {
         selected_item = 0;
     }
-    variable_item_list_set_selected_item(var_item_list, selected_item);
+    variable_item_list_set_selected_item(app->devices_var_item_list, selected_item);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewDeviceList);
 }
 

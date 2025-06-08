@@ -465,6 +465,53 @@ void wendigo_free_bt_devices() {
     }
 }
 
+/** During testing I bumped the ESP32 reset button and was irritated that Flipper's device
+ * cache was working perfectly but status claimed there were no devices in the cache. This
+ * function provides a location to validate and alter status attributes prior to displaying
+ * them, allowing this issue to be overcome.
+ */
+void process_and_display_status_attribute(WendigoApp *app, char *attribute_name, char *attribute_value) {
+    char *interesting_attributes[] = {"BT Classic Devices:", "BT Low Energy Devices:",
+                                      "WiFi STA Devices:", "WiFi APs:"};
+    uint8_t interesting_attributes_count = 4;
+    uint8_t interested;
+    uint16_t count = 0;
+    char strVal[6];
+    for (interested = 0; interested < interesting_attributes_count && strcmp(interesting_attributes[interested], attribute_name); ++interested) { }
+    if (interested < interesting_attributes_count) {
+        /* We're interested in this attribute */
+        switch (interested) {
+            case 0:
+                /* BT Classic device count - Count it ourselves for consistency */
+                for (uint16_t i = 0; i < bt_devices_count; ++i) {
+                    if (bt_devices[i]->dev.scanType == SCAN_HCI) {
+                        ++count;
+                    }
+                }
+                snprintf(strVal, sizeof(strVal), "%d", count);
+                attribute_value = strVal;
+                break;
+            case 1:
+                /* BLE device count */
+                for (uint16_t i = 0; i < bt_devices_count; ++i) {
+                    if (bt_devices[i]->dev.scanType == SCAN_BLE) {
+                        ++count;
+                    }
+                }
+                snprintf(strVal, sizeof(strVal), "%d", count);
+                attribute_value = strVal;
+                break;
+            case 2:
+                /* WiFi STA */
+                break;
+            case 3:
+                /* WiFi AP */
+                break;
+        }
+    }
+    wendigo_scene_status_add_attribute(app, attribute_name, attribute_value);
+}
+
 /* Returns the number of bytes consumed from the buffer - DOES NOT remove consumed bytes
    from the buffer, this must be handled by the calling function.
    The received packet must follow this structure:
@@ -599,7 +646,8 @@ uint16_t parseBufferVersion(WendigoApp *app) {
 /** Parse a status packet and display in the status view.
  * Returns the number of bytes consumed by the function, including the end-of-packet
  * bytes. DOES NOT remove these bytes, that is handled by the calling function.
- * This function requires that Wendigo_AppViewStatus be the currently-displayed view.
+ * This function requires that Wendigo_AppViewStatus be the currently-displayed view
+ * (otherwise the packet is discarded).
  */
 uint16_t parseBufferStatus(WendigoApp *app) {
     /* Ignore the packet if the status scene isn't displayed */
@@ -647,8 +695,8 @@ uint16_t parseBufferStatus(WendigoApp *app) {
         memcpy(attribute_value, buffer + offset, attribute_value_len);
         attribute_value[attribute_value_len] = '\0';
         offset += attribute_value_len;
-        /* Add the attribute to the var_item_list */
-        wendigo_scene_status_add_attribute(app, attribute_name, attribute_value);
+        /* Send the attribute off for validation and display */
+        process_and_display_status_attribute(app, attribute_name, attribute_value);
         free(attribute_name);
         free(attribute_value);
     }

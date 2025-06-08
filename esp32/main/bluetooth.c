@@ -893,7 +893,7 @@ esp_err_t wendigo_bt_enable() {
 
 /* This function does not terminate in-flight discovery. Its calling function -
    cmd_bluetooth in wendigo.c - sets scanStatus[SCAN_HCI] to ACTION_DISABLE.
-   When the current discovery interval expires a new discovery task will not be launchei */
+   When the current discovery interval expires a new discovery task will not be launched */
 esp_err_t wendigo_bt_disable() {
     esp_err_t result = ESP_OK;
     if (!BT_INITIALISED) {
