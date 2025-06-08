@@ -391,7 +391,7 @@ bool wendigo_update_bt_device(WendigoApp *app, flipper_bt_device *dev) {
 
     /* Update the device list if it's currently displayed */
     if (app->current_view == WendigoAppViewDeviceList) {
-        wendigo_scene_device_list_update(app, bt_devices[idx]);
+        wendigo_scene_device_list_update(app, target);
     } else if (app->current_view == WendigoAppViewDeviceDetail) { // && selectedDevice == bt_devices[idx]
         // TODO: Update existing view
     }

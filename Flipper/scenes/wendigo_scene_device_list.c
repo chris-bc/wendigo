@@ -102,9 +102,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
         }
         bytes_to_string(dev->dev.bda, MAC_BYTES, name);
     } else {
-        name = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
-        strncpy(name, dev->dev.bdname, dev->dev.bdname_len);
-        name[dev->dev.bdname_len] = '\0';
+        name = dev->dev.bdname;
     }
     char tempStr[10];
     if (dev->view == NULL && !display_selected_only) {
@@ -131,7 +129,9 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
             variable_item_set_current_value_text(dev->view, tempStr);
         }
     } /* Ignore new devices if display_selected_only is true */
-    free(name);    
+    if (dev->dev.bdname_len == 0 || dev->dev.bdname == NULL) {
+        free(name);    
+    }
 }
 
 static void wendigo_scene_device_list_var_list_enter_callback(void* context, uint32_t index) {
