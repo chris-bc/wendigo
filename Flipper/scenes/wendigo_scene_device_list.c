@@ -139,6 +139,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
     } else {
         name = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
         strncpy(name, dev->dev.bdname, dev->dev.bdname_len);
+        name[dev->dev.bdname_len] = '\0';
     }
     char tempStr[10];
     if (dev->view == NULL && !display_selected_only) {

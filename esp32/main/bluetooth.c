@@ -815,7 +815,8 @@ wendigo_bt_device *bt_device_from_gap_cb(esp_bt_gap_cb_param_t *param) {
         get_string_name_from_eir(dev->eir, dev_bdname, &(dev->bdname_len));
         if (dev->bdname_len > 0) {
             dev->bdname = (char *)malloc(sizeof(char) * (dev->bdname_len + 1));
-            strncpy(dev->bdname, dev_bdname, strlen(dev_bdname) + 1);
+            strncpy(dev->bdname, dev_bdname, dev->bdname_len);
+            dev->bdname[dev->bdname_len] = '\0';
         }
     }
     

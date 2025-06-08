@@ -18,6 +18,7 @@ void wendigo_scene_text_input_on_enter(void* context) {
         strncpy(app->text_input_store, app->selected_tx_string, length);
 
         // Add space - because flipper keyboard currently doesn't have a space
+        // TODO: Why is the following line commented out?
         //app->text_input_store[length] = ' ';
         app->text_input_store[length + 1] = '\0';
         app->is_custom_tx_string = true;

@@ -587,7 +587,7 @@ uint16_t parseBufferVersion(WendigoApp *app) {
     }
     wendigo_popup_text = versionStr;
     // TODO: I don't know why I implemented this as a loop. Replace loop with the following (I didn't want to make this change at the same time as other bulk changes in case of an off-by-one error)
-    // strncpy(wendigo_popup_text, buffer, endSeq);
+    // memcpy(wendigo_popup_text, buffer, endSeq);
     for (int i = 0; i < endSeq; ++i) {
         wendigo_popup_text[i] = buffer[i];
     }

@@ -53,6 +53,11 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
                                 bool btBLESupported, bool wifiSupported) {
     const char github[] = "github.com/chris-bc";
 
+    /* strncpy doesn't always add the terminating null byte, so start with a sequence of null bytes */
+    for (uint8_t i = 0; i < ATTR_COUNT_MAX; ++i) {
+        explicit_bzero(attribute_values[i], VAL_MAX_LEN);
+    }
+
     strncpy(attribute_values[ATTR_VERSION], WENDIGO_VERSION, strlen(WENDIGO_VERSION));
     strncpy(attribute_values[ATTR_GITHUB], github, strlen(github));
     strncpy(attribute_values[ATTR_UUID_DICTIONARY], (uuidDictionarySupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
@@ -85,6 +90,11 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
     snprintf(attribute_values[ATTR_BT_BLE_COUNT], VAL_MAX_LEN, "%d", leDeviceCount);
     snprintf(attribute_values[ATTR_WIFI_STA_COUNT], VAL_MAX_LEN, "%d", wifiSTACount);
     snprintf(attribute_values[ATTR_WIFI_AP_COUNT], VAL_MAX_LEN, "%d", wifiAPCount);
+
+    /* Now values have been written, loop through attributes again to ensure everything has a null byte */
+    for (uint8_t i = 0; i < ATTR_COUNT_MAX; ++i) {
+        attribute_values[i][VAL_MAX_LEN - 1] = '\0';
+    }
 }
 
 void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupported,
