@@ -28,7 +28,7 @@ static uint8_t item_indexes[START_MENU_ITEMS] = {0};
    Defined and used in wendigo_scene_device_list.c */
 extern bool display_selected_only;
 
-/* Callback invoked when the action button is pressed on a menu item */
+/* Callback invoked when a menu item is selected */
 static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
     WendigoApp* app = context;
@@ -50,64 +50,62 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
     dolphin_deed(DolphinDeedGpioUartBridge);
 
     switch(item->action) {
-    case OPEN_SETUP:
-        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventSetup);
-        return;
-    case OPEN_SCAN:
-        VariableItem* myItem;
-        /* Quit now if there's nothing to do */
-        if ((selected_option_index == SCAN_START_IDX && app->is_scanning) ||
-            (selected_option_index == SCAN_STOP_IDX && !app->is_scanning)) {
-            break;
-        }
-        bool starting = (selected_option_index == SCAN_START_IDX);
-        /* Disable/Enable settings menu when starting/stopping scanning */
-        if (selected_option_index == SCAN_START_IDX || selected_option_index == SCAN_STOP_IDX) {
-            myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
-            variable_item_set_locked(myItem, starting, LOCKED_MSG);
-            /* Set selected option to Stop when starting and Start when stopping */
-            myItem = variable_item_list_get(app->var_item_list, SCAN_IDX);
-            uint8_t newOption = (starting) ? SCAN_STOP_IDX : SCAN_START_IDX;
-            app->selected_option_index[index] = newOption;
-            variable_item_set_current_value_index(myItem, newOption);
-            variable_item_set_current_value_text(myItem, item->options_menu[newOption]);
-            wendigo_set_scanning_active(app, starting);
-        } else if (selected_option_index == SCAN_STATUS_IDX) {
-            view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventDisplayStatus);
+        case OPEN_SETUP:
+            view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventSetup);
             return;
-        }
-        break;
-    case LIST_DEVICES:
-        // Try to fit name, BDA and CoD on the var_list
-        // Allow selecting a device to obtain more information: remaining attributes, tag/untag, services, maybe some transmit options
-        display_selected_only = false;
-        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
-        return;
-    case LIST_SELECTED_DEVICES:
-        display_selected_only = true;
-        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
-        return;
-    case TRACK_DEVICES:
-        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
-        return;
-    case OPEN_HELP:
-        switch (selected_option_index) {
-            case ABOUT_IDX:
-                view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartHelp);
+        case OPEN_SCAN:
+            VariableItem* myItem;
+            /* Quit now if there's nothing to do */
+            if ((selected_option_index == SCAN_START_IDX && app->is_scanning) ||
+                (selected_option_index == SCAN_STOP_IDX && !app->is_scanning)) {
                 break;
-            case ESP_VER_IDX:
-                /* Ensure wendigo_scan.c receives transmitted data */
-                // TODO: The UART callback is only modified by wendigo_app.c and wendigo_scene_console_output.c - If ConsoleOutput is removed then this can be
-                wendigo_uart_set_binary_cb(app->uart);
-                wendigo_esp_version(app);
-                break;
-            default:
-                // TODO: Panic
-                break;
-        }
-        return;
-    default:
-        return;
+            }
+            bool starting = (selected_option_index == SCAN_START_IDX);
+            /* Disable/Enable settings menu when starting/stopping scanning */
+            if (selected_option_index == SCAN_START_IDX || selected_option_index == SCAN_STOP_IDX) {
+                myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
+                variable_item_set_locked(myItem, starting, LOCKED_MSG);
+                /* Set selected option to Stop when starting and Start when stopping */
+                myItem = variable_item_list_get(app->var_item_list, SCAN_IDX);
+                uint8_t newOption = (starting) ? SCAN_STOP_IDX : SCAN_START_IDX;
+                app->selected_option_index[index] = newOption;
+                variable_item_set_current_value_index(myItem, newOption);
+                variable_item_set_current_value_text(myItem, item->options_menu[newOption]);
+                wendigo_set_scanning_active(app, starting);
+            } else if (selected_option_index == SCAN_STATUS_IDX) {
+                view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventDisplayStatus);
+                return;
+            }
+            break;
+        case LIST_DEVICES:
+            display_selected_only = false;
+            view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
+            return;
+        case LIST_SELECTED_DEVICES:
+            display_selected_only = true;
+            view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
+            return;
+        case TRACK_DEVICES:
+            view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
+            return;
+        case OPEN_HELP:
+            switch (selected_option_index) {
+                case ABOUT_IDX:
+                    view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartHelp);
+                    break;
+                case ESP_VER_IDX:
+                    /* Ensure wendigo_scan.c receives transmitted data */
+                    // TODO: The UART callback is only modified by wendigo_app.c and wendigo_scene_console_output.c - If ConsoleOutput is removed then this can be
+                    wendigo_uart_set_binary_cb(app->uart);
+                    wendigo_esp_version(app);
+                    break;
+                default:
+                    // TODO: Panic
+                    break;
+            }
+            return;
+        default:
+            return;
     }
 }
 
@@ -129,19 +127,18 @@ static void wendigo_scene_start_var_list_change_callback(VariableItem* item) {
 /* Callback invoked when the view is launched */
 void wendigo_scene_start_on_enter(void* context) {
     WendigoApp* app = context;
-    VariableItemList* var_item_list = app->var_item_list;
     app->current_view = WendigoAppViewVarItemList;
 
     for(int i = 0; i < START_MENU_ITEMS; ++i) {
         app->selected_option_index[i] = 0;
     }
 
-    variable_item_list_set_enter_callback(
-        var_item_list, wendigo_scene_start_var_list_enter_callback, app);
+    variable_item_list_set_enter_callback(app->var_item_list,
+        wendigo_scene_start_var_list_enter_callback, app);
 
     VariableItem* item;
     menu_items_num = 0;
-    for(int i = 0; i < START_MENU_ITEMS; ++i) {
+    for(uint8_t i = 0; i < START_MENU_ITEMS; ++i) {
         bool enabled = false;
         if(app->hex_mode && (items[i].mode_mask & HEX_MODE)) {
             enabled = true;
@@ -152,7 +149,7 @@ void wendigo_scene_start_on_enter(void* context) {
 
         if(enabled) {
             item = variable_item_list_add(
-                var_item_list,
+                app->var_item_list,
                 items[i].item_string,
                 items[i].num_options_menu,
                 wendigo_scene_start_var_list_change_callback,
@@ -169,8 +166,8 @@ void wendigo_scene_start_on_enter(void* context) {
         }
     }
 
-    variable_item_list_set_selected_item(
-        var_item_list, scene_manager_get_scene_state(app->scene_manager, WendigoSceneStart));
+    variable_item_list_set_selected_item(app->var_item_list,
+        scene_manager_get_scene_state(app->scene_manager, WendigoSceneStart));
 
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
 }

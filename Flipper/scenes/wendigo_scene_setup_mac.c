@@ -27,20 +27,20 @@ void wendigo_scene_setup_mac_input_callback(void* context) {
         /* Also set interface string for popups */
         bool mac_changed = false;
         switch(app->active_interface) {
-        case IF_BT_CLASSIC:
-        case IF_BLE:
-            strcpy(result_if_text, "Bluetooth");
-            // TODO: Set bluetooth MAC
-            mac_changed = true;
-            break;
-        case IF_WIFI:
-            strcpy(result_if_text, "WiFi");
-            // TODO: Set WiFi MAC
-            mac_changed = true;
-            break;
-        case IF_COUNT:
-            // Do nothing
-            break;
+            case IF_BT_CLASSIC:
+            case IF_BLE:
+                strcpy(result_if_text, "Bluetooth");
+                // TODO: Set bluetooth MAC
+                mac_changed = true;
+                break;
+            case IF_WIFI:
+                strcpy(result_if_text, "WiFi");
+                // TODO: Set WiFi MAC
+                mac_changed = true;
+                break;
+            case IF_COUNT:
+                // Do nothing
+                break;
         }
         snprintf(
             popup_header_text,
@@ -51,16 +51,16 @@ void wendigo_scene_setup_mac_input_callback(void* context) {
         if(mac_changed) {
             /* Record the new MAC in app->interfaces */
             switch(app->active_interface) {
-            case IF_BT_CLASSIC:
-            case IF_BLE:
-                memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, view_bytes, MAC_BYTES);
-                memcpy(app->interfaces[IF_BLE].mac_bytes, view_bytes, MAC_BYTES);
-                break;
-            case IF_WIFI:
-                memcpy(app->interfaces[IF_WIFI].mac_bytes, view_bytes, MAC_BYTES);
-                break;
-            default:
-                // Do nothing
+                case IF_BT_CLASSIC:
+                case IF_BLE:
+                    memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, view_bytes, MAC_BYTES);
+                    memcpy(app->interfaces[IF_BLE].mac_bytes, view_bytes, MAC_BYTES);
+                    break;
+                case IF_WIFI:
+                    memcpy(app->interfaces[IF_WIFI].mac_bytes, view_bytes, MAC_BYTES);
+                    break;
+                default:
+                    // Do nothing
             }
             snprintf(
                 popup_text,

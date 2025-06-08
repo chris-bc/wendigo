@@ -1,6 +1,5 @@
 #include "../wendigo_app_i.h"
 
-// SETUP_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
 static const WendigoItem items[SETUP_CHANNEL_MENU_ITEMS] = {
     {"1", {"On", "Off"}, 2, NO_ACTION, OFF},
     {"2", {"On", "Off"}, 2, NO_ACTION, OFF},
@@ -26,13 +25,6 @@ static const uint8_t CH_OFF = 1;
    use a static variable here */
 static uint8_t selected_menu_index = 0;
 
-/* Y'know ... I don't think I need this function to do anything at all
-   Channel selection is handled by list_changed callback */
-static void wendigo_scene_setup_channel_var_list_enter_callback(void* context, uint32_t index) {
-    furi_assert(context);
-    UNUSED(index);
-}
-
 static void wendigo_scene_setup_channel_var_list_change_callback(VariableItem* item) {
     furi_assert(item);
 
@@ -48,7 +40,7 @@ static void wendigo_scene_setup_channel_var_list_change_callback(VariableItem* i
     variable_item_set_current_value_text(item, menu_item->options_menu[item_index]);
 
     /* Store selected channel state */
-    if(item_index == CH_ON) {
+    if (item_index == CH_ON) {
         app->channel_mask = app->channel_mask | app->CH_MASK[selected_menu_index + 1];
     } else {
         /* Eck. This got less elegant.
@@ -65,8 +57,7 @@ void wendigo_scene_setup_channel_on_enter(void* context) {
     VariableItemList* var_item_list = app->var_item_list;
     app->current_view = WendigoAppViewSetupChannel;
 
-    variable_item_list_set_enter_callback(
-        var_item_list, wendigo_scene_setup_channel_var_list_enter_callback, app);
+    variable_item_list_set_enter_callback(var_item_list, NULL, app);
 
     VariableItem* item;
     for(int i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
@@ -105,7 +96,6 @@ bool wendigo_scene_setup_channel_on_event(void* context, SceneManagerEvent event
             variable_item_list_get_selected_item_index(app->var_item_list);
         consumed = true;
     }
-
     return consumed;
 }
 

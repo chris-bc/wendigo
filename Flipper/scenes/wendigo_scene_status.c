@@ -8,8 +8,8 @@
  */
 void wendigo_scene_status_finish_layout(WendigoApp *app) {
     /* Set the selected menu item to what it was last time we were here */
-    variable_item_list_set_selected_item(
-        app->var_item_list, scene_manager_get_scene_state(app->scene_manager, WendigoSceneStatus));
+    variable_item_list_set_selected_item(app->var_item_list,
+        scene_manager_get_scene_state(app->scene_manager, WendigoSceneStatus));
 }
 
 /** Add a variable item for `name` with selected option `value` */
@@ -46,15 +46,11 @@ void wendigo_scene_status_on_enter(void* context) {
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
 }
 
+/* We have no need to respond to events */
 bool wendigo_scene_status_on_event(void* context, SceneManagerEvent event) {
-    bool consumed = false;
     UNUSED(context);
-
-    if (event.type == SceneManagerEventTypeTick) {
-        /* Nothing for us to do but acknowledge the tick */
-        consumed = true;
-    }
-    return consumed;
+    UNUSED(event);
+    return false;
 }
 
 void wendigo_scene_status_on_exit(void* context) {
