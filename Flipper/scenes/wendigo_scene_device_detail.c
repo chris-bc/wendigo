@@ -10,7 +10,6 @@ void wendigo_scene_device_detail_set_device(flipper_bt_device *d) {
 static void wendigo_scene_device_detail_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
     WendigoApp* app = context;
-    app->current_view = WendigoAppViewDeviceDetail;
 
 //    furi_assert(index < ((display_selected_only) ? bt_selected_devices_count : bt_devices_count));
 
@@ -38,6 +37,7 @@ static void wendigo_scene_device_detail_var_list_change_callback(VariableItem* i
 void wendigo_scene_device_detail_on_enter(void* context) {
     WendigoApp* app = context;
     VariableItemList* var_item_list = app->detail_var_item_list;
+    app->current_view = WendigoAppViewDeviceDetail;
 
     variable_item_list_set_enter_callback(
         var_item_list, wendigo_scene_device_detail_var_list_enter_callback, app);
@@ -62,12 +62,13 @@ void wendigo_scene_device_detail_on_enter(void* context) {
 bool wendigo_scene_device_detail_on_event(void* context, SceneManagerEvent event) {
     WendigoApp* app = context;
     bool consumed = false;
+    UNUSED(app);
 
     if(event.type == SceneManagerEventTypeCustom) {
         switch (event.event) {
             case Wendigo_EventListDevices:
-                scene_manager_set_scene_state(
-                    app->scene_manager, WendigoSceneDeviceDetail, app->device_detail_selected_menu_index);
+                // scene_manager_set_scene_state(
+                //     app->scene_manager, WendigoSceneDeviceDetail, app->device_detail_selected_menu_index);
                 //scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceDetail);
                 break;
             default:
@@ -76,8 +77,8 @@ bool wendigo_scene_device_detail_on_event(void* context, SceneManagerEvent event
         }
         consumed = true;
     } else if(event.type == SceneManagerEventTypeTick) {
-        app->device_detail_selected_menu_index =
-            variable_item_list_get_selected_item_index(app->detail_var_item_list);
+        // app->device_detail_selected_menu_index =
+        //     variable_item_list_get_selected_item_index(app->detail_var_item_list);
         consumed = true;
     }
     return consumed;

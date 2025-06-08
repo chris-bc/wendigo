@@ -233,6 +233,8 @@ Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some fu
 * [ ] Other Features
   * [ ] Focus Mode
   * [ ] Use FZ LED to indicate events
+  * [ ] variable_item_list (Flipper API) uses uint8_t to get/set selected item index, meaning the device list is limited to 255 devices.
+    * [ ] Add some fanciness to allow display of a larger number of devices.
   * [ ] Ability to flash ESP32 firmware from Flipper?
 * [ ] Flipper Zero logging
   * [ ] Develop a Flipper-based logging mechanism and support for multiple streams of data from ESP32

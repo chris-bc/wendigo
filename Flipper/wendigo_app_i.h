@@ -85,11 +85,12 @@ typedef enum {
     WendigoAppViewVarItemList,
     WendigoAppViewDeviceList,
     WendigoAppViewDeviceDetail,
-    WendigoAppViewStatus, /* This doesn't have a view but is used as a flag in app->current_view */
+    WendigoAppViewStatus,       /* This doesn't have a view but is used as a flag in app->current_view */
     WendigoAppViewConsoleOutput, // TODO: Consider whether there's a better way to flag the status view
     WendigoAppViewTextInput,
     WendigoAppViewHexInput,
     WendigoAppViewHelp,
+    WendigoAppViewSetup,        /* This doesn't have an associated view but is used as a flag in app->current_view */
     WendigoAppViewSetupMAC,
     WendigoAppViewSetupChannel,
     WendigoAppViewPopup,
@@ -100,13 +101,8 @@ struct WendigoApp {
     ViewDispatcher* view_dispatcher;
     SceneManager* scene_manager;
     WendigoAppView current_view;
+    bool is_scanning;
 
-    char text_input_store[WENDIGO_TEXT_INPUT_STORE_SIZE + 1];
-    FuriString* text_box_store;
-    size_t text_box_store_strlen;
-    TextBox* text_box;
-    TextInput* text_input;
-    Wendigo_TextInput* hex_input;
     Widget* widget;
     VariableItemList* var_item_list;
     VariableItemList *devices_var_item_list;
@@ -116,16 +112,24 @@ struct WendigoApp {
     Popup* popup; // Avoid continual allocation and freeing of Popup by initialising at launch
     WendigoRadio interfaces[IF_COUNT];
     InterfaceType active_interface;
-// TODO: Revise these attributes - Remove what I can, change ints (32 bits) to uint8 or uint16
-    int setup_selected_menu_index;
-    int device_list_selected_menu_index;
-    int device_detail_selected_menu_index;
-    int setup_selected_option_index[SETUP_MENU_ITEMS];
-    int selected_menu_index;
-    int selected_option_index[START_MENU_ITEMS];
-    const char* selected_tx_string;
 
-    bool is_scanning;
+    uint8_t setup_selected_menu_index;
+    uint16_t device_list_selected_menu_index;
+    uint8_t setup_selected_option_index[SETUP_MENU_ITEMS];
+    uint8_t selected_menu_index;
+    uint8_t selected_option_index[START_MENU_ITEMS];
+    uint16_t channel_mask;
+    uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1];
+
+    // TODO: Review these attributes - Remove what I can as remnants of the past
+    char text_input_store[WENDIGO_TEXT_INPUT_STORE_SIZE + 1];
+    FuriString* text_box_store;
+    size_t text_box_store_strlen;
+    TextBox* text_box;
+    TextInput* text_input;
+    Wendigo_TextInput* hex_input;
+
+    const char* selected_tx_string;
     bool is_command;
     bool is_custom_tx_string;
     bool hex_mode;
@@ -134,9 +138,6 @@ struct WendigoApp {
     int BAUDRATE;
     int NEW_BAUDRATE;
     int TERMINAL_MODE; //1=AT mode, 0=other mode
-
-    uint16_t channel_mask;
-    uint16_t CH_MASK[SETUP_CHANNEL_MENU_ITEMS + 1];
 };
 
 /* Public methods from wendigo_app.c */

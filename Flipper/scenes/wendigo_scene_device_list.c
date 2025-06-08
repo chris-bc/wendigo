@@ -3,6 +3,8 @@
 
 /* Public method from wendigo_scene_device_detail.c */
 extern void wendigo_scene_device_detail_set_device(flipper_bt_device *d);
+/* Internal method - I don't wan't to move all calling functions below it */
+static void wendigo_scene_device_list_var_list_change_callback(VariableItem* item);
 
 /* This scene is used to both display all devices and display selected devices */
 bool display_selected_only = false;
@@ -19,8 +21,8 @@ enum wendigo_device_list_options {
 
 /** A more flexible version of elapsedTime() that lets us avoid running furi_hal_rtc_get_timestamp().
  * This version is suitable for running at high frequency - In tick events etc.
- * Returns elapsed seconds and, if elapstedStr is an initialised char[] and strlen > 0, places
- * a text representation of the elapsed time in elapsedStr.
+ * `from` and `to` are seconds since the Unix Epoch. Returns elapsed seconds and, if elapsedStr is an
+ * initialised char[] and strlen > 0, places a text representation of the elapsed time in elapsedStr.
  * Returns zero and the empty string on failure.
  */
 double _elapsedTime(uint32_t *from, uint32_t *to, char *elapsedStr, uint8_t strlen) {
@@ -48,6 +50,7 @@ double _elapsedTime(uint32_t *from, uint32_t *to, char *elapsedStr, uint8_t strl
  * Returns the elapsed time as a uint32 and, if elapsedStr is not NULL,
  * in a string representation there. elapsedStr must be an initialised
  * char[] of at least 7 bytes.
+ * If a string representation is not needed provide NULL for elapsedStr.
  * Returns zero and an empty string on failure.
  */
 double elapsedTime(flipper_bt_device *dev, char *elapsedStr, uint8_t strlen) {
@@ -62,71 +65,33 @@ double elapsedTime(flipper_bt_device *dev, char *elapsedStr, uint8_t strlen) {
     return _elapsedTime((uint32_t *)&(dev->dev.lastSeen.tv_sec), &nowTime, elapsedStr, strlen);
 }
 
-static void wendigo_scene_device_list_var_list_enter_callback(void* context, uint32_t index) {
-    furi_assert(context);
-    WendigoApp* app = context;
-
-    furi_assert(index < ((display_selected_only) ? bt_selected_devices_count : bt_devices_count));
-
-    flipper_bt_device *item = (display_selected_only) ? bt_selected_devices[index] : bt_devices[index];
-
-    app->device_list_selected_menu_index = index;
-
-    /* If the tag/untag menu item is selected perform that action, otherwise display details for `item` */
-    if (item->view != NULL && variable_item_get_current_value_index(item->view) == WendigoOptionTagUntag) {
-        wendigo_set_bt_device_selected(item, !item->dev.tagged);
-        variable_item_set_current_value_text(item->view, (item->dev.tagged) ? "Untag" : "Tag");
-    } else {
-        /* Display details for `item` */
-        wendigo_scene_device_detail_set_device(item);
-        // TODO Fix detail scene view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
-    }
-}
-
-static void wendigo_scene_device_list_var_list_change_callback(VariableItem* item) {
-    furi_assert(item);
-
+/** Identify the device represented by the currently-selected menu item. NULL if it cannot be identified. */
+flipper_bt_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
     WendigoApp* app = variable_item_get_context(item);
-    furi_assert(app);
 
-    flipper_bt_device *menu_item = (display_selected_only) ?
-                                    bt_selected_devices[app->device_list_selected_menu_index] :
-                                    bt_devices[app->device_list_selected_menu_index];
-    uint8_t item_index = variable_item_get_current_value_index(item);
-    furi_assert(item_index < ((display_selected_only) ? bt_selected_devices_count : bt_devices_count));
-    // TODO: The following will be useful for managing tag options (on/off)
-    // variable_item_set_current_value_text(item, menu_item->options_menu[item_index]);
-    // app->setup_selected_option_index[app->setup_selected_menu_index] = item_index;
-    
-    /* Update the current option label */
-    char tempStr[16];
-    switch (item_index) {
-        case WendigoOptionRSSI:
-            snprintf(tempStr, sizeof(tempStr), "%ld dB", menu_item->dev.rssi);
-            variable_item_set_current_value_text(item, tempStr);
-            break;
-        case WendigoOptionTagUntag:
-            variable_item_set_current_value_text(item, (menu_item->dev.tagged) ? "Untag" : "Tag");
-            break;
-        case WendigoOptionScanType:
-            variable_item_set_current_value_text(item, (menu_item->dev.scanType == SCAN_HCI) ? "BT Classic" :
-                (menu_item->dev.scanType == SCAN_BLE) ? "BLE" : (menu_item->dev.scanType == SCAN_WIFI) ?
-                "WiFi" : "Unknown");
-            break;
-        case WendigoOptionCod:
-            variable_item_set_current_value_text(item, menu_item->cod_str);
-            break;
-        case WendigoOptionLastSeen:
-            elapsedTime(menu_item, tempStr, sizeof(tempStr));
-            variable_item_set_current_value_text(item, tempStr);
-            break;
-        default:
-            // TODO: Panic
-            break;
+    flipper_bt_device **cache = (display_selected_only) ? bt_selected_devices : bt_devices;
+    uint16_t cache_count = (display_selected_only) ? bt_selected_devices_count : bt_devices_count;
+    if (app->device_list_selected_menu_index < cache_count) {
+        return cache[app->device_list_selected_menu_index];
     }
-
+// TODO: Compare these methods - I'm tempted to remove the first approach (which is why it now gets its own function)
+    /* Instead of indexing into the array, see if we can find the device with a reverse lookup from `item` */
+    uint16_t idx = 0;
+    for (; idx < cache_count && cache[idx]->view != item; ++idx) { }
+    if (idx < cache_count) {
+        return cache[idx];
+    }
+    /* Device not found */
+    return NULL;
 }
 
+/** Update the current display to reflect a new Bluetooth discovery result for `dev`.
+ * This function is called by the functions wendigo_add_bt_device() and wendigo_update_bt_device()
+ * in wendigo_scan.c. When this scene and scanning are active at the same time all devices
+ * identified, whether newly-identified devices or subsequent packets describing a known device,
+ * are passed as an argument to this function to allow the UI to be dynamically updated and to display
+ * either information about a new device or updated information about an existing device.
+ */
 void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
     char *name;
     if (dev->dev.bdname_len == 0 || dev->dev.bdname == NULL) {
@@ -169,6 +134,69 @@ void wendigo_scene_device_list_update(WendigoApp *app, flipper_bt_device *dev) {
     free(name);    
 }
 
+static void wendigo_scene_device_list_var_list_enter_callback(void* context, uint32_t index) {
+    furi_assert(context);
+    WendigoApp* app = context;
+
+    furi_assert(index < ((display_selected_only) ? bt_selected_devices_count : bt_devices_count));
+
+    flipper_bt_device *item = (display_selected_only) ? bt_selected_devices[index] : bt_devices[index];
+    if (item == NULL) {
+        return;
+    }
+
+    app->device_list_selected_menu_index = index;
+
+    /* If the tag/untag menu item is selected perform that action, otherwise display details for `item` */
+    if (item->view != NULL && variable_item_get_current_value_index(item->view) == WendigoOptionTagUntag) {
+        wendigo_set_bt_device_selected(item, !item->dev.tagged);
+        variable_item_set_current_value_text(item->view, (item->dev.tagged) ? "Untag" : "Tag");
+    } else {
+        /* Display details for `item` */
+        wendigo_scene_device_detail_set_device(item);
+        // TODO Fix detail scene, then view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
+    }
+}
+
+static void wendigo_scene_device_list_var_list_change_callback(VariableItem* item) {
+    furi_assert(item);
+
+    /* app->device_list_selected_menu_index should reliably point to the selected menu item.
+       Use that to obtain the flipper_bt_device* */
+    flipper_bt_device *menu_item = wendigo_scene_device_list_selected_device(item);
+
+    if (menu_item != NULL) {
+        uint8_t option_index = variable_item_get_current_value_index(item);
+        furi_assert(option_index < WendigoOptionsCount);
+        /* Update the current option label */
+        char tempStr[16];
+        switch (option_index) {
+            case WendigoOptionRSSI:
+                snprintf(tempStr, sizeof(tempStr), "%ld dB", menu_item->dev.rssi);
+                variable_item_set_current_value_text(item, tempStr);
+                break;
+            case WendigoOptionTagUntag:
+                variable_item_set_current_value_text(item, (menu_item->dev.tagged) ? "Untag" : "Tag");
+                break;
+            case WendigoOptionScanType:
+                variable_item_set_current_value_text(item, (menu_item->dev.scanType == SCAN_HCI) ? "BT Classic" :
+                    (menu_item->dev.scanType == SCAN_BLE) ? "BLE" : (menu_item->dev.scanType == SCAN_WIFI) ?
+                    "WiFi" : "Unknown");
+                break;
+            case WendigoOptionCod:
+                variable_item_set_current_value_text(item, menu_item->cod_str);
+                break;
+            case WendigoOptionLastSeen:
+                elapsedTime(menu_item, tempStr, sizeof(tempStr));
+                variable_item_set_current_value_text(item, tempStr);
+                break;
+            default:
+                // TODO: Panic
+                break;
+        }
+    }
+}
+
 /* Initialise the device list
    TODO: When "display options" are implemented include consideration of selected device types and sorting options
 */
@@ -191,7 +219,7 @@ void wendigo_scene_device_list_on_enter(void* context) {
         device_count = bt_devices_count;
         devices = bt_devices;
     }
-    for(int i = 0; i < device_count; ++i) {
+    for(uint16_t i = 0; i < device_count; ++i) {
         /* Label with the name if we have a name, otherwise use the BDA */
         if (devices[i]->dev.bdname_len > 0 && devices[i]->dev.bdname != NULL) {
             item_str = devices[i]->dev.bdname;
@@ -220,9 +248,14 @@ void wendigo_scene_device_list_on_enter(void* context) {
     }
     // TODO: Display WiFi devices
 
-    variable_item_list_set_selected_item(
-        var_item_list, scene_manager_get_scene_state(app->scene_manager, WendigoSceneDeviceList));
-
+    /* Restore the selected device index if it's there to restore (e.g. if we're returning from
+       the device detail scene). But first test that it's in bounds, unless we've moved from all
+       devices to selected only. */
+    uint8_t selected_item = scene_manager_get_scene_state(app->scene_manager, WendigoSceneDeviceList);
+    if (selected_item >= device_count) {
+        selected_item = 0;
+    }
+    variable_item_list_set_selected_item(var_item_list, selected_item);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewDeviceList);
 }
 
@@ -252,7 +285,7 @@ bool wendigo_scene_device_list_on_event(void* context, SceneManagerEvent event) 
         uint16_t devices_count = (display_selected_only) ? bt_selected_devices_count : bt_devices_count;
         char elapsedStr[7];
         uint32_t now = furi_hal_rtc_get_timestamp();
-        for (int i = 0; i < devices_count; ++i) {
+        for (uint16_t i = 0; i < devices_count; ++i) {
             if (devices != NULL && devices[i] != NULL && devices[i]->view != NULL &&
                     variable_item_get_current_value_index(devices[i]->view) == WendigoOptionLastSeen) {
                 /* Update option text if lastSeen is selected for this device */
@@ -267,7 +300,7 @@ bool wendigo_scene_device_list_on_event(void* context, SceneManagerEvent event) 
 void wendigo_scene_device_list_on_exit(void* context) {
     WendigoApp* app = context;
     variable_item_list_reset(app->devices_var_item_list);
-    for (int i = 0; i < bt_devices_count; ++i) {
+    for (uint16_t i = 0; i < bt_devices_count; ++i) {
         bt_devices[i]->view = NULL;
     }
 }
