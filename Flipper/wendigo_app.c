@@ -41,7 +41,7 @@ void wendigo_popup_callback(void *context) {
 void wendigo_display_popup(WendigoApp *app, char *header, char*body) {
     popup_set_header(app->popup, header, 64, 3, AlignCenter, AlignTop);
     popup_set_text(app->popup, body, 64, 22, AlignCenter, AlignTop);
-    popup_set_icon(app->popup, -1, -1, NULL);
+    popup_set_icon(app->popup, -1, -1, NULL); // TODO: Find a fun icon to use
     popup_set_timeout(app->popup, 2000);
     popup_enable_timeout(app->popup);
     popup_set_callback(app->popup, wendigo_popup_callback);
@@ -98,11 +98,11 @@ WendigoApp* wendigo_app_alloc() {
         app->setup_selected_option_index[i] = 0;
     }
 
-    /* Initialise the channel bitmasks */
+    /* Initialise the channel bitmasks - pow() is slow so hardcode 0 & 1 and use multiplication for the rest */
     app->CH_MASK[0] = 0;
-    for(int i = 1; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
-        // TODO YAGNI: pow() is slow. Seed CH_MASK[1] and calculate the rest by multiplying the previous element by 2
-        app->CH_MASK[i] = pow(2, i - 1);
+    app->CH_MASK[1] = 1;
+    for(int i = 2; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
+        app->CH_MASK[i] = app->CH_MASK[i - 1] * 2;
     }
 
     /* Default to enabling all channels */
@@ -231,10 +231,10 @@ void wendigo_uart_set_console_cb(Wendigo_Uart *uart) {
 /* Convert an array of bytesCount uint8_ts into a colon-separated string of bytes.
    strBytes must be initialised with sufficient space to hold the output string.
    For a MAC this is 18 bytes. In general it is 3 * byteCount */
-void bytes_to_string(uint8_t* bytes, uint16_t bytesCount, char* strBytes) {
-    uint8_t* p_in = bytes;
-    const char* hex = "0123456789ABCDEF";
-    char* p_out = strBytes;
+void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes) {
+    uint8_t *p_in = bytes;
+    const char *hex = "0123456789ABCDEF";
+    char *p_out = strBytes;
     for(; p_in < bytes + bytesCount; p_out += 3, ++p_in) {
         p_out[0] = hex[(*p_in >> 4) & 0xF];
         p_out[1] = hex[*p_in & 0xF];
