@@ -6,13 +6,12 @@ uint16_t bufferCap = 0; // Buffer capacity - I don't want to allocate 65kb, but 
 char *wendigo_popup_text = NULL; // I suspect the popup text is going out of scope when declared at function scope
 
 /* Device caches */
-flipper_bt_device **bt_devices = NULL;
-flipper_bt_device **bt_selected_devices = NULL;
-uint16_t bt_devices_count = 0;
-uint16_t bt_selected_devices_count = 0;
-uint16_t bt_devices_capacity = 0;
-uint16_t bt_selected_devices_capacity = 0;
-// TODO: WiFi
+wendigo_device **devices = NULL;
+wendigo_device **selected_devices = NULL;
+uint16_t devices_count = 0;
+uint16_t selected_devices_count = 0;
+uint16_t devices_capacity = 0;
+uint16_t selected_devices_capacity = 0;
 
 /* Packet identifiers */
 uint8_t PREAMBLE_LEN = 8;
@@ -76,7 +75,6 @@ void consumeBufferBytes(uint16_t bytes) {
     memset(buffer + bufferLen - bytes, '\0', bytes);
     /* Buffer is now bufferLen - bytes */
     bufferLen -= bytes;
-
 }
 
 /* Returns the index of the first occurrence of `\n` in `theString`, searching the first `size` characters.
@@ -115,36 +113,36 @@ void wendigo_esp_version(WendigoApp *app) {
 
 /* Manage the tagged/selected status of the specified flipper_bt_device
    Maintains bt_selected_devices[] as needed */
-bool wendigo_set_bt_device_selected(flipper_bt_device *device, bool selected) {
+bool wendigo_set_device_selected(wendigo_device *device, bool selected) {
     /* NULL device check */
     if (device == NULL) { return false; }
-    if (selected && !device->dev.tagged) {
-        /* Add device to bt_selected_devices[] */
-        if (bt_selected_devices_capacity == bt_selected_devices_count) {
-            /* Extend bt_selected_devices[] */
-            flipper_bt_device **new_devices = realloc(bt_selected_devices, sizeof(flipper_bt_device *) * (bt_selected_devices_capacity + 1));
+    if (selected && !device->tagged) {
+        /* Add device to selected_devices[] */
+        if (selected_devices_capacity == selected_devices_count) {
+            /* Extend selected_devices[] */
+            wendigo_device **new_devices = realloc(selected_devices, sizeof(wendigo_device *) * (selected_devices_capacity + 1));
             if (new_devices == NULL) {
                 // TODO: Panic - Display an error popup or something
                 return false;
             }
-            bt_selected_devices = new_devices;
-            ++bt_selected_devices_capacity;
+            selected_devices = new_devices;
+            ++selected_devices_capacity;
         }
-        bt_selected_devices[bt_selected_devices_count++] = device;
+        selected_devices[selected_devices_count++] = device;
         // TODO: Sort
-    } else if (device->dev.tagged && !selected) {
-        /* Remove device from bt_selected_devices[] - bt_custom_device_index() will safely handle any NULLs */
+    } else if (device->tagged && !selected) {
+        /* Remove device from selected_devices[] - custom_device_index() will safely handle any NULLs */
         /* Not using 16 bits because nobody's going to select 255 devices */
-        uint8_t index = (uint8_t)bt_custom_device_index(device, bt_selected_devices, bt_selected_devices_count);
-        if (index < bt_selected_devices_count) {
+        uint8_t index = (uint8_t)custom_device_index(device, selected_devices, selected_devices_count);
+        if (index < selected_devices_count) {
             /* Shuffle forward all subsequent devices, replacing device at `index` */
-            for(++index; index < bt_selected_devices_count; ++index) {
-                bt_selected_devices[index - 1] = bt_selected_devices[index];
+            for(++index; index < selected_devices_count; ++index) {
+                selected_devices[index - 1] = selected_devices[index];
             }
-            bt_selected_devices[bt_selected_devices_count--] = NULL;
+            selected_devices[selected_devices_count--] = NULL;
         }
     }
-    device->dev.tagged = selected;
+    device->tagged = selected;
     return true;
 }
 
@@ -172,143 +170,150 @@ void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
     }
 }
 
-/* Returns the index into `array` of the device with BDA matching dev->dev.bda.
+/* Returns the index into `array` of the device with MAC/BDA matching dev->mac.
    Returns `array_count` if the device was not found. */
-uint16_t bt_custom_device_index(flipper_bt_device *dev, flipper_bt_device **array, uint16_t array_count) {
+uint16_t custom_device_index(wendigo_device *dev, wendigo_device **array, uint16_t array_count) {
     uint16_t result;
     if (dev == NULL || array == NULL) { return array_count; }
-    for (result = 0; result < array_count && memcmp(dev->dev.bda, array[result]->dev.bda, MAC_BYTES); ++result) { }
+    for (result = 0; result < array_count && memcmp(dev->mac, array[result]->mac, MAC_BYTES); ++result) { }
     return result;
 }
 
-/* Returns the index into bt_devices[] of the device with BDA matching dev->dev.bda.
-   Returns bt_devices_count if the device was not found. A NULL value for `dev` is handled
-   correctly by bt_custom_device_index() */
-uint16_t bt_device_index(flipper_bt_device *dev) {
-    return bt_custom_device_index(dev, bt_devices, bt_devices_count);
+/* Returns the index into devices[] of the device with MAC/BDA matching dev->mac.
+   Returns devices_count if the device was not found. A NULL value for `dev` is handled
+   correctly by custom_device_index() */
+uint16_t device_index(wendigo_device *dev) {
+    return custom_device_index(dev, devices, devices_count);
 }
 
-/* Determines whether a device with the BDA dev->bda exists in bt_devices[].
+/* Determines whether a device with the MAC/BDA dev->mac exists in devices[].
    A NULL value for `dev` is handled correctly at the top of the call stack,
-   by bt_custom_device_index(). */
-bool bt_device_exists(flipper_bt_device *dev) {
-    return bt_device_index(dev) < bt_devices_count;
+   by custom_device_index(). */
+bool device_exists(wendigo_device *dev) {
+    return device_index(dev) < devices_count;
 }
 
-/** Add the specified device to bt_devices[], extending the length of bt_devices[] if necessary.
- * If the specified device has a BDA which is already present in bt_devices[] a new entry will
- * not be made, instead the element with the same BDA will be updated based on the specified device.
- * Returns true if the device was successfully added to (or updated in) bt_devices[].
- * NOTE: The calling function may free the specified flipper_bt_device or any of its attributes
+/** Add the specified device to devices[], extending the length of devices[] if necessary.
+ * If the specified device has a MAC/BDA which is already present in devices[] a new entry will
+ * not be made, instead the element with the same MAC/BDA will be updated based on the specified device.
+ * Returns true if the device was successfully added to (or updated in) devices[].
+ * NOTE: The calling function may free the specified wendigo_device or any of its attributes
  * when this function returns. To minimise the likelihood of memory leaks this function will allocate
  * its own memory to hold the specified device and its attributes.
  */
-bool wendigo_add_bt_device(WendigoApp *app, flipper_bt_device *dev) {
-    uint16_t idx = bt_device_index(dev);
-    if (idx < bt_devices_count) {
+bool wendigo_add_bt_device(WendigoApp *app, wendigo_device *dev) {
+    uint16_t idx = device_index(dev);
+    if (idx < devices_count) {
         /* A device with the provided BDA already exists - Update that instead */
         return wendigo_update_bt_device(app, dev);
     }
-    /* Adding to bt_devices - Increase capacity by an additional INC_BT_DEVICE_CAPACITY_BY if necessary */
-    if (bt_devices == NULL || bt_devices_capacity == bt_devices_count) {
-        flipper_bt_device **new_devices = realloc(bt_devices, sizeof(flipper_bt_device *) * (bt_devices_capacity + INC_BT_DEVICE_CAPACITY_BY));
+    /* Adding to devices - Increase capacity by an additional INC_BT_DEVICE_CAPACITY_BY if necessary */
+    if (devices == NULL || devices_capacity == devices_count) {
+        wendigo_device **new_devices = realloc(devices, sizeof(wendigo_device *) * (devices_capacity + INC_BT_DEVICE_CAPACITY_BY));
         if (new_devices == NULL) {
             /* Can't store the device */
             return false;
         }
-        bt_devices = new_devices;
-        bt_devices_capacity += INC_BT_DEVICE_CAPACITY_BY;
+        devices = new_devices;
+        devices_capacity += INC_BT_DEVICE_CAPACITY_BY;
     }
-    flipper_bt_device *new_device = malloc(sizeof(flipper_bt_device));
+    wendigo_device *new_device = malloc(sizeof(wendigo_device));
     if (new_device == NULL) {
         /* That's unfortunate */
         return false;
     }
-    new_device->dev.rssi = dev->dev.rssi;
-    new_device->dev.cod = dev->dev.cod;
-    new_device->dev.scanType = dev->dev.scanType;
+    new_device->rssi = dev->rssi;
+    new_device->radio.bluetooth.cod = dev->radio.bluetooth.cod;
+    new_device->scanType = dev->scanType;
     /* Don't copy tagged status - A new device is not tagged. */
-    new_device->dev.tagged = false;
+    new_device->tagged = false;
     /* ESP32 doesn't know the real time/date so overwrite the lastSeen value.
        time_t is just another way of saying long long int, so casting is OK */
-    new_device->dev.lastSeen.tv_sec = (time_t)furi_hal_rtc_get_timestamp();
-    /* Copy BDA */
-    memcpy(new_device->dev.bda, dev->dev.bda, MAC_BYTES);
+    new_device->lastSeen.tv_sec = (time_t)furi_hal_rtc_get_timestamp();
+    /* Copy MAC/BDA */
+    memcpy(new_device->mac, dev->mac, MAC_BYTES);
     new_device->view = dev->view; /* Copy the view pointer if we have one, NULL if we don't */
-    if (dev->cod_str != NULL) {
-        new_device->cod_str = malloc(sizeof(char) * (strlen(dev->cod_str) + 1));
-        if (new_device->cod_str != NULL) {
+    if (dev->radio.bluetooth.cod_str != NULL) {
+        new_device->radio.bluetooth.cod_str = malloc(sizeof(char) * (strlen(dev->radio.bluetooth.cod_str) + 1));
+        if (new_device->radio.bluetooth.cod_str != NULL) {
             /* No need to handle allocation failure - we simply don't copy cod_str */
-            strncpy(new_device->cod_str, dev->cod_str, strlen(dev->cod_str));
-            new_device->cod_str[strlen(dev->cod_str)] = '\0';
+            strncpy(new_device->radio.bluetooth.cod_str, dev->radio.bluetooth.cod_str, strlen(dev->radio.bluetooth.cod_str));
+            new_device->radio.bluetooth.cod_str[strlen(dev->radio.bluetooth.cod_str)] = '\0';
         }
     } else {
-        new_device->cod_str = NULL;
+        new_device->radio.bluetooth.cod_str = NULL;
     }
     /* Device name */
-    new_device->dev.bdname_len = dev->dev.bdname_len;
-    if (dev->dev.bdname_len > 0 && dev->dev.bdname != NULL) {
-        new_device->dev.bdname = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
-        if (new_device->dev.bdname == NULL) {
+    new_device->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
+    if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
+        new_device->radio.bluetooth.bdname = malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
+        if (new_device->radio.bluetooth.bdname == NULL) {
             /* Skip the device's bdname and hope we have memory for it next time it's seen */
-            new_device->dev.bdname_len = 0;
+            new_device->radio.bluetooth.bdname_len = 0;
         } else {
-            strncpy(new_device->dev.bdname, dev->dev.bdname, dev->dev.bdname_len);
-            new_device->dev.bdname[dev->dev.bdname_len] = '\0';
+            strncpy(new_device->radio.bluetooth.bdname, dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
+            new_device->radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
         }
     } else {
-        new_device->dev.bdname = NULL;
-        new_device->dev.bdname_len = 0;
+        new_device->radio.bluetooth.bdname = NULL;
+        new_device->radio.bluetooth.bdname_len = 0;
     }
     /* EIR */
-    new_device->dev.eir_len = dev->dev.eir_len;
-    if (dev->dev.eir_len > 0 && dev->dev.eir != NULL) {
-        new_device->dev.eir = malloc(sizeof(uint8_t) * dev->dev.eir_len);
-        if (new_device->dev.eir == NULL) {
+    new_device->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
+    if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
+        new_device->radio.bluetooth.eir = malloc(sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
+        if (new_device->radio.bluetooth.eir == NULL) {
             /* Skip EIR from this packet */
-            new_device->dev.eir_len = 0;
+            new_device->radio.bluetooth.eir_len = 0;
         } else {
-            memcpy(new_device->dev.eir, dev->dev.eir, dev->dev.eir_len);
+            memcpy(new_device->radio.bluetooth.eir, dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
         }
     } else {
-        new_device->dev.eir = NULL;
-        new_device->dev.eir_len = 0;
+        new_device->radio.bluetooth.eir = NULL;
+        new_device->radio.bluetooth.eir_len = 0;
     }
     /* BT services */
-    new_device->dev.bt_services.num_services = dev->dev.bt_services.num_services;
-    if (dev->dev.bt_services.num_services > 0 && dev->dev.bt_services.service_uuids != NULL) {
-        new_device->dev.bt_services.service_uuids = malloc(sizeof(void *) * dev->dev.bt_services.num_services);
-        if (new_device->dev.bt_services.service_uuids == NULL) {
-            new_device->dev.bt_services.num_services = 0;
+    new_device->radio.bluetooth.bt_services.num_services = dev->radio.bluetooth.bt_services.num_services;
+    if (dev->radio.bluetooth.bt_services.num_services > 0 &&
+            dev->radio.bluetooth.bt_services.service_uuids != NULL) {
+        new_device->radio.bluetooth.bt_services.service_uuids =
+            malloc(sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
+        if (new_device->radio.bluetooth.bt_services.service_uuids == NULL) {
+            new_device->radio.bluetooth.bt_services.num_services = 0;
         } else {
-            memcpy(new_device->dev.bt_services.service_uuids, dev->dev.bt_services.service_uuids,
-                sizeof(void *) * dev->dev.bt_services.num_services);
+            memcpy(new_device->radio.bluetooth.bt_services.service_uuids,
+                dev->radio.bluetooth.bt_services.service_uuids,
+                sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
         }
     } else {
-        new_device->dev.bt_services.service_uuids = NULL;
-        new_device->dev.bt_services.num_services = 0;
+        new_device->radio.bluetooth.bt_services.service_uuids = NULL;
+        new_device->radio.bluetooth.bt_services.num_services = 0;
     }
     /* Known services */
-    new_device->dev.bt_services.known_services_len = dev->dev.bt_services.known_services_len;
-    if (dev->dev.bt_services.known_services_len > 0 && dev->dev.bt_services.known_services != NULL) {
+    new_device->radio.bluetooth.bt_services.known_services_len =
+        dev->radio.bluetooth.bt_services.known_services_len;
+    if (dev->radio.bluetooth.bt_services.known_services_len > 0 &&
+            dev->radio.bluetooth.bt_services.known_services != NULL) {
         /* known_services is an array of pointers - this is where we stop controlling memory allocation 
            so that bt_uuid's can be allocated a single time and reused.
            This function will copy the *pointers* in known_services[], but not the bt_uuid structs that
            they point to. */
-        new_device->dev.bt_services.known_services = malloc(sizeof(bt_uuid *) * dev->dev.bt_services.known_services_len);
-        if (new_device->dev.bt_services.known_services == NULL) {
-            new_device->dev.bt_services.known_services_len = 0;
+        new_device->radio.bluetooth.bt_services.known_services =
+            malloc(sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
+        if (new_device->radio.bluetooth.bt_services.known_services == NULL) {
+            new_device->radio.bluetooth.bt_services.known_services_len = 0;
         } else {
-            memcpy(new_device->dev.bt_services.known_services, dev->dev.bt_services.known_services,
-                sizeof(bt_uuid *) * dev->dev.bt_services.known_services_len);
+            memcpy(new_device->radio.bluetooth.bt_services.known_services,
+                dev->radio.bluetooth.bt_services.known_services,
+                sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
             // TODO: Despite the caveat above, it might be nice to validate that the bt_uuid's we're pointing to actually exist.
         }
     } else {
-        new_device->dev.bt_services.known_services = NULL;
-        new_device->dev.bt_services.known_services_len = 0;
+        new_device->radio.bluetooth.bt_services.known_services = NULL;
+        new_device->radio.bluetooth.bt_services.known_services_len = 0;
     }
 
-    bt_devices[bt_devices_count++] = new_device;
+    devices[devices_count++] = new_device;
 
     /* If the device list scene is currently displayed, add the device to the UI */
     if (app->current_view == WendigoAppViewDeviceList) {
@@ -318,73 +323,83 @@ bool wendigo_add_bt_device(WendigoApp *app, flipper_bt_device *dev) {
     return true;
 }
 
-/** Locate the device in bt_devices[] with the same BDA as `dev` and update the object based
- * on the contents of `dev`. If a device with the specified BDA does not exist a new device will
- * be added to bt_devices[].
+/** Locate the device in devices[] with the same MAC/BDA as `dev` and update the object based
+ * on the contents of `dev`. If a device with the specified MAC/BDA does not exist a new device will
+ * be added to devices[].
  * Returns true if the specified device has been updated (or a new device added) successfully.
  * NOTE: The calling function may free `dev` or any of its members immediately upon this function
  * returning. To minimise the likelihood of memory leaks, the device cache management functions
  * manage the allocation and free'ing of all components of the device cache *except for* bt_uuid
  * objects that form part of service descriptors.
  */
-bool wendigo_update_bt_device(WendigoApp *app, flipper_bt_device *dev) {
-    uint16_t idx = bt_device_index(dev);
-    if (idx == bt_devices_count) {
+bool wendigo_update_bt_device(WendigoApp *app, wendigo_device *dev) {
+    uint16_t idx = device_index(dev);
+    if (idx == devices_count) {
         /* Device doesn't exist in bt_devices[] - Add it instead */
         return wendigo_add_bt_device(app, dev);
     }
 
-    flipper_bt_device *target = bt_devices[idx];
+    wendigo_device *target = devices[idx];
     /* Copy standard attributes */
-    target->dev.rssi = dev->dev.rssi;
-    target->dev.cod = dev->dev.cod;
-    target->dev.scanType = dev->dev.scanType;
+    target->rssi = dev->rssi;
+    target->radio.bluetooth.cod = dev->radio.bluetooth.cod;
+    target->scanType = dev->scanType;
     /* Replace lastSeen - cast to long long int (aka time_t) */
-    target->dev.lastSeen.tv_sec = (time_t)furi_hal_rtc_get_timestamp();
+    target->lastSeen.tv_sec = (time_t)furi_hal_rtc_get_timestamp();
     /* cod_str present in update? */
-    if (dev->cod_str != NULL && strlen(dev->cod_str) > 0) {
-        char *new_cod = realloc(target->cod_str, sizeof(char) * (strlen(dev->cod_str) + 1));
+    if (dev->radio.bluetooth.cod_str != NULL && strlen(dev->radio.bluetooth.cod_str) > 0) {
+        char *new_cod = realloc(target->radio.bluetooth.cod_str,
+                                sizeof(char) * (strlen(dev->radio.bluetooth.cod_str) + 1));
         if (new_cod != NULL) {
-            strncpy(new_cod, dev->cod_str, strlen(dev->cod_str));
-            new_cod[strlen(dev->cod_str)] = '\0';
-            target->cod_str = new_cod;
+            strncpy(new_cod, dev->radio.bluetooth.cod_str, strlen(dev->radio.bluetooth.cod_str));
+            new_cod[strlen(dev->radio.bluetooth.cod_str)] = '\0';
+            target->radio.bluetooth.cod_str = new_cod;
         }
     }
     /* Is bdname in update? */
-    if (dev->dev.bdname_len > 0 && dev->dev.bdname != NULL) {
-        char *new_name = realloc(target->dev.bdname, sizeof(char) * (dev->dev.bdname_len + 1));
+    if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
+        char *new_name = realloc(target->radio.bluetooth.bdname,
+                                 sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
         if (new_name != NULL) { /* If allocation fails target's existing bdname and bdname_len are unmodified */
-            strncpy(new_name, dev->dev.bdname, dev->dev.bdname_len);
-            new_name[dev->dev.bdname_len] = '\0';
-            target->dev.bdname = new_name;
-            target->dev.bdname_len = dev->dev.bdname_len;
+            strncpy(new_name, dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
+            new_name[dev->radio.bluetooth.bdname_len] = '\0';
+            target->radio.bluetooth.bdname = new_name;
+            target->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
         }
     }
     /* How about EIR? */
-    if (dev->dev.eir_len > 0 && dev->dev.eir != NULL) {
-        uint8_t *new_eir = realloc(target->dev.eir, sizeof(uint8_t) * dev->dev.eir_len);
+    if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
+        uint8_t *new_eir = realloc(target->radio.bluetooth.eir,
+                                   sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
         if (new_eir != NULL) {
-            memcpy(new_eir, dev->dev.eir, sizeof(uint8_t) * dev->dev.eir_len);
-            target->dev.eir = new_eir;
-            target->dev.eir_len = dev->dev.eir_len;
+            memcpy(new_eir, dev->radio.bluetooth.eir, sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
+            target->radio.bluetooth.eir = new_eir;
+            target->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
         }
     }
     /* Number of services */
-    if (dev->dev.bt_services.num_services > 0 && dev->dev.bt_services.service_uuids != NULL) {
-        void *new_svcs = realloc(target->dev.bt_services.service_uuids, sizeof(void *) * dev->dev.bt_services.num_services);
+    if (dev->radio.bluetooth.bt_services.num_services > 0 &&
+            dev->radio.bluetooth.bt_services.service_uuids != NULL) {
+        void *new_svcs = realloc(target->radio.bluetooth.bt_services.service_uuids,
+                                 sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
         if (new_svcs != NULL) {
-            memcpy(new_svcs, dev->dev.bt_services.service_uuids, sizeof(void *) * dev->dev.bt_services.num_services);
-            target->dev.bt_services.service_uuids = new_svcs;
-            target->dev.bt_services.num_services = dev->dev.bt_services.num_services;
+            memcpy(new_svcs, dev->radio.bluetooth.bt_services.service_uuids,
+                   sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
+            target->radio.bluetooth.bt_services.service_uuids = new_svcs;
+            target->radio.bluetooth.bt_services.num_services = dev->radio.bluetooth.bt_services.num_services;
         }
     }
     /* Known services */
-    if (dev->dev.bt_services.known_services_len > 0 && dev->dev.bt_services.known_services != NULL) {
-        bt_uuid **new_known_svcs = realloc(target->dev.bt_services.known_services, sizeof(bt_uuid *) * dev->dev.bt_services.known_services_len);
+    if (dev->radio.bluetooth.bt_services.known_services_len > 0 &&
+            dev->radio.bluetooth.bt_services.known_services != NULL) {
+        bt_uuid **new_known_svcs = realloc(target->radio.bluetooth.bt_services.known_services,
+                        sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
         if (new_known_svcs != NULL) {
-            memcpy(new_known_svcs, dev->dev.bt_services.known_services, sizeof(bt_uuid *) * dev->dev.bt_services.known_services_len);
-            target->dev.bt_services.known_services = new_known_svcs;
-            target->dev.bt_services.known_services_len = dev->dev.bt_services.known_services_len;
+            memcpy(new_known_svcs, dev->radio.bluetooth.bt_services.known_services,
+                   sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
+            target->radio.bluetooth.bt_services.known_services = new_known_svcs;
+            target->radio.bluetooth.bt_services.known_services_len =
+                dev->radio.bluetooth.bt_services.known_services_len;
         }
     }
 
@@ -406,68 +421,83 @@ bool wendigo_update_bt_device(WendigoApp *app, flipper_bt_device *dev) {
  * allocated memory ARE set to NULL (for pointers) and 0 (for counts) to reduce the likelihood that any orphan
  * pointers will attempt to use deallocated memory.
  */
-void wendigo_free_bt_device(flipper_bt_device *dev) {
+void wendigo_free_bt_device(wendigo_device *dev) {
     if (dev == NULL) {
         return;
     }
-    if (dev->cod_str != NULL) {
-        free(dev->cod_str);
-        dev->cod_str = NULL;
-    }
-    if (dev->dev.bdname != NULL) {
-        free(dev->dev.bdname);
-        dev->dev.bdname = NULL;
-        dev->dev.bdname_len = 0;
-    }
-    if (dev->dev.eir != NULL) {
-        free(dev->dev.eir);
-        dev->dev.eir = NULL;
-    }
-    if (dev->dev.bt_services.service_uuids != NULL) {
-        free(dev->dev.bt_services.service_uuids);
-        dev->dev.bt_services.service_uuids = NULL;
-        dev->dev.bt_services.num_services = 0;
-    }
-    if (dev->dev.bt_services.known_services != NULL) {
-        // TODO: After implementing BT services, ensure that the bt_uuid's are freed somewhere
-        free(dev->dev.bt_services.known_services);
-        dev->dev.bt_services.known_services = NULL;
-        dev->dev.bt_services.known_services_len = 0;
+    switch (dev->scanType) {
+        case SCAN_HCI:
+        case SCAN_BLE:
+            if (dev->radio.bluetooth.cod_str != NULL) {
+                free(dev->radio.bluetooth.cod_str);
+                dev->radio.bluetooth.cod_str = NULL;
+            }
+            if (dev->radio.bluetooth.bdname != NULL) {
+                free(dev->radio.bluetooth.bdname);
+                dev->radio.bluetooth.bdname = NULL;
+                dev->radio.bluetooth.bdname_len = 0;
+            }
+            if (dev->radio.bluetooth.eir != NULL) {
+                free(dev->radio.bluetooth.eir);
+                dev->radio.bluetooth.eir = NULL;
+            }
+            if (dev->radio.bluetooth.bt_services.service_uuids != NULL) {
+                free(dev->radio.bluetooth.bt_services.service_uuids);
+                dev->radio.bluetooth.bt_services.service_uuids = NULL;
+                dev->radio.bluetooth.bt_services.num_services = 0;
+            }
+            if (dev->radio.bluetooth.bt_services.known_services != NULL) {
+                // TODO: After implementing BT services, ensure that the bt_uuid's are freed somewhere
+                free(dev->radio.bluetooth.bt_services.known_services);
+                dev->radio.bluetooth.bt_services.known_services = NULL;
+                dev->radio.bluetooth.bt_services.known_services_len = 0;
+            }
+            break;
+        case SCAN_WIFI_AP:
+            if (dev->radio.ap.stations != NULL) {
+                free(dev->radio.ap.stations);
+                dev->radio.ap.stations = NULL;
+                dev->radio.ap.stations_count = 0;
+            }
+            break;
+        case SCAN_WIFI_STA:
+            dev->radio.sta.ap = NULL;
+            break;
     }
     dev->view = NULL;
     free(dev);
 }
 
-/** Deallocates all memory allocated to the Bluetooth device cache.
- * This function deallocates all elements of the BT device cache, bt_devices[] and bt_selected_devices[].
+/** Deallocates all memory allocated to the device cache.
+ * This function deallocates all elements of the device cache, devices[] and selected_devices[].
  * These arrays are left in a coherent state, with the arrays set to NULL and their count & capacity
  * variables set to zero.
  */
-void wendigo_free_bt_devices() {
-    /* Start by freeing bt_selected_devices[] */
-    if (bt_selected_devices_capacity > 0 && bt_selected_devices != NULL) {
-        free(bt_selected_devices); /* Elements will be freed when addressing bt_devices[] */
-        bt_selected_devices = NULL;
-        bt_selected_devices_count = 0;
-        bt_selected_devices_capacity = 0;
+void wendigo_free_devices() {
+    /* Start by freeing selected_devices[] */
+    if (selected_devices_capacity > 0 && selected_devices != NULL) {
+        free(selected_devices); /* Elements will be freed when addressing bt_devices[] */
+        selected_devices = NULL;
+        selected_devices_count = 0;
+        selected_devices_capacity = 0;
     }
-    /* For bt_devices[] we also want to free device attributes and the devices themselves */
-    if (bt_devices_capacity > 0 && bt_devices != NULL) {
-        for (uint16_t i = 0; i < bt_devices_count; ++i) {
-            wendigo_free_bt_device(bt_devices[i]);
-            bt_devices[i] = NULL;
+    /* For devices[] we also want to free device attributes and the devices themselves */
+    if (devices_capacity > 0 && devices != NULL) {
+        for (uint16_t i = 0; i < devices_count; ++i) {
+            wendigo_free_device(devices[i]);
+            devices[i] = NULL;
         }
-        free(bt_devices);
-        bt_devices = NULL;
-        bt_devices_count = 0;
-        bt_devices_capacity = 0;
+        free(devices);
+        devices = NULL;
+        devices_count = 0;
+        devices_capacity = 0;
     }
 }
 
 /** During testing I bumped the ESP32 reset button and was irritated that Flipper's device
- * cache was working perfectly but status claimed there were no devices in the cache. This
- * function provides a location to validate and alter status attributes prior to displaying
- * them, allowing this issue to be overcome.
+ * cache was working perfectly but status claimed there were no devices in the cache
+ * despite displaying them). This function provides a location to validate and alter status
+ * attributes prior to displaying them, allowing this issue to be overcome.
  */
 void process_and_display_status_attribute(WendigoApp *app, char *attribute_name, char *attribute_value) {
     char *interesting_attributes[] = {"BT Classic Devices:", "BT Low Energy Devices:",
@@ -480,10 +510,11 @@ void process_and_display_status_attribute(WendigoApp *app, char *attribute_name,
     if (interested < interesting_attributes_count) {
         /* We're interested in this attribute */
         switch (interested) {
+            // TODO: Roll these into a single loop, with case just setting some variables
             case 0:
                 /* BT Classic device count - Count it ourselves for consistency */
-                for (uint16_t i = 0; i < bt_devices_count; ++i) {
-                    if (bt_devices[i]->dev.scanType == SCAN_HCI) {
+                for (uint16_t i = 0; i < devices_count; ++i) {
+                    if (devices[i]->scanType == SCAN_HCI) {
                         ++count;
                     }
                 }
@@ -492,8 +523,8 @@ void process_and_display_status_attribute(WendigoApp *app, char *attribute_name,
                 break;
             case 1:
                 /* BLE device count */
-                for (uint16_t i = 0; i < bt_devices_count; ++i) {
-                    if (bt_devices[i]->dev.scanType == SCAN_BLE) {
+                for (uint16_t i = 0; i < devices_count; ++i) {
+                    if (devices[i]->scanType == SCAN_BLE) {
                         ++count;
                     }
                 }
@@ -502,9 +533,23 @@ void process_and_display_status_attribute(WendigoApp *app, char *attribute_name,
                 break;
             case 2:
                 /* WiFi STA */
+                for (uint16_t i = 0; i < devices_count; ++i) {
+                    if (devices[i]->scanType == SCAN_WIFI_STA) {
+                        ++count;
+                    }
+                }
+                snprintf(strVal, sizeof(strVal), "%d", count);
+                attribute_value = strVal;
                 break;
             case 3:
                 /* WiFi AP */
+                for (uint16_t i = 0; i < devices_count; ++i) {
+                    if (devices[i]->scanType == SCAN_WIFI_AP) {
+                        ++count;
+                    }
+                }
+                snprintf(strVal, sizeof(strVal), "%d", count);
+                attribute_value = strVal;
                 break;
         }
     }
@@ -531,59 +576,63 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
         // Skip this packet
         return packetLen;
     }
-    flipper_bt_device *dev = malloc(sizeof(flipper_bt_device));
+    wendigo_device *dev = malloc(sizeof(wendigo_device));
     if (dev == NULL) {
         // TODO: Panic. For now just skip the device
         return packetLen;
     }
-    dev->dev.bdname = NULL;
-    dev->dev.eir = NULL;
-    dev->dev.bt_services.known_services = NULL;
-    dev->dev.bt_services.service_uuids = NULL;
-    dev->cod_str = NULL;
+    dev->radio.bluetooth.bdname = NULL;
+    dev->radio.bluetooth.eir = NULL;
+    dev->radio.bluetooth.bt_services.known_services = NULL;
+    dev->radio.bluetooth.bt_services.service_uuids = NULL;
+    dev->radio.bluetooth.cod_str = NULL;
     dev->view = NULL;
     /* Copy fixed-byte members */
-    memcpy(&(dev->dev.bdname_len), buffer + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
-    memcpy(&(dev->dev.eir_len), buffer + WENDIGO_OFFSET_BT_EIR_LEN, sizeof(uint8_t));
-    memcpy(&(dev->dev.rssi), buffer + WENDIGO_OFFSET_BT_RSSI, sizeof(int32_t));
-    memcpy(&(dev->dev.cod), buffer + WENDIGO_OFFSET_BT_COD, sizeof(uint32_t));
-    memcpy(dev->dev.bda, buffer + WENDIGO_OFFSET_BT_BDA, MAC_BYTES);
-    memcpy(&(dev->dev.scanType), buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(ScanType));
-    memcpy(&(dev->dev.tagged), buffer + WENDIGO_OFFSET_BT_TAGGED, sizeof(bool));
-    memcpy(&(dev->dev.lastSeen), buffer + WENDIGO_OFFSET_BT_LASTSEEN, sizeof(struct timeval)); // TODO: Should lastSeen be removed from here as well?
-    memcpy(&(dev->dev.bt_services.num_services), buffer + WENDIGO_OFFSET_BT_NUM_SERVICES, sizeof(uint8_t));
-    memcpy(&(dev->dev.bt_services.known_services_len), buffer + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN, sizeof(uint8_t));
+    memcpy(&(dev->radio.bluetooth.bdname_len), buffer + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
+    memcpy(&(dev->radio.bluetooth.eir_len), buffer + WENDIGO_OFFSET_BT_EIR_LEN, sizeof(uint8_t));
+    int32_t temp_rssi;
+    memcpy(&temp_rssi, buffer + WENDIGO_OFFSET_BT_RSSI, sizeof(int32_t));
+    dev->rssi = (int8_t)temp_rssi;
+    memcpy(&(dev->radio.bluetooth.cod), buffer + WENDIGO_OFFSET_BT_COD, sizeof(uint32_t));
+    memcpy(dev->mac, buffer + WENDIGO_OFFSET_BT_BDA, MAC_BYTES);
+    memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(ScanType));
+    memcpy(&(dev->tagged), buffer + WENDIGO_OFFSET_BT_TAGGED, sizeof(bool));
+    memcpy(&(dev->lastSeen), buffer + WENDIGO_OFFSET_BT_LASTSEEN, sizeof(struct timeval)); // TODO: Should lastSeen be removed from here as well?
+    memcpy(&(dev->radio.bluetooth.bt_services.num_services), buffer + WENDIGO_OFFSET_BT_NUM_SERVICES, sizeof(uint8_t));
+    memcpy(&(dev->radio.bluetooth.bt_services.known_services_len), buffer + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN, sizeof(uint8_t));
     uint8_t cod_len;
     memcpy(&cod_len, buffer + WENDIGO_OFFSET_BT_COD_LEN, sizeof(uint8_t));
     /* Do we have a bdname? */
     uint16_t index = WENDIGO_OFFSET_BT_BDNAME;
     /* Rudimentary buffer capacity check - Is the buffer large enough to hold the specified bdname and packet terminator? */
-    if (dev->dev.bdname_len > 0 && bufferLen > (index + dev->dev.bdname_len + PREAMBLE_LEN)) {
-        dev->dev.bdname = malloc(sizeof(char) * (dev->dev.bdname_len + 1));
-        if (dev->dev.bdname == NULL) {
+    if (dev->radio.bluetooth.bdname_len > 0 &&
+            bufferLen > (index + dev->radio.bluetooth.bdname_len + PREAMBLE_LEN)) {
+        dev->radio.bluetooth.bdname = malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
+        if (dev->radio.bluetooth.bdname == NULL) {
             /* Can't store bdname so set bdname_len to 0 */
-            dev->dev.bdname_len = 0;
+            dev->radio.bluetooth.bdname_len = 0;
         } else {
-            memcpy(dev->dev.bdname, buffer + index, dev->dev.bdname_len + 1);
+            memcpy(dev->radio.bluetooth.bdname, buffer + index, dev->radio.bluetooth.bdname_len + 1);
         }
-        /* Move index passed bdname and its terminating null character */
-        index += (dev->dev.bdname_len + 1);
+        /* Move index past bdname and its terminating null character */
+        index += (dev->radio.bluetooth.bdname_len + 1);
     }
     /* EIR? */
-    if (dev->dev.eir_len > 0 && bufferLen >= (index + dev->dev.eir_len + PREAMBLE_LEN)) {
-        dev->dev.eir = malloc(sizeof(uint8_t) * dev->dev.eir_len);
-        if (dev->dev.eir == NULL) {
-            dev->dev.eir_len = 0;
+    if (dev->radio.bluetooth.eir_len > 0 &&
+            bufferLen >= (index + dev->radio.bluetooth.eir_len + PREAMBLE_LEN)) {
+        dev->radio.bluetooth.eir = malloc(sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
+        if (dev->radio.bluetooth.eir == NULL) {
+            dev->radio.bluetooth.eir_len = 0;
         } else {
-            memcpy(dev->dev.eir, buffer + index, dev->dev.eir_len);
+            memcpy(dev->radio.bluetooth.eir, buffer + index, dev->radio.bluetooth.eir_len);
         }
-        index += dev->dev.eir_len;
+        index += dev->radio.bluetooth.eir_len;
     }
     /* Class of Device? */
     if (cod_len > 0 && bufferLen > (index + cod_len + PREAMBLE_LEN)) {
-        dev->cod_str = malloc(sizeof(char) * (cod_len + 1));
-        if (dev->cod_str != NULL) {
-            memcpy(dev->cod_str, buffer + index, cod_len + 1);
+        dev->radio.bluetooth.cod_str = malloc(sizeof(char) * (cod_len + 1));
+        if (dev->radio.bluetooth.cod_str != NULL) {
+            memcpy(dev->radio.bluetooth.cod_str, buffer + index, cod_len + 1);
         }
         index += (cod_len + 1); /* Cater for the trailing '\0' */
     }
@@ -596,12 +645,12 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
         wendigo_display_popup(app, "BT Packet Error", "Packet terminator not found where expected");
     }
 
-    /* Add or update the device in bt_devices[] - No longer need to check
+    /* Add or update the device in devices[] - No longer need to check
        whether we're adding or updating, the add/update functions will call
        each other if required. */
     wendigo_add_bt_device(app, dev);
     /* Clean up memory */
-    wendigo_free_bt_device(dev);
+    wendigo_free_device(dev);
 
     /* We've consumed `index` bytes as well as the packet terminator */
     // TODO: Consider pros & cons of this vs. returning packetLen. At the very least comparing the two could help find corrupted packets.
@@ -646,7 +695,7 @@ uint16_t parseBufferVersion(WendigoApp *app) {
  * Returns the number of bytes consumed by the function, including the end-of-packet
  * bytes. DOES NOT remove these bytes, that is handled by the calling function.
  * This function requires that Wendigo_AppViewStatus be the currently-displayed view
- * (otherwise the packet is discarded).
+ * (otherwise the packet is discarded).devdevdevddevoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;e;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj kjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjev
  */
 uint16_t parseBufferStatus(WendigoApp *app) {
     /* Ignore the packet if the status scene isn't displayed */
@@ -767,7 +816,7 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
     if (bufferLen + len >= bufferCap) {
         /* Extend it by the larger of len and 128 bytes do avoid constant realloc()s */
         uint16_t newCapacity = bufferCap + ((len > 128) ? len : 128);
-        uint8_t *newBuffer = realloc(buffer, newCapacity); // Behaves like malloc() when buffer==NULL
+        uint8_t *newBuffer = realloc(buffer, sizeof(uint8_t *) * newCapacity); // Behaves like malloc() when buffer==NULL
         if (newBuffer == NULL) {
             /* Out of memory */
             // TODO: Panic
