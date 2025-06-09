@@ -1,5 +1,4 @@
 #include "wendigo_scan.h"
-#include "wendigo_packet_offsets.h"
 
 uint8_t *buffer = NULL;
 uint16_t bufferLen = 0; // 65535 should be plenty of length

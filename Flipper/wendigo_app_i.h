@@ -18,6 +18,7 @@
 
 #include "wendigo_hex_input.h"
 
+#define IS_FLIPPER_APP           (1)
 #define START_MENU_ITEMS         (6)
 #define SETUP_MENU_ITEMS         (4)
 #define SETUP_CHANNEL_MENU_ITEMS (13)
