@@ -33,7 +33,7 @@ double _elapsedTime(uint32_t *from, uint32_t *to, char *elapsedStr, uint8_t strl
         }
         return 0;
     }
-    uint16_t elapsed = (uint16_t)(to - from);
+    uint16_t elapsed = (uint16_t)(*to - *from);
     if (elapsedStr != NULL && strlen > 0) {
         if (elapsed < 60) {
             snprintf(elapsedStr, strlen, "%ds", elapsed);
