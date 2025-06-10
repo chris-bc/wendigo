@@ -117,7 +117,9 @@ typedef struct wendigo_device {
     ScanType scanType;
     bool tagged;
     struct timeval lastSeen;
-    VariableItem *view;
+    #ifdef IS_FLIPPER_APP
+        VariableItem *view;
+    #endif
     union {
         wendigo_bt_device bluetooth;
         wendigo_wifi_ap ap;
