@@ -67,7 +67,11 @@ typedef struct {
 
 typedef struct {
     uint8_t num_services;
-    void *service_uuids;        // Was esp_bt_uuid_t
+    #ifdef IS_FLIPPER_APP
+        void *service_uuids;        // Was esp_bt_uuid_t
+    #else
+        esp_bt_uuid_t *service_uuids;
+    #endif
     bt_uuid **known_services;
     uint8_t known_services_len;
 } wendigo_bt_svc;
