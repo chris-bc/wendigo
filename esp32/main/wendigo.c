@@ -371,9 +371,6 @@ esp_err_t cmd_tag(int argc, char **argv) {
                 case ACTION_STATUS:
                     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
                         ESP_LOGI(TAG, "Device %s IS %stagged.", argv[2], (device->tagged)?"":"NOT ");
-                    } else {
-                        /* In Flipper mode re-transmit the device to provide status */
-                        result |= display_gap_device(device);
                     }
                     break;
                 default:
