@@ -5,6 +5,9 @@ uint16_t bufferLen = 0; // 65535 should be plenty of length
 uint16_t bufferCap = 0; // Buffer capacity - I don't want to allocate 65kb, but don't want to constantly realloc
 char *wendigo_popup_text = NULL; // I suspect the popup text is going out of scope when declared at function scope
 
+/* Internal function declarations */
+uint16_t custom_device_index(wendigo_device *dev, wendigo_device **array, uint16_t array_count);
+
 /* Device caches */
 wendigo_device **devices = NULL;
 wendigo_device **selected_devices = NULL;
@@ -421,7 +424,7 @@ bool wendigo_update_bt_device(WendigoApp *app, wendigo_device *dev) {
  * allocated memory ARE set to NULL (for pointers) and 0 (for counts) to reduce the likelihood that any orphan
  * pointers will attempt to use deallocated memory.
  */
-void wendigo_free_bt_device(wendigo_device *dev) {
+void wendigo_free_device(wendigo_device *dev) {
     if (dev == NULL) {
         return;
     }
@@ -462,6 +465,9 @@ void wendigo_free_bt_device(wendigo_device *dev) {
             break;
         case SCAN_WIFI_STA:
             dev->radio.sta.ap = NULL;
+            break;
+        default:
+            /* Nothing to do */
             break;
     }
     dev->view = NULL;

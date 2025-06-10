@@ -1,9 +1,9 @@
 #include "../wendigo_app_i.h"
 #include "../wendigo_scan.h"
 
-flipper_bt_device *device = NULL;
+wendigo_device *device = NULL;
 
-void wendigo_scene_device_detail_set_device(flipper_bt_device *d) {
+void wendigo_scene_device_detail_set_device(wendigo_device *d) {
     device = d;
 }
 
@@ -27,10 +27,6 @@ static void wendigo_scene_device_detail_var_list_change_callback(VariableItem* i
 
     uint8_t item_index = variable_item_get_current_value_index(item);
     UNUSED(item_index);
-//    furi_assert(item_index < bt_devices_count);
-    // TODO: The following will be useful for managing tag options (on/off)
-    // variable_item_set_current_value_text(item, menu_item->options_menu[item_index]);
-    // app->setup_selected_option_index[app->setup_selected_menu_index] = item_index;
 
 }
 

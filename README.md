@@ -208,9 +208,9 @@ Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some fu
   * [ ] ESP32 WiFi scanning
   * [ ] ESP32 WiFi packet transmission
   * [ ] Flipper WiFi packet parsing
-  * [ ] Flipper WiFi data model
+  * [X] Flipper WiFi data model
     * [ ] Move data model definitions into a common header file, included by both ESP32 and Flipper apps
-    * [ ] Standardise data model as a struct with common attributes, and a union of specialised structs.
+    * [X] Standardise data model as a struct with common attributes, and a union of specialised structs.
   * [ ] Channel hopping
   * [ ] Support for 5GHz channels (ESP32-C5)
 * [ ] Bluetooth Services

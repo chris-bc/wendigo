@@ -185,7 +185,7 @@ void wendigo_app_free(WendigoApp* app) {
 
     /* Free device cache and UART buffer */
     wendigo_free_uart_buffer();
-    wendigo_free_bt_devices();
+    wendigo_free_devices();
     // TODO: WiFi device cache
 
 
