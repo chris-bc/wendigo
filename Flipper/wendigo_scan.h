@@ -1,9 +1,6 @@
 #pragma once
 
 #include "wendigo_app_i.h"
-#include <sys/time.h>
-
-#include "../wendigo_common_defs.h"
 
 /* Function imports from scenes */
 extern void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev);

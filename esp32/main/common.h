@@ -15,15 +15,14 @@
 #include <string.h>
 #include <sys/time.h>
 
+#include "../../wendigo_common_defs.h"
+
 #define WENDIGO_VERSION "0.1.0"
 
 /* Macro to mark a variable as unused to prevent compiler warnings */
 #ifndef UNUSED
     #define UNUSED(x) (void)(x)
 #endif
-
-#define MAX_SSID_LEN 32
-#define MAC_STRLEN 17
 
 /* Common string definitions */
 static const char STRING_MALLOC_FAIL[] = "Unable to allocate memory ";
@@ -52,49 +51,12 @@ typedef enum {
     ACTION_INVALID
 } ActionType;
 
-typedef enum {
-    SCAN_HCI = 0,
-    SCAN_BLE,
-    SCAN_WIFI,
-    SCAN_INTERACTIVE,
-    SCAN_TAG,
-    SCAN_FOCUS,
-    SCAN_COUNT
-} ScanType;
-
-typedef struct {
-    //esp_bt_uuid_t *uuid;
-    uint16_t uuid16;
-    char name[40];
-} bt_uuid;
-
-typedef struct {
-    uint8_t num_services;
-    esp_bt_uuid_t *service_uuids;
-    bt_uuid **known_services;
-    uint8_t known_services_len;
-} wendigo_bt_svc;
-
-typedef struct {
-    uint8_t bdname_len;
-    uint8_t eir_len;
-    int32_t rssi;
-    uint32_t cod;
-    uint8_t *eir;   // Consider inline - [ESP_BT_GAP_EIR_DATA_LEN]
-    char *bdname;   // Consider inline - [ESP_BT_GAP_MAX_BDNAME_LEN + 1]
-    esp_bd_addr_t bda;
-    ScanType scanType;
-    bool tagged;
-    struct timeval lastSeen;
-    wendigo_bt_svc bt_services;
-} wendigo_bt_device;
-
 /* Globals for state management */
 const char *TAG = "WENDIGO";
-ActionType scanStatus[SCAN_COUNT] = { ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE };
-char *syntaxTip[SCAN_COUNT] = { "H[CI]", "B[LE]", "W[IFI]", "I[NTERACTIVE]", "T[AG] ( B[T] | W[IFI] ) <MAC>", "F[OCUS]" };
-char *radioShortNames[SCAN_COUNT] = { "HCI", "BLE", "WiFi", "Interactive", "Tag", "Focus" };
-char *radioFullNames[SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi", "Interactive Mode", "Tag Devices", "Focus Mode" };
+ActionType scanStatus[SCAN_COUNT] = { ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE };
+char *syntaxTip[SCAN_COUNT] = { "H[CI]", "B[LE]", "W[IFI]", "W[IFI]", "I[NTERACTIVE]", "T[AG] ( B[T] | W[IFI] ) <MAC>", "F[OCUS]" };
+char *radioShortNames[SCAN_COUNT] = { "HCI", "BLE", "WiFi", "WiFi", "Interactive", "Tag", "Focus" };
+char *radioFullNames[SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi", "WiFi", "Interactive Mode", "Tag Devices", "Focus Mode" };
 
 /* Device caches accessible across Wendige */
 extern uint16_t num_gap_devices;
