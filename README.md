@@ -183,6 +183,7 @@ Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some fu
 
 * [ ] CoD menu option is meaningless for WiFi, and WiFi devices have their own attributes useful to display. Cater for these differences when populating wendigo_scene_device_list.
 * [ ] Add WiFi scan options to scan for just AP or STA devices
+* [ ] When scanning is active device packets and scanning status or poll requests can be interleaved. Currently malformed device packets are simply dropped. Implement packet queueing on ESP32 to ensure sequential transmission.
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
 * [X] BT Classic and LE device transmission from ESP32 to Flipper

@@ -603,8 +603,10 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     if (packetLen < (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN)) {
         /* Ignore the malformed packet if scanning has been stopped */
         if (app->is_scanning) {
-            // TODO: I'm not sure what to do in this case
-            wendigo_display_popup(app, "Packet Error", "Bluetooth packet is shorter than expected");
+            // TODO: Introducing polling to recover from an ESP32 restart can lead to corrupted packets
+            //       if confirmation of scan status is interleaved with a device packet.
+            //       Create a queueing mechanism in ESP32 so packets are guaranteed to be sent sequentially.
+            //wendigo_display_popup(app, "Packet Error", "Bluetooth packet is shorter than expected");
         }
         // Skip this packet
         return packetLen;
@@ -674,8 +676,10 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     /* Hopefully `index` now points to the packet terminator (unless scanning has stopped,
        then all bets are off) */
     if (app->is_scanning && memcmp(PACKET_TERM, buffer + index, PREAMBLE_LEN)) {
-        // TODO: Panic & recover
-        wendigo_display_popup(app, "BT Packet Error", "Packet terminator not found where expected");
+        // TODO: Introducing polling to recover from an ESP32 restart can lead to corrupted packets
+        //       if confirmation of scan status is interleaved with a device packet.
+        //       Create a queueing mechanism in ESP32 so packets are guaranteed to be sent sequentially.
+        //wendigo_display_popup(app, "BT Packet Error", "Packet terminator not found where expected");
     }
 
     /* Add or update the device in devices[] - No longer need to check
@@ -808,6 +812,8 @@ uint16_t parseBufferStatus(WendigoApp *app) {
  */
 void parseBuffer(WendigoApp *app) {
     uint16_t consumedBytes = 0;
+    /* Update the last packet received time */
+    app->last_packet = furi_hal_rtc_get_timestamp();
     /* We get here only after finding an end of packet sequence, so can assume
        there's a beginning of packet sequence. */
     consumedBytes = start_of_packet(buffer, bufferLen);

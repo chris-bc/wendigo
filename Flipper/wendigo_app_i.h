@@ -19,6 +19,9 @@
 #include "wendigo_hex_input.h"
 
 #define IS_FLIPPER_APP           (1)
+/* How frequently should Flipper poll ESP32 when scanning to restart
+   scanning in the event the device restarts (seconds)? */
+#define ESP32_POLL_INTERVAL      (3)
 #define START_MENU_ITEMS         (6)
 #define SETUP_MENU_ITEMS         (4)
 #define SETUP_CHANNEL_MENU_ITEMS (13)
@@ -113,6 +116,7 @@ struct WendigoApp {
     Popup* popup; // Avoid continual allocation and freeing of Popup by initialising at launch
     WendigoRadio interfaces[IF_COUNT];
     InterfaceType active_interface;
+    int32_t last_packet;
 
     uint8_t setup_selected_menu_index;
     uint16_t device_list_selected_menu_index;

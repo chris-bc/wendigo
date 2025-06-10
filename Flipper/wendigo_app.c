@@ -24,6 +24,14 @@ static bool wendigo_app_back_event_callback(void* context) {
 static void wendigo_app_tick_event_callback(void* context) {
     furi_assert(context);
     WendigoApp* app = context;
+    if (app->is_scanning) {
+        /* Is it time to poll ESP32 to ensure it's still scanning? */
+        int32_t now = furi_hal_rtc_get_timestamp();
+        if (now - app->last_packet > ESP32_POLL_INTERVAL) {
+            wendigo_set_scanning_active(app, true);
+        }
+    }
+
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
@@ -150,6 +158,9 @@ WendigoApp* wendigo_app_alloc() {
     app->devices_var_item_list = variable_item_list_alloc();
     view_dispatcher_add_view(app->view_dispatcher, WendigoAppViewDeviceList,
         variable_item_list_get_view(app->devices_var_item_list));
+    
+    /* Initialise the last packet received time */
+    app->last_packet = furi_hal_rtc_get_timestamp();
 
     scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
 
