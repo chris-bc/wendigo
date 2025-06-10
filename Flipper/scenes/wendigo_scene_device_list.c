@@ -94,15 +94,21 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
  */
 void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     char *name;
-    if (dev->radio.bluetooth.bdname_len == 0 || dev->radio.bluetooth.bdname == NULL) {
+    /* Use bdname as name if it's a bluetooth device and we have a name */
+    if ((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+            dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
+        name = dev->radio.bluetooth.bdname;
+    } else if (dev->scanType == SCAN_WIFI_AP && dev->radio.ap.ssid[0] != '\0') {
+        /* Use access point SSID if it's an AP and we have an SSID */
+        name = (char *)dev->radio.ap.ssid;
+    } else {
+        /* Use MAC to label the device */
         name = malloc(sizeof(char) * (MAC_STRLEN + 1));
         if (name == NULL) {
             // TODO: Panic
             return;
         }
         bytes_to_string(dev->mac, MAC_BYTES, name);
-    } else {
-        name = dev->radio.bluetooth.bdname;
     }
     char tempStr[10];
     if (dev->view == NULL && !display_selected_only) {
@@ -129,7 +135,11 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
             variable_item_set_current_value_text(dev->view, tempStr);
         }
     } /* Ignore new devices if display_selected_only is true */
-    if (dev->radio.bluetooth.bdname_len == 0 || dev->radio.bluetooth.bdname == NULL) {
+    /* Free `name` if we malloc'd it */
+    if (((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+                (dev->radio.bluetooth.bdname_len == 0 || dev->radio.bluetooth.bdname == NULL)) ||
+            (dev->scanType == SCAN_WIFI_AP && dev->radio.ap.ssid[0] == '\0') ||
+            (dev->scanType != SCAN_WIFI_AP && dev->scanType != SCAN_HCI && dev->scanType != SCAN_BLE)) {
         free(name);    
     }
 }
@@ -152,9 +162,15 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
     }
     variable_item_list_set_selected_item(app->devices_var_item_list, 0);
     for(uint16_t i = 0; i < my_devices_count; ++i) {
-        /* Label with the name if we have a name, otherwise use the MAC/BDA */
-        if (my_devices[i]->radio.bluetooth.bdname_len > 0 && my_devices[i]->radio.bluetooth.bdname != NULL) {
+        /* Label with bdname if it's bluetooth & we have a name */
+        if ((my_devices[i]->scanType == SCAN_HCI || my_devices[i]->scanType == SCAN_BLE) &&
+                my_devices[i]->radio.bluetooth.bdname_len > 0 &&
+                my_devices[i]->radio.bluetooth.bdname != NULL) {
             item_str = my_devices[i]->radio.bluetooth.bdname;
+        /* Label with SSID if it's an AP and we have an SSID */
+        } else if (my_devices[i]->scanType == SCAN_WIFI_AP && my_devices[i]->radio.ap.ssid[0] != '\0') {
+            item_str = (char *)my_devices[i]->radio.ap.ssid;
+        /* Otherwise use the MAC/BDA */
         } else {
             item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
             if (item_str == NULL) {
@@ -169,7 +185,13 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
             WendigoOptionsCount,
             wendigo_scene_device_list_var_list_change_callback,
             app);
-        if (my_devices[i]->radio.bluetooth.bdname_len == 0 || my_devices[i]->radio.bluetooth.bdname == NULL) {
+        /* free item_str if we malloc'd it */
+        if (((my_devices[i]->scanType == SCAN_HCI || my_devices[i]->scanType == SCAN_BLE) &&
+                    (my_devices[i]->radio.bluetooth.bdname_len == 0 ||
+                     my_devices[i]->radio.bluetooth.bdname == NULL)) ||
+                (my_devices[i]->scanType == SCAN_WIFI_AP && my_devices[i]->radio.ap.ssid[0] == '\0') ||
+                (my_devices[i]->scanType != SCAN_HCI && my_devices[i]->scanType != SCAN_BLE &&
+                 my_devices[i]->scanType != SCAN_WIFI_AP)) {
             free(item_str);
         }
         /* Default to displaying RSSI in options menu */
@@ -237,7 +259,10 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
                     "WiFi AP" : (menu_item->scanType == SCAN_WIFI_STA) ? "WiFi STA" : "Unknown");
                 break;
             case WendigoOptionCod:
-                variable_item_set_current_value_text(item, menu_item->radio.bluetooth.cod_str);
+                if (menu_item->scanType == SCAN_HCI || menu_item->scanType == SCAN_BLE) {
+                    variable_item_set_current_value_text(item, menu_item->radio.bluetooth.cod_str);
+                }
+                // TODO: Other menu item(s) for WiFi devices
                 break;
             case WendigoOptionLastSeen:
                 elapsedTime(menu_item, tempStr, sizeof(tempStr));

@@ -181,6 +181,7 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 ## Roadmap
 Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some further refinement is required to existing functionality, after which Wendigo will be extended to include WiFi scanning, Bluetooth service discovery, and additional features.
 
+* [ ] CoD menu option is meaningless for WiFi, and WiFi devices have their own attributes useful to display. Cater for these differences when populating wendigo_scene_device_list.
 * [ ] Add WiFi scan options to scan for just AP or STA devices
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
