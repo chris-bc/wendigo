@@ -198,6 +198,151 @@ bool device_exists(wendigo_device *dev) {
     return device_index(dev) < devices_count;
 }
 
+bool wendigo_add_bt_device(wendigo_device *dev, wendigo_device *new_device) {
+    new_device->radio.bluetooth.cod = dev->radio.bluetooth.cod;
+    if (dev->radio.bluetooth.cod_str != NULL) {
+        new_device->radio.bluetooth.cod_str = malloc(sizeof(char) * (strlen(dev->radio.bluetooth.cod_str) + 1));
+        if (new_device->radio.bluetooth.cod_str != NULL) {
+            /* No need to handle allocation failure - we simply don't copy cod_str */
+            strncpy(new_device->radio.bluetooth.cod_str, dev->radio.bluetooth.cod_str, strlen(dev->radio.bluetooth.cod_str));
+            new_device->radio.bluetooth.cod_str[strlen(dev->radio.bluetooth.cod_str)] = '\0';
+        }
+    } else {
+        new_device->radio.bluetooth.cod_str = NULL;
+    }
+    /* Device name */
+    new_device->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
+    if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
+        new_device->radio.bluetooth.bdname = malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
+        if (new_device->radio.bluetooth.bdname == NULL) {
+            /* Skip the device's bdname and hope we have memory for it next time it's seen */
+            new_device->radio.bluetooth.bdname_len = 0;
+        } else {
+            strncpy(new_device->radio.bluetooth.bdname, dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
+            new_device->radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
+        }
+    } else {
+        new_device->radio.bluetooth.bdname = NULL;
+        new_device->radio.bluetooth.bdname_len = 0;
+    }
+    /* EIR */
+    new_device->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
+    if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
+        new_device->radio.bluetooth.eir = malloc(sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
+        if (new_device->radio.bluetooth.eir == NULL) {
+            /* Skip EIR from this packet */
+            new_device->radio.bluetooth.eir_len = 0;
+        } else {
+            memcpy(new_device->radio.bluetooth.eir, dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
+        }
+    } else {
+        new_device->radio.bluetooth.eir = NULL;
+        new_device->radio.bluetooth.eir_len = 0;
+    }
+    /* BT services */
+    new_device->radio.bluetooth.bt_services.num_services = dev->radio.bluetooth.bt_services.num_services;
+    if (dev->radio.bluetooth.bt_services.num_services > 0 &&
+            dev->radio.bluetooth.bt_services.service_uuids != NULL) {
+        new_device->radio.bluetooth.bt_services.service_uuids =
+            malloc(sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
+        if (new_device->radio.bluetooth.bt_services.service_uuids == NULL) {
+            new_device->radio.bluetooth.bt_services.num_services = 0;
+        } else {
+            memcpy(new_device->radio.bluetooth.bt_services.service_uuids,
+                dev->radio.bluetooth.bt_services.service_uuids,
+                sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
+        }
+    } else {
+        new_device->radio.bluetooth.bt_services.service_uuids = NULL;
+        new_device->radio.bluetooth.bt_services.num_services = 0;
+    }
+    /* Known services */
+    new_device->radio.bluetooth.bt_services.known_services_len =
+        dev->radio.bluetooth.bt_services.known_services_len;
+    if (dev->radio.bluetooth.bt_services.known_services_len > 0 &&
+            dev->radio.bluetooth.bt_services.known_services != NULL) {
+        /* known_services is an array of pointers - this is where we stop controlling memory allocation 
+           so that bt_uuid's can be allocated a single time and reused.
+           This function will copy the *pointers* in known_services[], but not the bt_uuid structs that
+           they point to. */
+        new_device->radio.bluetooth.bt_services.known_services =
+            malloc(sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
+        if (new_device->radio.bluetooth.bt_services.known_services == NULL) {
+            new_device->radio.bluetooth.bt_services.known_services_len = 0;
+        } else {
+            memcpy(new_device->radio.bluetooth.bt_services.known_services,
+                dev->radio.bluetooth.bt_services.known_services,
+                sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
+            // TODO: Despite the caveat above, it might be nice to validate that the bt_uuid's we're pointing to actually exist.
+        }
+    } else {
+        new_device->radio.bluetooth.bt_services.known_services = NULL;
+        new_device->radio.bluetooth.bt_services.known_services_len = 0;
+    }
+    return true;
+}
+
+bool wendigo_update_bt_device(wendigo_device *dev, wendigo_device *new_device) {
+    new_device->radio.bluetooth.cod = dev->radio.bluetooth.cod;
+    /* cod_str present in update? */
+    if (dev->radio.bluetooth.cod_str != NULL && strlen(dev->radio.bluetooth.cod_str) > 0) {
+        char *new_cod = realloc(new_device->radio.bluetooth.cod_str,
+                                sizeof(char) * (strlen(dev->radio.bluetooth.cod_str) + 1));
+        if (new_cod != NULL) {
+            strncpy(new_cod, dev->radio.bluetooth.cod_str, strlen(dev->radio.bluetooth.cod_str));
+            new_cod[strlen(dev->radio.bluetooth.cod_str)] = '\0';
+            new_device->radio.bluetooth.cod_str = new_cod;
+        }
+    }
+    /* Is bdname in update? */
+    if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
+        char *new_name = realloc(new_device->radio.bluetooth.bdname,
+                                    sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
+        if (new_name != NULL) { /* If allocation fails target's existing bdname and bdname_len are unmodified */
+            strncpy(new_name, dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
+            new_name[dev->radio.bluetooth.bdname_len] = '\0';
+            new_device->radio.bluetooth.bdname = new_name;
+            new_device->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
+        }
+    }
+    /* How about EIR? */
+    if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
+        uint8_t *new_eir = realloc(new_device->radio.bluetooth.eir,
+                                   sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
+        if (new_eir != NULL) {
+            memcpy(new_eir, dev->radio.bluetooth.eir, sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
+            new_device->radio.bluetooth.eir = new_eir;
+            new_device->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
+        }
+    }
+    /* Number of services */
+    if (dev->radio.bluetooth.bt_services.num_services > 0 &&
+            dev->radio.bluetooth.bt_services.service_uuids != NULL) {
+        void *new_svcs = realloc(new_device->radio.bluetooth.bt_services.service_uuids,
+                                 sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
+        if (new_svcs != NULL) {
+            memcpy(new_svcs, dev->radio.bluetooth.bt_services.service_uuids,
+                   sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
+            new_device->radio.bluetooth.bt_services.service_uuids = new_svcs;
+            new_device->radio.bluetooth.bt_services.num_services = dev->radio.bluetooth.bt_services.num_services;
+        }
+    }
+    /* Known services */
+    if (dev->radio.bluetooth.bt_services.known_services_len > 0 &&
+            dev->radio.bluetooth.bt_services.known_services != NULL) {
+        bt_uuid **new_known_svcs = realloc(new_device->radio.bluetooth.bt_services.known_services,
+                        sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
+        if (new_known_svcs != NULL) {
+            memcpy(new_known_svcs, dev->radio.bluetooth.bt_services.known_services,
+                   sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
+            new_device->radio.bluetooth.bt_services.known_services = new_known_svcs;
+            new_device->radio.bluetooth.bt_services.known_services_len =
+                dev->radio.bluetooth.bt_services.known_services_len;
+        }
+    }
+    return true;
+}
+
 /** Add the specified device to devices[], extending the length of devices[] if necessary.
  * If the specified device has a MAC/BDA which is already present in devices[] a new entry will
  * not be made, instead the element with the same MAC/BDA will be updated based on the specified device.
@@ -240,86 +385,7 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
     memcpy(new_device->mac, dev->mac, MAC_BYTES);
     /* Copy protocol-specific attributes */
     if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-        new_device->radio.bluetooth.cod = dev->radio.bluetooth.cod;
-        if (dev->radio.bluetooth.cod_str != NULL) {
-            new_device->radio.bluetooth.cod_str = malloc(sizeof(char) * (strlen(dev->radio.bluetooth.cod_str) + 1));
-            if (new_device->radio.bluetooth.cod_str != NULL) {
-                /* No need to handle allocation failure - we simply don't copy cod_str */
-                strncpy(new_device->radio.bluetooth.cod_str, dev->radio.bluetooth.cod_str, strlen(dev->radio.bluetooth.cod_str));
-                new_device->radio.bluetooth.cod_str[strlen(dev->radio.bluetooth.cod_str)] = '\0';
-            }
-        } else {
-            new_device->radio.bluetooth.cod_str = NULL;
-        }
-        /* Device name */
-        new_device->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
-        if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
-            new_device->radio.bluetooth.bdname = malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
-            if (new_device->radio.bluetooth.bdname == NULL) {
-                /* Skip the device's bdname and hope we have memory for it next time it's seen */
-                new_device->radio.bluetooth.bdname_len = 0;
-            } else {
-                strncpy(new_device->radio.bluetooth.bdname, dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
-                new_device->radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
-            }
-        } else {
-            new_device->radio.bluetooth.bdname = NULL;
-            new_device->radio.bluetooth.bdname_len = 0;
-        }
-        /* EIR */
-        new_device->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
-        if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
-            new_device->radio.bluetooth.eir = malloc(sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
-            if (new_device->radio.bluetooth.eir == NULL) {
-                /* Skip EIR from this packet */
-                new_device->radio.bluetooth.eir_len = 0;
-            } else {
-                memcpy(new_device->radio.bluetooth.eir, dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
-            }
-        } else {
-            new_device->radio.bluetooth.eir = NULL;
-            new_device->radio.bluetooth.eir_len = 0;
-        }
-        /* BT services */
-        new_device->radio.bluetooth.bt_services.num_services = dev->radio.bluetooth.bt_services.num_services;
-        if (dev->radio.bluetooth.bt_services.num_services > 0 &&
-                dev->radio.bluetooth.bt_services.service_uuids != NULL) {
-            new_device->radio.bluetooth.bt_services.service_uuids =
-                malloc(sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
-            if (new_device->radio.bluetooth.bt_services.service_uuids == NULL) {
-                new_device->radio.bluetooth.bt_services.num_services = 0;
-            } else {
-                memcpy(new_device->radio.bluetooth.bt_services.service_uuids,
-                    dev->radio.bluetooth.bt_services.service_uuids,
-                    sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
-            }
-        } else {
-            new_device->radio.bluetooth.bt_services.service_uuids = NULL;
-            new_device->radio.bluetooth.bt_services.num_services = 0;
-        }
-        /* Known services */
-        new_device->radio.bluetooth.bt_services.known_services_len =
-            dev->radio.bluetooth.bt_services.known_services_len;
-        if (dev->radio.bluetooth.bt_services.known_services_len > 0 &&
-                dev->radio.bluetooth.bt_services.known_services != NULL) {
-            /* known_services is an array of pointers - this is where we stop controlling memory allocation 
-               so that bt_uuid's can be allocated a single time and reused.
-               This function will copy the *pointers* in known_services[], but not the bt_uuid structs that
-               they point to. */
-            new_device->radio.bluetooth.bt_services.known_services =
-                malloc(sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
-            if (new_device->radio.bluetooth.bt_services.known_services == NULL) {
-                new_device->radio.bluetooth.bt_services.known_services_len = 0;
-            } else {
-                memcpy(new_device->radio.bluetooth.bt_services.known_services,
-                    dev->radio.bluetooth.bt_services.known_services,
-                    sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
-                // TODO: Despite the caveat above, it might be nice to validate that the bt_uuid's we're pointing to actually exist.
-            }
-        } else {
-            new_device->radio.bluetooth.bt_services.known_services = NULL;
-            new_device->radio.bluetooth.bt_services.known_services_len = 0;
-        }
+        wendigo_add_bt_device(dev, new_device);
     } else if (dev->scanType == SCAN_WIFI_AP) {
         //
     } else if (dev->scanType == SCAN_WIFI_STA) {
@@ -360,63 +426,7 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
     target->lastSeen.tv_sec = (time_t)furi_hal_rtc_get_timestamp();
     /* Copy protocol-specific attributes */
     if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-        target->radio.bluetooth.cod = dev->radio.bluetooth.cod;
-        /* cod_str present in update? */
-        if (dev->radio.bluetooth.cod_str != NULL && strlen(dev->radio.bluetooth.cod_str) > 0) {
-            char *new_cod = realloc(target->radio.bluetooth.cod_str,
-                                    sizeof(char) * (strlen(dev->radio.bluetooth.cod_str) + 1));
-            if (new_cod != NULL) {
-                strncpy(new_cod, dev->radio.bluetooth.cod_str, strlen(dev->radio.bluetooth.cod_str));
-                new_cod[strlen(dev->radio.bluetooth.cod_str)] = '\0';
-                target->radio.bluetooth.cod_str = new_cod;
-            }
-        }
-        /* Is bdname in update? */
-        if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
-            char *new_name = realloc(target->radio.bluetooth.bdname,
-                                     sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
-            if (new_name != NULL) { /* If allocation fails target's existing bdname and bdname_len are unmodified */
-                strncpy(new_name, dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
-                new_name[dev->radio.bluetooth.bdname_len] = '\0';
-                target->radio.bluetooth.bdname = new_name;
-                target->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
-            }
-        }
-        /* How about EIR? */
-        if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
-            uint8_t *new_eir = realloc(target->radio.bluetooth.eir,
-                                       sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
-            if (new_eir != NULL) {
-                memcpy(new_eir, dev->radio.bluetooth.eir, sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
-                target->radio.bluetooth.eir = new_eir;
-                target->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
-            }
-        }
-        /* Number of services */
-        if (dev->radio.bluetooth.bt_services.num_services > 0 &&
-                dev->radio.bluetooth.bt_services.service_uuids != NULL) {
-            void *new_svcs = realloc(target->radio.bluetooth.bt_services.service_uuids,
-                                     sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
-            if (new_svcs != NULL) {
-                memcpy(new_svcs, dev->radio.bluetooth.bt_services.service_uuids,
-                       sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
-                target->radio.bluetooth.bt_services.service_uuids = new_svcs;
-                target->radio.bluetooth.bt_services.num_services = dev->radio.bluetooth.bt_services.num_services;
-            }
-        }
-        /* Known services */
-        if (dev->radio.bluetooth.bt_services.known_services_len > 0 &&
-                dev->radio.bluetooth.bt_services.known_services != NULL) {
-            bt_uuid **new_known_svcs = realloc(target->radio.bluetooth.bt_services.known_services,
-                            sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
-            if (new_known_svcs != NULL) {
-                memcpy(new_known_svcs, dev->radio.bluetooth.bt_services.known_services,
-                       sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
-                target->radio.bluetooth.bt_services.known_services = new_known_svcs;
-                target->radio.bluetooth.bt_services.known_services_len =
-                    dev->radio.bluetooth.bt_services.known_services_len;
-            }
-        }
+        wendigo_update_bt_device(dev, target);
     } else if (dev->scanType == SCAN_WIFI_AP) {
         //
     } else if (dev->scanType == SCAN_WIFI_STA) {
