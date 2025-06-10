@@ -28,5 +28,5 @@ void wendigo_esp_status(WendigoApp *app);
 void wendigo_free_devices();
 bool wendigo_set_device_selected(wendigo_device *device, bool selected);
 uint16_t bt_custom_device_index(wendigo_device *dev, wendigo_device **array, uint16_t array_count);
-bool wendigo_update_bt_device(WendigoApp *app, wendigo_device *dev);
-bool wendigo_add_bt_device(WendigoApp *app, wendigo_device *dev);
+bool wendigo_update_device(WendigoApp *app, wendigo_device *dev);
+bool wendigo_add_device(WendigoApp *app, wendigo_device *dev);

@@ -206,11 +206,11 @@ bool device_exists(wendigo_device *dev) {
  * when this function returns. To minimise the likelihood of memory leaks this function will allocate
  * its own memory to hold the specified device and its attributes.
  */
-bool wendigo_add_bt_device(WendigoApp *app, wendigo_device *dev) {
+bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
     uint16_t idx = device_index(dev);
     if (idx < devices_count) {
         /* A device with the provided BDA already exists - Update that instead */
-        return wendigo_update_bt_device(app, dev);
+        return wendigo_update_device(app, dev);
     }
     /* Adding to devices - Increase capacity by an additional INC_BT_DEVICE_CAPACITY_BY if necessary */
     if (devices == NULL || devices_capacity == devices_count) {
@@ -345,11 +345,11 @@ bool wendigo_add_bt_device(WendigoApp *app, wendigo_device *dev) {
  * manage the allocation and free'ing of all components of the device cache *except for* bt_uuid
  * objects that form part of service descriptors.
  */
-bool wendigo_update_bt_device(WendigoApp *app, wendigo_device *dev) {
+bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
     uint16_t idx = device_index(dev);
     if (idx == devices_count) {
         /* Device doesn't exist in bt_devices[] - Add it instead */
-        return wendigo_add_bt_device(app, dev);
+        return wendigo_add_device(app, dev);
     }
 
     wendigo_device *target = devices[idx];
@@ -671,7 +671,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     /* Add or update the device in devices[] - No longer need to check
        whether we're adding or updating, the add/update functions will call
        each other if required. */
-    wendigo_add_bt_device(app, dev);
+    wendigo_add_device(app, dev);
     /* Clean up memory */
     wendigo_free_device(dev);
 
