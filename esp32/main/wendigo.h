@@ -28,7 +28,7 @@ void invalid_command(char *cmd, char *arg, char *syntax);
 void display_syntax(char *command);
 esp_err_t send_response(char *cmd, char *arg, MsgType result);
 ActionType parseCommand(int argc, char **argv);
-ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr, ScanType *radio);
+ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr);
 void wendigo_set_logging(esp_log_level_t level);
 
 #define CMD_COUNT 16

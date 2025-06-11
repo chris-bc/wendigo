@@ -1,9 +1,6 @@
 #pragma once
 
 #include "wendigo_app_i.h"
-#include <sys/time.h>
-
-#include "wendigo_packet_offsets.h"
 
 /* Function imports from scenes */
 extern void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev);
@@ -18,7 +15,6 @@ extern uint16_t devices_count;
 extern uint16_t selected_devices_count;
 extern uint16_t devices_capacity;
 extern uint16_t selected_devices_capacity;
-// TODO: WiFi
 
 void wendigo_set_scanning_active(WendigoApp *app, bool starting);
 void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context);

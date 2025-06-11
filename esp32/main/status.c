@@ -66,24 +66,31 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
     strncpy(attribute_values[ATTR_WIFI_SUPPORT], (wifiSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
     strncpy(attribute_values[ATTR_BT_CLASSIC_SCANNING], (scanStatus[SCAN_HCI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
     strncpy(attribute_values[ATTR_BT_BLE_SCANNING], (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
-    strncpy(attribute_values[ATTR_WIFI_SCANNING], (scanStatus[SCAN_WIFI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
-    /* num_gap_devices counts both Classic and LE devices. Create separate counts instead */
+    strncpy(attribute_values[ATTR_WIFI_SCANNING], (scanStatus[SCAN_WIFI_AP] == ACTION_ENABLE || scanStatus[SCAN_WIFI_STA] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
+    /* Create device counts for BT Classic, BLE, AP and STA */
     classicDeviceCount = 0;
     leDeviceCount = 0;
-    for (uint16_t i = 0; i < num_gap_devices; ++i) {
-        switch (all_gap_devices[i].scanType) {
+    wifiSTACount = 0;
+    wifiAPCount = 0;
+    for (uint16_t i = 0; i < devices_count; ++i) {
+        switch (devices[i].scanType) {
             case SCAN_HCI:
                 ++classicDeviceCount;
                 break;
             case SCAN_BLE:
                 ++leDeviceCount;
                 break;
+            case SCAN_WIFI_AP:
+                ++wifiAPCount;
+                break;
+            case SCAN_WIFI_STA:
+                ++wifiSTACount;
+                break;
             default:
                 /* No action required */
                 break;
         }
     }
-    // TODO: WiFi stuff to set wifiSTACount and wifiAPCount
 
     /* Need to stringify device counts */
     snprintf(attribute_values[ATTR_BT_CLASSIC_COUNT], VAL_MAX_LEN, "%d", classicDeviceCount);
@@ -103,6 +110,9 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     const char *btClassicSupport = (btClassicSupported) ? STRING_YES : STRING_NO;
     const char *btBLESupport = (btBLESupported) ? STRING_YES : STRING_NO;
     const char *wifiSupport = (wifiSupported) ? STRING_YES : STRING_NO;
+    /* While we're not using attribute_names[] and attribute_values[], this
+       function also generates device counts for different device types. */
+    initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
 
     print_star(53, true);
     print_empty_row(53);
@@ -134,14 +144,23 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     printf("Bluetooth Low Energy Scanning: %12s", (!btBLESupported) ? STRING_NA : (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
     print_status_row_end(4);
     print_status_row_start(4);
-    printf("WiFi Scanning: %28s", (!wifiSupported) ? STRING_NA : (scanStatus[SCAN_WIFI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
+    printf("WiFi Scanning: %28s", (!wifiSupported) ? STRING_NA : (scanStatus[SCAN_WIFI_AP] == ACTION_ENABLE || scanStatus[SCAN_WIFI_STA] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
+    print_status_row_end(4);
+    print_status_row_start(4); // 43 total
+    printf("BT Classic Devices: %23d", classicDeviceCount);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("BT Low Energy Devices: %20d", leDeviceCount);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("WiFi Access Points: %23d", wifiAPCount);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("WiFi Stations: %28d", wifiSTACount);
     print_status_row_end(4);
     print_empty_row(53);
     print_star(53, true);
-    // Some extra stuff for development
-    printf("sizeof(wendigo_bt_device): %d\tsizeof(wendigo_bt_svc): %d\n", sizeof(wendigo_bt_device), sizeof(wendigo_bt_svc));
-    printf("sizeof(ScanType): %d\tsizeof(struct timeval): %d\n", sizeof(ScanType), sizeof(struct timeval));
-    printf("sizeof(char*): %d\tsizeof(*all_gap_devices): %d\n", sizeof(char*), sizeof(all_gap_devices));
+    // TODO: Device counts
 }
 
 /** Send status information to Flipper Zero.

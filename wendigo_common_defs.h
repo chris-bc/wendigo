@@ -49,6 +49,10 @@ PSK and not recommended to be used. It will be deprecated in future, please use 
 } wifi_auth_mode_t;
  #endif
 
+#define MAX_SSID_LEN    32
+#define MAC_STRLEN      17
+#define MAC_BYTES       6
+
  typedef enum {
     SCAN_HCI = 0,
     SCAN_BLE,
@@ -67,7 +71,11 @@ typedef struct {
 
 typedef struct {
     uint8_t num_services;
-    void *service_uuids;        // Was esp_bt_uuid_t
+    #ifdef IS_FLIPPER_APP
+        void *service_uuids;        // Was esp_bt_uuid_t
+    #else
+        esp_bt_uuid_t *service_uuids;
+    #endif
     bt_uuid **known_services;
     uint8_t known_services_len;
 } wendigo_bt_svc;
@@ -85,7 +93,7 @@ typedef struct {
 typedef struct wendigo_wifi_ap {
     void **stations;
     uint8_t stations_count;
-    uint8_t ssid[33];                     /** SSID of AP */
+    uint8_t ssid[MAX_SSID_LEN + 1];                     /** SSID of AP */
     uint8_t channel;
     wifi_auth_mode_t authmode;
     uint32_t phy_11b: 1;                  /**< Bit: 0 flag to identify if 11b mode is enabled or not */
@@ -113,7 +121,9 @@ typedef struct wendigo_device {
     ScanType scanType;
     bool tagged;
     struct timeval lastSeen;
-    VariableItem *view;
+    #ifdef IS_FLIPPER_APP
+        VariableItem *view;
+    #endif
     union {
         wendigo_bt_device bluetooth;
         wendigo_wifi_ap ap;
