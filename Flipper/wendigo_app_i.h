@@ -49,6 +49,7 @@ typedef enum DeviceMask {
     DEVICE_BT_LE        = 2,
     DEVICE_WIFI_AP      = 4,
     DEVICE_WIFI_STA     = 8,
+    DEVICE_ALL          = 15
 } DeviceMask;
 
 // Command action type

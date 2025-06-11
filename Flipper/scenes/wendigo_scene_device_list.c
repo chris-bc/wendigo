@@ -49,6 +49,9 @@ enum wendigo_device_list_sta_options {
  * tagged: true if only tagged devices are to be displayed
  */
 uint16_t wendigo_set_devices(uint8_t deviceMask, bool tagged) {
+    if (deviceMask == 0) {
+        deviceMask = DEVICE_ALL;
+    }
     /* To ensure we only malloc the required memory, run an initial pass to count the number of devices */
     uint16_t deviceCount = 0;
     for (uint16_t idx = 0; idx < devices_count; ++idx) {
