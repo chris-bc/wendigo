@@ -70,8 +70,8 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
     /* num_gap_devices counts both Classic and LE devices. Create separate counts instead */
     classicDeviceCount = 0;
     leDeviceCount = 0;
-    for (uint16_t i = 0; i < num_gap_devices; ++i) {
-        switch (all_gap_devices[i].scanType) {
+    for (uint16_t i = 0; i < devices_count; ++i) {
+        switch (devices[i].scanType) {
             case SCAN_HCI:
                 ++classicDeviceCount;
                 break;
@@ -138,10 +138,6 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     print_status_row_end(4);
     print_empty_row(53);
     print_star(53, true);
-    // Some extra stuff for development
-    printf("sizeof(wendigo_bt_device): %d\tsizeof(wendigo_bt_svc): %d\n", sizeof(wendigo_bt_device), sizeof(wendigo_bt_svc));
-    printf("sizeof(ScanType): %d\tsizeof(struct timeval): %d\n", sizeof(ScanType), sizeof(struct timeval));
-    printf("sizeof(char*): %d\tsizeof(*all_gap_devices): %d\n", sizeof(char*), sizeof(all_gap_devices));
 }
 
 /** Send status information to Flipper Zero.

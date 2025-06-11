@@ -344,9 +344,9 @@ esp_err_t cmd_tag(int argc, char **argv) {
         invalid_command(argv[0], argv[1], syntaxTip[SCAN_TAG]);
         result = ESP_ERR_INVALID_ARG;
     }
-    if (result == ESP_OK && (radio == SCAN_HCI || radio == SCAN_BLE)) {
+    if (result == ESP_OK) {
         /* Fetch the specified device */
-        wendigo_bt_device *device = retrieve_gap_by_bda(addr);
+        wendigo_device *device = retrieve_by_bda(addr);
         if (device == NULL) {
             if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
                 ESP_LOGE(TAG, "Failed to retrieve device %s\n", argv[2]);
@@ -379,10 +379,7 @@ esp_err_t cmd_tag(int argc, char **argv) {
                     break;
             }
         }
-    } else if (result == ESP_OK && radio == SCAN_WIFI) {
-        // TODO: Implement WiFi tagging
     }
-
     if (result == ESP_OK) {
         send_response(argv[0], argv[1], MSG_OK);
     } else {

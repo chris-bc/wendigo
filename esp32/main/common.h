@@ -59,8 +59,8 @@ char *radioShortNames[SCAN_COUNT] = { "HCI", "BLE", "WiFi", "WiFi", "Interactive
 char *radioFullNames[SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi", "WiFi", "Interactive Mode", "Tag Devices", "Focus Mode" };
 
 /* Device caches accessible across Wendige */
-extern uint16_t num_gap_devices;
-extern wendigo_bt_device *all_gap_devices;
+extern uint16_t devices_count;
+extern wendigo_device *devices;
 
 /* Function declarations */
 esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount);
