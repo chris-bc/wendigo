@@ -406,4 +406,7 @@ void wendigo_scene_device_list_on_exit(void* context) {
     for (uint16_t i = 0; i < devices_count; ++i) {
         devices[i]->view = NULL;
     }
+    if (current_devices != NULL) {
+        free(current_devices);
+    }
 }
