@@ -181,8 +181,7 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 ## Roadmap
 Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some further refinement is required to existing functionality, after which Wendigo will be extended to include WiFi scanning, Bluetooth service discovery, and additional features.
 
-* [ ] CoD menu option is meaningless for WiFi, and WiFi devices have their own attributes useful to display. Cater for these differences when populating wendigo_scene_device_list.
-* [ ] Add WiFi scan options to scan for just AP or STA devices
+* [ ] Add options when starting wendigo_scene_device_list to view specific device types.
 * [ ] When scanning is active device packets and scanning status or poll requests can be interleaved. Currently malformed device packets are simply dropped. Implement packet queueing on ESP32 to ensure sequential transmission.
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [X] Combined Bluetooth packet for BT Classic and LE devices
@@ -216,6 +215,21 @@ Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some fu
     * [X] Standardise data model as a struct with common attributes, and a union of specialised structs.
   * [ ] Channel hopping
   * [ ] Support for 5GHz channels (ESP32-C5)
+  * [ ] Display different options in wendigo_scene_device_list
+    * [ ] For STA
+      * [ ] RSSI
+      * [ ] Tag/Untag
+      * [ ] ScanType
+      * [ ] AP (SSID if present, otherwise MAC)
+      * [ ] Channel
+      * [ ] LastSeen
+    * [ ] For AP
+      * [ ] RSSI
+      * [ ] Tag/Untag
+      * [ ] ScanType
+      * [ ] AuthMode
+      * [ ] Channel
+      * [ ] LastSeen
 * [ ] Bluetooth Services
   * [ ] ESP32 service discovery
   * [ ] ESP32 service transmission
