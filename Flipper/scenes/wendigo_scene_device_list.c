@@ -9,6 +9,10 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
 /* This scene is used to both display all devices and display selected devices */
 bool display_selected_only = false;
 
+/* Devices currently being displayed */
+wendigo_device **current_devices = NULL;
+uint16_t current_devices_count = 0;
+
 /* Enum to index the options menu for devices */
 enum wendigo_device_list_bt_options {
     WendigoOptionBTRSSI = 0,
@@ -38,6 +42,42 @@ enum wendigo_device_list_sta_options {
     WendigoOptionSTALastSeen,
     WendigoOptionsSTACount
 };
+
+/** Restrict displayed devices based on the specified filters
+ * deviceMask: A bitmask of DeviceMask values. e.g. DEVICE_WIFI_AP | DEVICE_WIFI_STA to display all WiFi devices.
+ *             0 to display all device types.
+ * tagged: true if only tagged devices are to be displayed
+ */
+uint16_t wendigo_set_devices(uint8_t deviceMask, bool tagged) {
+    /* To ensure we only malloc the required memory, run an initial pass to count the number of devices */
+    uint16_t deviceCount = 0;
+    for (uint16_t idx = 0; idx < devices_count; ++idx) {
+        if ((devices[idx]->scanType == SCAN_HCI && ((deviceMask & DEVICE_BT_CLASSIC) == DEVICE_BT_CLASSIC) && (!tagged || (tagged && devices[idx]->tagged))) ||
+            (devices[idx]->scanType == SCAN_BLE && ((deviceMask & DEVICE_BT_LE) == DEVICE_BT_LE) && (!tagged || (tagged && devices[idx]->tagged))) ||
+            (devices[idx]->scanType == SCAN_WIFI_AP && ((deviceMask & DEVICE_WIFI_AP) == DEVICE_WIFI_AP) && (!tagged || (tagged && devices[idx]->tagged))) ||
+            (devices[idx]->scanType == SCAN_WIFI_STA && ((deviceMask & DEVICE_WIFI_STA) == DEVICE_WIFI_STA) && (!tagged || (tagged && devices[idx]->tagged)))) {
+                ++deviceCount;
+            }
+    }
+    wendigo_device **new_devices = realloc(current_devices, sizeof(wendigo_device *) * deviceCount);
+    if (new_devices == NULL) {
+        return false;
+    }
+    current_devices = new_devices;
+    current_devices_count = deviceCount;
+    /* Populate current_devices[] */
+    uint16_t current_index = 0;
+    for (uint16_t i = 0; i < devices_count; ++i) {
+        if ((devices[i]->scanType == SCAN_HCI && ((deviceMask & DEVICE_BT_CLASSIC) == DEVICE_BT_CLASSIC) && (!tagged || (tagged && devices[i]->tagged))) ||
+            (devices[i]->scanType == SCAN_BLE && ((deviceMask & DEVICE_BT_LE) == DEVICE_BT_LE) && (!tagged || (tagged && devices[i]->tagged))) ||
+            (devices[i]->scanType == SCAN_WIFI_AP && ((deviceMask & DEVICE_WIFI_AP) == DEVICE_WIFI_AP) && (!tagged || (tagged && devices[i]->tagged))) ||
+            (devices[i]->scanType == SCAN_WIFI_STA && ((deviceMask & DEVICE_WIFI_STA) == DEVICE_WIFI_STA) && (!tagged || (tagged && devices[i]->tagged)))) {
+                current_devices[current_index++] = devices[i];
+        }
+    }
+    furi_assert(current_index == deviceCount);
+    return deviceCount;
+}
 
 /** A more flexible version of elapsedTime() that lets us avoid running furi_hal_rtc_get_timestamp().
  * This version is suitable for running at high frequency - In tick events etc.
@@ -153,7 +193,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
         } else if (variable_item_get_current_value_index(dev->view) == WendigoOptionBTLastSeen) {
             elapsedTime(dev, tempStr, sizeof(tempStr));
             variable_item_set_current_value_text(dev->view, tempStr);
-        }
+        }// TODO: Support multiple device types, update AP/channel for STA if changed, update SSID/channel for AP if changed
     } /* Ignore new devices if display_selected_only is true */
     /* Free `name` if we malloc'd it */
     if (((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
