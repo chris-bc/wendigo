@@ -110,6 +110,9 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     const char *btClassicSupport = (btClassicSupported) ? STRING_YES : STRING_NO;
     const char *btBLESupport = (btBLESupported) ? STRING_YES : STRING_NO;
     const char *wifiSupport = (wifiSupported) ? STRING_YES : STRING_NO;
+    /* While we're not using attribute_names[] and attribute_values[], this
+       function also generates device counts for different device types. */
+    initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
 
     print_star(53, true);
     print_empty_row(53);
@@ -142,6 +145,18 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     print_status_row_end(4);
     print_status_row_start(4);
     printf("WiFi Scanning: %28s", (!wifiSupported) ? STRING_NA : (scanStatus[SCAN_WIFI_AP] == ACTION_ENABLE || scanStatus[SCAN_WIFI_STA] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
+    print_status_row_end(4);
+    print_status_row_start(4); // 43 total
+    printf("BT Classic Devices: %23d", classicDeviceCount);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("BT Low Energy Devices: %20d", leDeviceCount);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("WiFi Access Points: %23d", wifiAPCount);
+    print_status_row_end(4);
+    print_status_row_start(4);
+    printf("WiFi Stations: %28d", wifiSTACount);
     print_status_row_end(4);
     print_empty_row(53);
     print_star(53, true);

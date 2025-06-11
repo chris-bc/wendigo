@@ -150,16 +150,13 @@ ActionType parseCommand(int argc, char **argv) {
 }
 
 /* Tag syntax is t[ag] ( b[t] | w[ifi] ) <MAC> <ActionType>, where ActionType :== 0 | 1 | 2 (or 3 for ACTION_INVALID) */
-ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr, ScanType *radio) {
+ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr) {
     if (argc != 4) {
         return ACTION_INVALID;
     }
     /* argv[1] must be b, bt, w, or wifi */
-    if ((!strcasecmp(argv[1], "b")) || (!strcasecmp(argv[1], "bt"))) {
-        *radio = SCAN_HCI;
-    } else if ((!strcasecmp(argv[1], "w")) || (!strcasecmp(argv[1], "wifi"))) {
-        *radio = SCAN_WIFI_AP; // TODO: Separate AP from STA scanning
-    } else {
+    if (strcasecmp(argv[1], "b") && strcasecmp(argv[1], "bt") &&
+        strcasecmp(argv[1], "w") && strcasecmp(argv[1], "wifi")) {
         return ACTION_INVALID;
     }
     /* argv[2] must be a MAC/BDA - Check it has the right number of bytes
@@ -339,16 +336,15 @@ esp_err_t cmd_interactive(int argc, char **argv) {
 esp_err_t cmd_tag(int argc, char **argv) {
     esp_err_t result = ESP_OK;
     esp_bd_addr_t addr;
-    ScanType radio = SCAN_COUNT;
     send_response(argv[0], argv[1], MSG_ACK);
-    ActionType action = parse_command_tag(argc, argv, addr, &radio);
+    ActionType action = parse_command_tag(argc, argv, addr);
     if (action == ACTION_INVALID) {
         invalid_command(argv[0], argv[1], syntaxTip[SCAN_TAG]);
         result = ESP_ERR_INVALID_ARG;
     }
     if (result == ESP_OK) {
         /* Fetch the specified device */
-        wendigo_device *device = retrieve_by_bda(addr);
+        wendigo_device *device = retrieve_by_mac(addr);
         if (device == NULL) {
             if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
                 ESP_LOGE(TAG, "Failed to retrieve device %s\n", argv[2]);

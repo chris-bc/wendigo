@@ -211,7 +211,7 @@ wendigo_device *retrieve_device(wendigo_device *dev) {
     return result;
 }
 
-wendigo_device *retrieve_by_bda(esp_bd_addr_t mac) {
+wendigo_device *retrieve_by_mac(esp_bd_addr_t mac) {
     wendigo_device dev;
     memcpy(dev.mac, mac, ESP_BD_ADDR_LEN);
     return retrieve_device(&dev);

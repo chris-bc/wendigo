@@ -185,7 +185,6 @@ Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some fu
 * [ ] Add WiFi scan options to scan for just AP or STA devices
 * [ ] When scanning is active device packets and scanning status or poll requests can be interleaved. Currently malformed device packets are simply dropped. Implement packet queueing on ESP32 to ensure sequential transmission.
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
-* [ ] ESP32 already thad ESP_BD_ADDR_LEN - Now also has MAC_BYTES
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
 * [X] BT Classic and LE device transmission from ESP32 to Flipper
