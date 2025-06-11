@@ -134,6 +134,9 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
 
     wendigo_device **cache = (display_selected_only) ? selected_devices : devices;
     uint16_t cache_count = (display_selected_only) ? selected_devices_count : devices_count;
+    if (current_devices_count == 0 || current_devices == NULL) {
+        wendigo_set_devices(0, false);
+    }
     if (app->device_list_selected_menu_index < cache_count) {
         return cache[app->device_list_selected_menu_index];
     }
