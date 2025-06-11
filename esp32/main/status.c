@@ -66,10 +66,12 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
     strncpy(attribute_values[ATTR_WIFI_SUPPORT], (wifiSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
     strncpy(attribute_values[ATTR_BT_CLASSIC_SCANNING], (scanStatus[SCAN_HCI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
     strncpy(attribute_values[ATTR_BT_BLE_SCANNING], (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
-    strncpy(attribute_values[ATTR_WIFI_SCANNING], (scanStatus[SCAN_WIFI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
-    /* num_gap_devices counts both Classic and LE devices. Create separate counts instead */
+    strncpy(attribute_values[ATTR_WIFI_SCANNING], (scanStatus[SCAN_WIFI_AP] == ACTION_ENABLE || scanStatus[SCAN_WIFI_STA] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
+    /* Create device counts for BT Classic, BLE, AP and STA */
     classicDeviceCount = 0;
     leDeviceCount = 0;
+    wifiSTACount = 0;
+    wifiAPCount = 0;
     for (uint16_t i = 0; i < devices_count; ++i) {
         switch (devices[i].scanType) {
             case SCAN_HCI:
@@ -78,12 +80,17 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
             case SCAN_BLE:
                 ++leDeviceCount;
                 break;
+            case SCAN_WIFI_AP:
+                ++wifiAPCount;
+                break;
+            case SCAN_WIFI_STA:
+                ++wifiSTACount;
+                break;
             default:
                 /* No action required */
                 break;
         }
     }
-    // TODO: WiFi stuff to set wifiSTACount and wifiAPCount
 
     /* Need to stringify device counts */
     snprintf(attribute_values[ATTR_BT_CLASSIC_COUNT], VAL_MAX_LEN, "%d", classicDeviceCount);
@@ -134,10 +141,11 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     printf("Bluetooth Low Energy Scanning: %12s", (!btBLESupported) ? STRING_NA : (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
     print_status_row_end(4);
     print_status_row_start(4);
-    printf("WiFi Scanning: %28s", (!wifiSupported) ? STRING_NA : (scanStatus[SCAN_WIFI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
+    printf("WiFi Scanning: %28s", (!wifiSupported) ? STRING_NA : (scanStatus[SCAN_WIFI_AP] == ACTION_ENABLE || scanStatus[SCAN_WIFI_STA] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
     print_status_row_end(4);
     print_empty_row(53);
     print_star(53, true);
+    // TODO: Device counts
 }
 
 /** Send status information to Flipper Zero.

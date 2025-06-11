@@ -158,7 +158,7 @@ ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr, ScanType
     if ((!strcasecmp(argv[1], "b")) || (!strcasecmp(argv[1], "bt"))) {
         *radio = SCAN_HCI;
     } else if ((!strcasecmp(argv[1], "w")) || (!strcasecmp(argv[1], "wifi"))) {
-        *radio = SCAN_WIFI;
+        *radio = SCAN_WIFI_AP; // TODO: Separate AP from STA scanning
     } else {
         return ACTION_INVALID;
     }
@@ -257,7 +257,9 @@ esp_err_t cmd_ble(int argc, char **argv) {
 }
 
 esp_err_t cmd_wifi(int argc, char **argv) {
-    enableDisableRadios(argc, argv, SCAN_WIFI, wendigo_wifi_enable, wendigo_wifi_disable);
+    enableDisableRadios(argc, argv, SCAN_WIFI_AP, wendigo_wifi_enable, wendigo_wifi_disable);
+    /* This sets scanStatus[] - Don't need to call the enable/disable function again */
+    enableDisableRadios(argc, argv, SCAN_WIFI_STA, NULL, NULL);
     return ESP_OK;
 }
 
