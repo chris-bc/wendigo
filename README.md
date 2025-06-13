@@ -184,6 +184,7 @@ Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some fu
 * [ ] Add options when starting wendigo_scene_device_list to view specific device types.
 * [ ] When scanning is active device packets and scanning status or poll requests can be interleaved. Currently malformed device packets are simply dropped. Implement packet queueing on ESP32 to ensure sequential transmission.
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
+* [ ] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
 * [X] BT Classic and LE device transmission from ESP32 to Flipper
@@ -211,25 +212,25 @@ Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some fu
   * [ ] ESP32 WiFi packet transmission
   * [ ] Flipper WiFi packet parsing
   * [X] Flipper WiFi data model
-    * [ ] Move data model definitions into a common header file, included by both ESP32 and Flipper apps
+    * [X] Move data model definitions into a common header file, included by both ESP32 and Flipper apps
     * [X] Standardise data model as a struct with common attributes, and a union of specialised structs.
   * [ ] Channel hopping
   * [ ] Support for 5GHz channels (ESP32-C5)
-  * [ ] Display different options in wendigo_scene_device_list
-    * [ ] For STA
-      * [ ] RSSI
-      * [ ] Tag/Untag
-      * [ ] ScanType
-      * [ ] AP (SSID if present, otherwise MAC)
-      * [ ] Channel
-      * [ ] LastSeen
-    * [ ] For AP
-      * [ ] RSSI
-      * [ ] Tag/Untag
-      * [ ] ScanType
-      * [ ] AuthMode
-      * [ ] Channel
-      * [ ] LastSeen
+  * [X] Display different options in wendigo_scene_device_list
+    * [X] For STA
+      * [X] RSSI
+      * [X] Tag/Untag
+      * [X] ScanType
+      * [X] AP (SSID if present, otherwise MAC)
+      * [X] Channel
+      * [X] LastSeen
+    * [X] For AP
+      * [X] RSSI
+      * [X] Tag/Untag
+      * [X] ScanType
+      * [X] AuthMode
+      * [X] Channel
+      * [X] LastSeen
 * [ ] Bluetooth Services
   * [ ] ESP32 service discovery
   * [ ] ESP32 service transmission
