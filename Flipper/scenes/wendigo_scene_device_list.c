@@ -393,11 +393,14 @@ static void wendigo_scene_device_list_var_list_enter_callback(void* context, uin
     app->device_list_selected_menu_index = index;
 
     /* If the tag/untag menu item is selected perform that action, otherwise display details for `item` */
-    if (item->view != NULL && variable_item_get_current_value_index(item->view) == WendigoOptionBTTagUntag) {
+    if (item->view != NULL && (((item->scanType == SCAN_HCI || item->scanType == SCAN_BLE) &&
+            variable_item_get_current_value_index(item->view) == WendigoOptionBTTagUntag) ||
+            (item->scanType == SCAN_WIFI_AP && variable_item_get_current_value_index(item->view) == WendigoOptionAPTagUntag) ||
+            (item->scanType == SCAN_WIFI_STA && variable_item_get_current_value_index(item->view) == WendigoOptionSTATagUntag))) {
         wendigo_set_device_selected(item, !item->tagged);
         variable_item_set_current_value_text(item->view, (item->tagged) ? "Untag" : "Tag");
         /* If the device is now untagged and we're viewing tagged devices only, remove the device from view */
-        if (display_selected_only && !item->tagged) {
+        if (((current_devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY) && !item->tagged) {
             /* Bugger - There's no method to remove an item from a variable_item_list */
             item->view = NULL;
             wendigo_scene_device_list_redraw(app);
@@ -418,35 +421,51 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
 
     if (menu_item != NULL) {
         uint8_t option_index = variable_item_get_current_value_index(item);
-        furi_assert(option_index < WendigoOptionsBTCount);
+        furi_assert(option_index < current_devices_count);
         /* Update the current option label */
-        char tempStr[16];
-        switch (option_index) {
-            case WendigoOptionBTRSSI:
-                snprintf(tempStr, sizeof(tempStr), "%d dB", menu_item->rssi);
-                variable_item_set_current_value_text(item, tempStr);
-                break;
-            case WendigoOptionBTTagUntag:
-                variable_item_set_current_value_text(item, (menu_item->tagged) ? "Untag" : "Tag");
-                break;
-            case WendigoOptionBTScanType:
-                variable_item_set_current_value_text(item, (menu_item->scanType == SCAN_HCI) ? "BT Classic" :
-                    (menu_item->scanType == SCAN_BLE) ? "BLE" : (menu_item->scanType == SCAN_WIFI_AP) ?
-                    "WiFi AP" : (menu_item->scanType == SCAN_WIFI_STA) ? "WiFi STA" : "Unknown");
-                break;
-            case WendigoOptionBTCod:
-                if (menu_item->scanType == SCAN_HCI || menu_item->scanType == SCAN_BLE) {
-                    variable_item_set_current_value_text(item, menu_item->radio.bluetooth.cod_str);
+        char tempStr[MAX_SSID_LEN + 1];
+        switch (menu_item->scanType) {
+            case SCAN_HCI:
+            case SCAN_BLE:
+                switch (option_index) {
+                    case WendigoOptionBTRSSI:
+                        snprintf(tempStr, sizeof(tempStr), "%d dB", menu_item->rssi);
+                        variable_item_set_current_value_text(item, tempStr);
+                        break;
+                    case WendigoOptionBTTagUntag:
+                        variable_item_set_current_value_text(item, (menu_item->tagged) ? "Untag" : "Tag");
+                        break;
+                    case WendigoOptionBTScanType:
+                        variable_item_set_current_value_text(item, (menu_item->scanType == SCAN_HCI) ? "BT Classic" :
+                            (menu_item->scanType == SCAN_BLE) ? "BLE" : (menu_item->scanType == SCAN_WIFI_AP) ?
+                            "WiFi AP" : (menu_item->scanType == SCAN_WIFI_STA) ? "WiFi STA" : "Unknown");
+                        break;
+                    case WendigoOptionBTCod:
+                        if (menu_item->scanType == SCAN_HCI || menu_item->scanType == SCAN_BLE) {
+                            variable_item_set_current_value_text(item, menu_item->radio.bluetooth.cod_str);
+                        }
+                        // TODO: Other menu item(s) for WiFi devices
+                        break;
+                    case WendigoOptionBTLastSeen:
+                        elapsedTime(menu_item, tempStr, sizeof(tempStr));
+                        variable_item_set_current_value_text(item, tempStr);
+                        break;
+                    default:
+                        // TODO: Panic
+                        break;
                 }
-                // TODO: Other menu item(s) for WiFi devices
                 break;
-            case WendigoOptionBTLastSeen:
-                elapsedTime(menu_item, tempStr, sizeof(tempStr));
-                variable_item_set_current_value_text(item, tempStr);
+            case SCAN_WIFI_AP:
+                switch (option_index) {
+                    case WendigoOptionAPRSSI:
+                        //
+                }
                 break;
-            default:
-                // TODO: Panic
-                break;
+            case SCAN_WIFI_STA:
+                switch (option_index) {
+                    case WendigoOptionSTARSSI:
+                        //
+                }
         }
     }
 }
