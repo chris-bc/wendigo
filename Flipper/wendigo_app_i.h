@@ -153,3 +153,8 @@ void wendigo_display_popup(WendigoApp *app, char *header, char*body);
 void wendigo_uart_set_binary_cb(Wendigo_Uart *uart);
 void wendigo_uart_set_console_cb(Wendigo_Uart *uart);
 void bytes_to_string(uint8_t* bytes, uint16_t bytesCount, char* strBytes);
+
+/* Devices currently being displayed */
+extern wendigo_device **current_devices;
+extern uint16_t current_devices_count;
+extern uint8_t current_devices_mask;
