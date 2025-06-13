@@ -55,6 +55,7 @@ typedef enum {
     OPEN_MAC,
     OPEN_HELP
 } ActionType;
+
 // Command availability in different modes
 typedef enum {
     OFF = 0,

@@ -24,10 +24,6 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
 
-/* Determine whether we're displaying all, or only tagged, devices
-   Defined and used in wendigo_scene_device_list.c */
-extern bool display_selected_only;
-
 /* Callback invoked when a menu item is selected */
 static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t index) {
     furi_assert(context);
@@ -78,11 +74,13 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
             }
             break;
         case LIST_DEVICES:
-            display_selected_only = false;
+            if ((current_devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY) {
+                current_devices_mask -= DEVICE_SELECTED_ONLY;
+            }
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
             return;
         case LIST_SELECTED_DEVICES:
-            display_selected_only = true;
+            current_devices_mask |= DEVICE_SELECTED_ONLY;
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
             return;
         case TRACK_DEVICES:
