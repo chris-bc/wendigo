@@ -44,14 +44,6 @@
 #define WENDIGO_TEXT_BOX_STORE_SIZE   (4096)
 #define WENDIGO_TEXT_INPUT_STORE_SIZE (512)
 
-typedef enum DeviceMask {
-    DEVICE_BT_CLASSIC   = 1,
-    DEVICE_BT_LE        = 2,
-    DEVICE_WIFI_AP      = 4,
-    DEVICE_WIFI_STA     = 8,
-    DEVICE_ALL          = 15
-} DeviceMask;
-
 // Command action type
 typedef enum {
     NO_ACTION = 0,

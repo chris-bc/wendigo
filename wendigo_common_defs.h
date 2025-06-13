@@ -1,3 +1,5 @@
+#ifndef WENDIGO_COMMON_DEFS
+#define WENDIGO_COMMON_DEFS
 /**
  * Structs have just blown my mind - based on its members wendigo_bt_device
  * (excluding wendigo_bt_svc) should be 45 bytes but it's 56. Wendigo_bt_svc
@@ -53,6 +55,10 @@ PSK and not recommended to be used. It will be deprecated in future, please use 
 #define MAC_STRLEN      17
 #define MAC_BYTES       6
 
+char *authModeStrings[] = {"Open", "WEP", "WPA_PSK", "WPA2_PSK", "WPA_WPA2_PSK", "EAP (Enterprise)", "WPA3_PSK",
+                           "WPA2_WPA3_PSK", "WAPI_PSK", "OWE", "WPA_ENT_SUITE_B_192_BIT", "WPA3_PSK", "WPA3_PSK",
+                           "DPP", "WPA3-Enterprise", "WPA3-Enterprise Transition"};
+
  typedef enum {
     SCAN_HCI = 0,
     SCAN_BLE,
@@ -63,6 +69,15 @@ PSK and not recommended to be used. It will be deprecated in future, please use 
     SCAN_FOCUS,
     SCAN_COUNT
 } ScanType;
+
+typedef enum DeviceMask {
+    DEVICE_BT_CLASSIC       = 1,
+    DEVICE_BT_LE            = 2,
+    DEVICE_WIFI_AP          = 4,
+    DEVICE_WIFI_STA         = 8,
+    DEVICE_SELECTED_ONLY    = 16,
+    DEVICE_ALL              = 31
+} DeviceMask;
 
 typedef struct {
     uint16_t uuid16;
@@ -130,3 +145,5 @@ typedef struct wendigo_device {
         wendigo_wifi_sta sta;
     } radio;
 } wendigo_device;
+
+#endif

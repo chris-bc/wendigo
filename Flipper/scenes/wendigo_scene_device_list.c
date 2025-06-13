@@ -44,9 +44,6 @@ enum wendigo_device_list_sta_options {
     WendigoOptionsSTACount
 };
 
-char *authModeStrings[] = {"Open", "WEP", "WPA_PSK", "WPA2_PSK", "WPA_WPA2_PSK", "EAP (Enterprise)", "WPA3_PSK",
-                           "WPA2_WPA3_PSK", "WAPI_PSK", "OWE", "WPA_ENT_SUITE_B_192_BIT", "WPA3_PSK", "WPA3_PSK",
-                           "DPP", "WPA3-Enterprise", "WPA3-Enterprise Transition"};
 
 /** Determine whether the specified device should be displayed, based on the criteria provided in wendigo_set_current_devices() */
 bool wendigo_device_is_displayed(wendigo_device *dev) {
