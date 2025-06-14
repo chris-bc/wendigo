@@ -68,10 +68,80 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     return result;
 }
 
+/** Parse a probe response packet, creating or updating a wendigo_device
+ * for both the source (AP) and destination (STA).
+ */
 esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
-    //
+    wendigo_device *ap = retrieve_by_mac(payload + PROBE_RESPONSE_BSSID_OFFSET);
+    wendigo_device *sta = NULL;
+    bool creating = false;
+    esp_err_t result = ESP_OK;
 
-    return ESP_OK;
+    if (memcmp(broadcastMac, payload + PROBE_RESPONSE_DESTADDR_OFFSET, MAC_BYTES)) {
+        /* Not a broadcast packet - it's being sent to an actual STA */
+        sta = retrieve_by_mac(payload + PROBE_RESPONSE_DESTADDR_OFFSET);
+        if (sta == NULL) {
+            creating = true;
+            sta = malloc(sizeof(wendigo_device));
+            if (sta != NULL) {
+                memcpy(sta->mac, payload + PROBE_RESPONSE_DESTADDR_OFFSET, MAC_BYTES);
+                sta->tagged = false;
+                sta->radio.sta.ap = NULL;   /* We'll update these later */
+                memcpy(sta->radio.sta.apMac, nullMac, MAC_BYTES);
+            }
+        }
+        /* If we weren't able to add the STA continue on to the AP */
+        if (sta != NULL) {
+            sta->scanType = SCAN_WIFI_STA;
+            sta->radio.sta.channel = rx_ctrl.channel;
+            result |= add_device(sta);
+            if (creating) {
+                free(sta);
+                creating = false;
+                /* Get a pointer to the actual object so we can set its AP later */
+                sta = retrieve_by_mac(payload + PROBE_RESPONSE_DESTADDR_OFFSET);
+            }
+        }
+    }
+    if (ap == NULL) {
+        creating = true;
+        ap = malloc(sizeof(wendigo_device));
+        if (ap == NULL) {
+            return outOfMemory();
+        }
+        memcpy(ap->mac, payload + PROBE_RESPONSE_BSSID_OFFSET, MAC_BYTES);
+        ap->tagged = false;
+        ap->radio.ap.stations = NULL;   /* We'll update these later */
+        ap->radio.ap.stations_count = 0;
+        ap->radio.ap.ssid[0] = '\0';
+    }
+    ap->scanType = SCAN_WIFI_AP;
+    ap->rssi = rx_ctrl.rssi;
+    ap->radio.ap.channel = rx_ctrl.channel;
+    uint8_t ssid_len = payload[PROBE_RESPONSE_SSID_OFFSET - 1];
+    if (ssid_len > 0) {
+        memcpy(ap->radio.ap.ssid, payload + PROBE_RESPONSE_SSID_OFFSET, ssid_len);
+    }
+    ap->radio.ap.ssid[ssid_len] = '\0';
+    result |= add_device(ap);
+    if (creating) {
+        free(ap);
+        ap = retrieve_by_mac(payload + PROBE_RESPONSE_BSSID_OFFSET);
+    }
+    /* Even though this is a probe response, meaning the STA and AP have not successfully
+       connected, link the AP and STA to each other because we don't currently parse enough
+       packets to set the links upon successful association. */
+    // TODO: Add parsing for data & association packets
+    if (ap != NULL && sta != NULL) {
+        sta->radio.sta.ap = ap;
+        memcpy(sta->radio.sta.apMac, ap->mac, MAC_BYTES);
+        wendigo_device **new_stations = realloc(ap->radio.ap.stations, sizeof(wendigo_device *) * (ap->radio.ap.stations_count + 1));
+        if (new_stations != NULL) {
+            ap->radio.ap.stations = (void **)new_stations;
+            ap->radio.ap.stations[ap->radio.ap.stations_count++] = sta;
+        }
+    }
+    return result;
 }
 
 esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
@@ -87,6 +157,18 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
 }
 
 esp_err_t parse_data(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    //
+
+    return ESP_OK;
+}
+
+esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    //
+
+    return ESP_OK;
+}
+
+esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     //
 
     return ESP_OK;
@@ -111,10 +193,10 @@ void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type) {
             result = parse_probe_resp(payload, data->rx_ctrl);
             break;
         case WIFI_FRAME_DEAUTH:
-            //
+            result = parse_deauth(payload, data->rx_ctrl);
             break;
         case WIFI_FRAME_DISASSOC:
-            //
+            result = parse_disassoc(payload, data->rx_ctrl);
             break;
         case WIFI_FRAME_ASSOC_REQ:
             //
