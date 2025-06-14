@@ -116,10 +116,14 @@ esp_err_t add_device(wendigo_device *dev) {
             if (dev->radio.bluetooth.cod != 0) {
                 existingDevice->radio.bluetooth.cod = dev->radio.bluetooth.cod;
             }
+            // TODO: Think about whether I should malloc memory for services or use previously-allocated memory
+            //       bt_uuid **known_services will make malloc'ing more difficult
+            // TODO: Decide how to merge services - Should probably be done with a separate function
+        } else if (dev->scanType == SCAN_WIFI_AP) {
+            //
+        } else if (dev->scanType == SCAN_WIFI_STA) {
+            //
         }
-        // TODO: Think about whether I should malloc memory for services or use previously-allocated memory
-        //       bt_uuid **known_services will make malloc'ing more difficult
-        // TODO: Decide how to merge services - Should probably be done with a separate function
     }
     return result;
 }
@@ -132,6 +136,10 @@ esp_err_t free_device(wendigo_device *dev) {
         if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
             free(dev->radio.bluetooth.eir);
         }
+    } else if (dev->scanType == SCAN_WIFI_AP) {
+        //
+    } else if (dev->scanType == SCAN_WIFI_STA) {
+        //
     }
     return ESP_OK;
 }

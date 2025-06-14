@@ -34,6 +34,8 @@ uint8_t PROBE_RESPONSE_GROUP_CIPHER_OFFSET = 62; /* + ssid_len */
 uint8_t PROBE_RESPONSE_PAIRWISE_CIPHER_OFFSET = 68; /* + ssid_len */
 uint8_t PROBE_RESPONSE_AUTH_TYPE_OFFSET = 74; /* + ssid_len */
 uint8_t PROBE_RESPONSE_LEN = 173;
+uint8_t RTS_CTS_DESTADDR = 4;
+uint8_t RTS_CTS_SRCADDR = 10;
 
 typedef enum WiFi_Frame {
     WIFI_FRAME_ASSOC_REQ = 0x00,
