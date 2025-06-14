@@ -5,14 +5,101 @@ esp_err_t ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t ar
     return ESP_OK;
 }
 
+esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    //
+
+    return ESP_OK;
+}
+
+esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    //
+
+    return ESP_OK;
+}
+
+esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    //
+
+    return ESP_OK;
+}
+
+esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    //
+
+    return ESP_OK;
+}
+
+esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    //
+
+    return ESP_OK;
+}
+
+esp_err_t parse_data(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    //
+
+    return ESP_OK;
+}
+
 /* Monitor mode callback
    This is the callback function invoked when the wireless interface receives any selected packet.
 */
 void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type) {
     wifi_promiscuous_pkt_t *data = (wifi_promiscuous_pkt_t *)buf;
-
-    UNUSED(data);
-    ESP_LOGE("UNIMPLEMENTED", "wifi_pkt_rcvd is not yet implemented, I don't know what to do with this packet but its RSSI is %d\n", data->rx_ctrl.rssi);
+    uint8_t *payload = data->payload;
+    esp_err_t result = ESP_OK;
+    /* Pass the packet to the relevant parser */
+    switch (payload[0]) {
+        case WIFI_FRAME_BEACON:
+            result = parse_beacon(payload, data->rx_ctrl);
+            break;
+        case WIFI_FRAME_PROBE_REQ:
+            result = parse_probe_req(payload, data->rx_ctrl);
+            break;
+        case WIFI_FRAME_PROBE_RESP:
+            result = parse_probe_resp(payload, data->rx_ctrl);
+            break;
+        case WIFI_FRAME_DEAUTH:
+            //
+            break;
+        case WIFI_FRAME_DISASSOC:
+            //
+            break;
+        case WIFI_FRAME_ASSOC_REQ:
+            //
+            break;
+        case WIFI_FRAME_ASSOC_RESP:
+            //
+            break;
+        case WIFI_FRAME_REASSOC_REQ:
+            //
+            break;
+        case WIFI_FRAME_REASSOC_RESP:
+            //
+            break;
+        case WIFI_FRAME_ATIMS:
+            //
+            break;
+        case WIFI_FRAME_AUTH:
+            //
+            break;
+        case WIFI_FRAME_ACTION:
+            //
+            break;
+        case WIFI_FRAME_RTS:
+            result = parse_rts(payload, data->rx_ctrl);
+            break;
+        case WIFI_FRAME_CTS:
+            result = parse_cts(payload, data->rx_ctrl);
+            break;
+        case WIFI_FRAME_DATA:
+        case WIFI_FRAME_DATA_ALT:
+            result = parse_data(payload, data->rx_ctrl);
+            break;
+        default:
+            //
+            break;
+    }
 
     return;
 }
