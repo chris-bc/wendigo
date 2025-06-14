@@ -207,8 +207,8 @@ Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some fu
     * [X] Age since last seen - Implemented but nonsense results.
   * [X] Device tagging and displaying only tagged devices
 * [ ] WiFi Features
-  * [ ] WiFi packet
-  * [ ] ESP32 WiFi scanning
+  * [X] WiFi packet
+  * [X] ESP32 WiFi scanning
   * [ ] ESP32 WiFi packet transmission
   * [ ] Flipper WiFi packet parsing
   * [X] Flipper WiFi data model
