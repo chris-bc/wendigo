@@ -31,8 +31,9 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     memcpy(dev->radio.ap.ssid, payload + BEACON_SSID_OFFSET, ssid_len);
     dev->radio.ap.ssid[ssid_len] = '\0';
 
-    esp_err_t result = add_device(dev);
+    esp_err_t result = ESP_OK;
     if (creating) {
+        result = add_device(dev);
         free(dev);
     }
     return result;
@@ -61,8 +62,9 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     dev->radio.sta.channel = rx_ctrl.channel;
     // TODO: Add SSID to the STA's network list
 
-    esp_err_t result = add_device(dev);
+    esp_err_t result = ESP_OK;
     if (creating) {
+        result = add_device(dev);
         free(dev);
     }
     return result;
@@ -95,8 +97,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         if (sta != NULL) {
             sta->scanType = SCAN_WIFI_STA;
             sta->radio.sta.channel = rx_ctrl.channel;
-            result |= add_device(sta);
             if (creating) {
+                result |= add_device(sta);
                 free(sta);
                 creating = false;
                 /* Get a pointer to the actual object so we can set its AP later */
@@ -124,8 +126,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->radio.ap.ssid, payload + PROBE_RESPONSE_SSID_OFFSET, ssid_len);
     }
     ap->radio.ap.ssid[ssid_len] = '\0';
-    result |= add_device(ap);
     if (creating) {
+        result |= add_device(ap);
         free(ap);
         ap = retrieve_by_mac(payload + PROBE_RESPONSE_BSSID_OFFSET);
     }
@@ -168,8 +170,8 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     sta->rssi = rx_ctrl.rssi;
     sta->scanType = SCAN_WIFI_STA;
     sta->radio.sta.channel = rx_ctrl.channel;
-    result |= add_device(sta);
     if (creating) {
+        result |= add_device(sta);
         free(sta);
         creating = false;
         sta = retrieve_by_mac(payload + RTS_CTS_SRCADDR);
@@ -191,8 +193,8 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     }
     ap->scanType = SCAN_WIFI_AP;
     ap->radio.ap.channel = rx_ctrl.channel;
-    result |= add_device(ap);
     if (creating) {
+        result |= add_device(ap);
         free(ap);
         ap = retrieve_by_mac(payload + RTS_CTS_DESTADDR);
     }
@@ -235,8 +237,8 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     ap->scanType = SCAN_WIFI_AP;
     ap->rssi = rx_ctrl.rssi;
     ap->radio.ap.channel = rx_ctrl.channel;
-    result |= add_device(ap);
     if (creating) {
+        result |= add_device(ap);
         free(ap);
         creating = false;
         ap = retrieve_by_mac(payload + RTS_CTS_SRCADDR);
@@ -256,8 +258,8 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     }
     sta->scanType = SCAN_WIFI_STA;
     sta->radio.sta.channel = rx_ctrl.channel;
-    result |= add_device(sta);
     if (creating) {
+        result |= add_device(sta);
         free(sta);
         sta = retrieve_by_mac(payload + RTS_CTS_DESTADDR);
     }
