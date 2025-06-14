@@ -5,6 +5,57 @@ esp_err_t ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t ar
     return ESP_OK;
 }
 
+esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
+    esp_err_t result = ESP_OK;
+
+
+    return result;
+}
+
+esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
+    esp_err_t result = ESP_OK;
+
+
+    return result;
+}
+
+esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
+    esp_err_t result = ESP_OK;
+
+
+    return result;
+}
+
+esp_err_t display_wifi_sta_interactive(wendigo_device *dev) {
+    esp_err_t result = ESP_OK;
+
+
+    return result;
+}
+
+esp_err_t display_wifi_device(wendigo_device *dev) {
+    /* If Focus Mode is enabled only display the device if it's tagged */
+    wendigo_device *existing_device = retrieve_device(dev);
+    if (scanStatus[SCAN_FOCUS] == ACTION_ENABLE && (existing_device == NULL || !existing_device->tagged)) {
+        return ESP_OK;
+    }
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+        if (dev->scanType == SCAN_WIFI_AP) {
+            return display_wifi_ap_interactive(dev);
+        } else if (dev->scanType == SCAN_WIFI_STA) {
+            return display_wifi_sta_interactive(dev);
+        }
+    } else {
+        if (dev->scanType == SCAN_WIFI_AP) {
+            return display_wifi_ap_uart(dev);
+        } else if (dev->scanType == SCAN_WIFI_STA) {
+            return display_wifi_sta_uart(dev);
+        }
+    }
+    /* We shouldn't reach this point - If we have there's something funky about `dev` */
+    return ESP_ERR_INVALID_ARG;
+}
+
 /** Link the specified devices to reflect their association.
  */
 esp_err_t set_associated(wendigo_device *sta, wendigo_device *ap) {
