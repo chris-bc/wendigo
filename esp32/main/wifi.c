@@ -60,6 +60,9 @@ esp_err_t display_wifi_sta_interactive(wendigo_device *dev) {
 
 esp_err_t display_wifi_device(wendigo_device *dev) {
     /* If Focus Mode is enabled only display the device if it's tagged */
+    if (dev == NULL) {
+        return ESP_OK; /* Not an error */
+    }
     wendigo_device *existing_device = retrieve_device(dev);
     if (scanStatus[SCAN_FOCUS] == ACTION_ENABLE && (existing_device == NULL || !existing_device->tagged)) {
         return ESP_OK;
@@ -137,6 +140,7 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     } else {
         gettimeofday(&(dev->lastSeen), NULL);
     }
+    display_wifi_device(dev);
     return result;
 }
 
@@ -170,6 +174,7 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     } else {
         gettimeofday(&(dev->lastSeen), NULL);
     }
+    display_wifi_device(dev);
     return result;
 }
 
@@ -244,6 +249,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     if (ap != NULL && sta != NULL) {
         result |= set_associated(sta, ap);
     }
+    display_wifi_device(ap);
+    display_wifi_device(sta);
     return result;
 }
 
@@ -306,6 +313,8 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     if (ap != NULL && sta != NULL) {
         result |= set_associated(sta, ap);
     }
+    display_wifi_device(ap);
+    display_wifi_device(sta);
     return result;
 }
 
@@ -368,6 +377,8 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     if (ap != NULL && sta != NULL) {
         set_associated(sta, ap);
     }
+    display_wifi_device(ap);
+    display_wifi_device(sta);
     return result;
 }
 
@@ -405,6 +416,8 @@ esp_err_t parse_data(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
             dest->radio.ap.channel = rx_ctrl.channel;
         }
     }
+    display_wifi_device(src);
+    display_wifi_device(dest);
     return ESP_OK;
 }
 
@@ -471,6 +484,8 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     if (ap != NULL && sta != NULL) {
         result |= set_associated(sta, ap);
     }
+    display_wifi_device(ap);
+    display_wifi_device(sta);
     return result;
 }
 
@@ -538,6 +553,8 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     if (ap != NULL && sta != NULL) {
         result |= set_associated(sta, ap);
     }
+    display_wifi_device(ap);
+    display_wifi_device(sta);
     return result;
 }
 
