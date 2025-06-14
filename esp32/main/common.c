@@ -70,6 +70,10 @@ esp_err_t add_device(wendigo_device *dev) {
                         devices[devices_count].radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
                     }
                 }
+            } else if (dev->scanType == SCAN_WIFI_AP) {
+                //
+            } else if (dev->scanType == SCAN_WIFI_STA) {
+                //
             }
             ++devices_count;
         }

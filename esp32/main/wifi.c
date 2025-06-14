@@ -5,10 +5,37 @@ esp_err_t ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t ar
     return ESP_OK;
 }
 
+/** Parse a beacon frame and either create or update a wendigo_device for
+ * the AP. As the only STA identifier we have is the MAC a STA device
+ * will not be created.
+ */
 esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
-    //
+    wendigo_device *dev = retrieve_by_mac(payload + BEACON_BSSID_OFFSET);
+    bool creating = false;
+    if (dev == NULL) {
+        creating = true;
+        dev = malloc(sizeof(wendigo_device));
+        if (dev == NULL) {
+            return outOfMemory();
+        }
+        memcpy(dev->mac, payload + BEACON_BSSID_OFFSET, MAC_BYTES);
+        dev->tagged = false;
+        dev->radio.ap.stations = NULL;
+        dev->radio.ap.stations_count = 0;
+        dev->radio.ap.ssid[0] = '\0';
+    }
+    dev->scanType = SCAN_WIFI_AP;
+    dev->rssi = rx_ctrl.rssi;
+    dev->radio.ap.channel = rx_ctrl.channel;
+    uint8_t ssid_len = payload[BEACON_SSID_OFFSET - 1];
+    memcpy(dev->radio.ap.ssid, payload + BEACON_SSID_OFFSET, ssid_len);
+    dev->radio.ap.ssid[ssid_len] = '\0';
 
-    return ESP_OK;
+    esp_err_t result = add_device(dev);
+    if (creating) {
+        free(dev);
+    }
+    return result;
 }
 
 esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
@@ -99,6 +126,9 @@ void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type) {
         default:
             //
             break;
+    }
+    if (result != ESP_OK) {
+        // TODO: Something?
     }
 
     return;
