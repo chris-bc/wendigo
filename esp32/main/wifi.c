@@ -357,9 +357,62 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
  * information we have is MAC and channel).
  */
 esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
-    //
-
-    return ESP_OK;
+    wendigo_device *sta = retrieve_by_mac(payload + DEAUTH_SRCADDR_OFFSET);
+    wendigo_device *ap = NULL;
+    bool creating = false;
+    esp_err_t result = ESP_OK;
+    /* Add or update the STA */
+    if (sta == NULL) {
+        creating = true;
+        sta = malloc(sizeof(wendigo_device));
+        if (sta == NULL) {
+            return outOfMemory();
+        }
+        memcpy(sta->mac, payload + DEAUTH_SRCADDR_OFFSET, MAC_BYTES);
+        sta->tagged = false;
+        sta->radio.sta.ap = NULL;
+        memcpy(sta->radio.sta.apMac, nullMac, MAX_CANON);
+    }
+    sta->scanType = SCAN_WIFI_STA;
+    sta->rssi = rx_ctrl.rssi;
+    sta->radio.sta.channel = rx_ctrl.channel;
+    if (creating) {
+        result |= add_device(sta);
+        creating = false;
+        free(sta);
+        sta = retrieve_by_mac(payload + DEAUTH_SRCADDR_OFFSET);
+    }
+    /* End now if it's a broadcast packet */
+    if (!memcmp(payload + DEAUTH_DESTADDR_OFFSET, broadcastMac, MAC_BYTES)) {
+        return result;
+    }
+    /* Add or update the AP */
+    ap = retrieve_by_mac(payload + DEAUTH_DESTADDR_OFFSET);
+    if (ap == NULL) {
+        creating = true;
+        ap = malloc(sizeof(wendigo_device));
+        if (ap == NULL) {
+            return outOfMemory();
+        }
+        memcpy(ap->mac, payload + DEAUTH_DESTADDR_OFFSET, MAC_BYTES);
+        ap->tagged = false;
+        ap->radio.ap.ssid[0] = '\0';
+        ap->radio.ap.stations = NULL;
+        ap->radio.ap.stations_count = 0;
+    }
+    ap->scanType = SCAN_WIFI_AP;
+    ap->rssi = rx_ctrl.rssi;
+    ap->radio.ap.channel = rx_ctrl.channel;
+    if (creating) {
+        result |= add_device(ap);
+        free(ap);
+        ap = retrieve_by_mac(payload + DEAUTH_DESTADDR_OFFSET);
+    }
+    /* Link the AP and STA */
+    if (ap != NULL && sta != NULL) {
+        result |= set_associated(sta, ap);
+    }
+    return result;
 }
 
 /* Monitor mode callback
