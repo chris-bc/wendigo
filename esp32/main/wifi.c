@@ -5,6 +5,29 @@ esp_err_t ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t ar
     return ESP_OK;
 }
 
+/** Link the specified devices to reflect their association.
+ */
+esp_err_t set_associated(wendigo_device *sta, wendigo_device *ap) {
+    if (sta == NULL || ap == NULL || sta->scanType != SCAN_WIFI_STA || ap->scanType != SCAN_WIFI_AP) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    sta->radio.sta.ap = ap;
+    memcpy(sta->radio.sta.apMac, ap->mac, MAC_BYTES);
+    /* See if sta is present in ap->radio.ap.stations */
+    uint8_t i;
+    for (i = 0; i < ap->radio.ap.stations_count && memcmp(sta->mac, ((wendigo_device *)ap->radio.ap.stations[i])->mac, MAC_BYTES); ++i) { }
+    if (i == ap->radio.ap.stations_count) {
+        /* Station not found in ap->radio.ap.stations - Add it */
+        wendigo_device **new_stations = realloc(ap->radio.ap.stations, sizeof(wendigo_device *) * (ap->radio.ap.stations_count + 1));
+        if (new_stations == NULL) {
+            return outOfMemory();
+        }
+        ap->radio.ap.stations = (void **)new_stations;
+        ap->radio.ap.stations[ap->radio.ap.stations_count++] = sta;
+    }
+    return ESP_OK;
+}
+
 /** Parse a beacon frame and either create or update a wendigo_device for
  * the AP. As the only STA identifier we have is the MAC a STA device
  * will not be created.
@@ -134,15 +157,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     /* Even though this is a probe response, meaning the STA and AP have not successfully
        connected, link the AP and STA to each other because we don't currently parse enough
        packets to set the links upon successful association. */
-    // TODO: Add parsing for data & association packets
     if (ap != NULL && sta != NULL) {
-        sta->radio.sta.ap = ap;
-        memcpy(sta->radio.sta.apMac, ap->mac, MAC_BYTES);
-        wendigo_device **new_stations = realloc(ap->radio.ap.stations, sizeof(wendigo_device *) * (ap->radio.ap.stations_count + 1));
-        if (new_stations != NULL) {
-            ap->radio.ap.stations = (void **)new_stations;
-            ap->radio.ap.stations[ap->radio.ap.stations_count++] = sta;
-        }
+        result |= set_associated(sta, ap);
     }
     return result;
 }
@@ -200,14 +216,7 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     }
     /* Link the AP and STA */
     if (ap != NULL && sta != NULL) {
-        sta->radio.sta.ap = ap;
-        memcpy(sta->radio.sta.apMac, ap->mac, MAC_BYTES);
-        wendigo_device **new_stations = realloc(ap->radio.ap.stations,
-                                        sizeof(wendigo_device *) * (ap->radio.ap.stations_count + 1));
-        if (new_stations != NULL) {
-            ap->radio.ap.stations = (void **)new_stations;
-            ap->radio.ap.stations[ap->radio.ap.stations_count++] = sta;
-        }
+        result |= set_associated(sta, ap);
     }
     return result;
 }
@@ -265,17 +274,16 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     }
     /* Link the AP and STA */
     if (ap != NULL && sta != NULL) {
-        sta->radio.sta.ap = ap;
-        memcpy(sta->radio.sta.apMac, ap->mac, MAC_BYTES);
-        wendigo_device **new_stations = realloc(ap->radio.ap.stations, sizeof(wendigo_device *) * (ap->radio.ap.stations_count + 1));
-        if (new_stations != NULL) {
-            ap->radio.ap.stations = (void **)new_stations;
-            ap->radio.ap.stations[ap->radio.ap.stations_count++] = sta;
-        }
+        set_associated(sta, ap);
     }
     return result;
 }
 
+/** Parse a data packet. These could go in either direction so we know the source
+ * and destination MAC, but don't know which is an AP and which a STA. This function
+ * will search for both MACs in the device cache to determine which is which. If
+ * both devices are present in the cache they are linked.
+ */
 esp_err_t parse_data(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     //
 
