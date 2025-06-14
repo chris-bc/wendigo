@@ -57,6 +57,8 @@ ActionType scanStatus[SCAN_COUNT] = { ACTION_DISABLE, ACTION_DISABLE, ACTION_DIS
 char *syntaxTip[SCAN_COUNT] = { "H[CI]", "B[LE]", "W[IFI]", "W[IFI]", "I[NTERACTIVE]", "T[AG] ( B[T] | W[IFI] ) <MAC>", "F[OCUS]" };
 char *radioShortNames[SCAN_COUNT] = { "HCI", "BLE", "WiFi", "WiFi", "Interactive", "Tag", "Focus" };
 char *radioFullNames[SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi", "WiFi", "Interactive Mode", "Tag Devices", "Focus Mode" };
+uint8_t nullMac[MAC_BYTES] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+uint8_t broadcastMac[MAC_BYTES] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
 /* Device caches accessible across Wendige */
 extern uint16_t devices_count;

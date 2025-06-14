@@ -38,10 +38,34 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     return result;
 }
 
+/** Parse a probe request frame, creating or updating a wendigo_device for
+ * the STA that transmitted it.
+ * TODO: Add network_list[] to wendigo_wifi_ap, add the probed SSID to this
+ */
 esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
-    //
+    wendigo_device *dev = retrieve_by_mac(payload + PROBE_SRCADDR_OFFSET);
+    bool creating = false;
+    if (dev == NULL) {
+        creating = true;
+        dev = malloc(sizeof(wendigo_device));
+        if (dev == NULL) {
+            return outOfMemory();
+        }
+        memcpy(dev->mac, payload + PROBE_SRCADDR_OFFSET, MAC_BYTES);
+        dev->tagged = false;
+        dev->radio.sta.ap = NULL;
+        memcpy(dev->radio.sta.apMac, nullMac, MAC_BYTES);
+    }
+    dev->scanType = SCAN_WIFI_STA;
+    dev->rssi = rx_ctrl.rssi;
+    dev->radio.sta.channel = rx_ctrl.channel;
+    // TODO: Add SSID to the STA's network list
 
-    return ESP_OK;
+    esp_err_t result = add_device(dev);
+    if (creating) {
+        free(dev);
+    }
+    return result;
 }
 
 esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
