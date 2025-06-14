@@ -71,9 +71,9 @@ esp_err_t add_device(wendigo_device *dev) {
                     }
                 }
             } else if (dev->scanType == SCAN_WIFI_AP) {
-                //
+                // No special cases
             } else if (dev->scanType == SCAN_WIFI_STA) {
-                //
+                // No special cases
             }
             ++devices_count;
         }
@@ -120,9 +120,16 @@ esp_err_t add_device(wendigo_device *dev) {
             //       bt_uuid **known_services will make malloc'ing more difficult
             // TODO: Decide how to merge services - Should probably be done with a separate function
         } else if (dev->scanType == SCAN_WIFI_AP) {
-            //
+            existingDevice->radio.ap.channel = dev->radio.ap.channel;
+            /* Just reuse the stations pointer and free it later */
+            existingDevice->radio.ap.stations = dev->radio.ap.stations;
+            existingDevice->radio.ap.stations_count = dev->radio.ap.stations_count;
+            strncpy((char *)existingDevice->radio.ap.ssid, (char *)dev->radio.ap.ssid, MAX_SSID_LEN + 1);
+            existingDevice->radio.ap.ssid[MAX_SSID_LEN] = '\0';
         } else if (dev->scanType == SCAN_WIFI_STA) {
-            //
+            existingDevice->radio.sta.channel = dev->radio.sta.channel;
+            existingDevice->radio.sta.ap = dev->radio.sta.ap;
+            memcpy(existingDevice->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
         }
     }
     return result;
