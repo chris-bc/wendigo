@@ -100,7 +100,7 @@ esp_err_t display_gap_interactive(wendigo_device *dev) {
     char *dev_type = (dev->scanType == SCAN_HCI) ? radioShortNames[SCAN_HCI] :
                       (dev->scanType == SCAN_BLE) ? radioShortNames[SCAN_BLE] : "UNK";
     char mac_str[MAC_STRLEN + 1];
-    bda2str(dev->mac, mac_str, MAC_STRLEN + 1);
+    mac_bytes_to_string(dev->mac, mac_str);
     char cod_str[COD_MAX_LEN];
     uint8_t cod_str_len = 0;
     cod2deviceStr(dev->radio.bluetooth.cod, cod_str, &cod_str_len);
@@ -447,7 +447,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             }
             break;
         case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
-            bda2str(param->update_conn_params.bda, bdaStr, MAC_STRLEN + 1);
+            mac_bytes_to_string(param->update_conn_params.bda, bdaStr);
             ESP_LOGI(BLE_TAG, "BLE updated connection params for %s. Status: %d, min_int: %d, max_int: %d, conn_int: %d, latency: %d, timeout: %d",
                     bdaStr, param->update_conn_params.status,
                     param->update_conn_params.min_int, param->update_conn_params.max_int,
@@ -455,7 +455,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     param->update_conn_params.timeout);
             break;
         case ESP_GAP_BLE_GET_DEV_NAME_COMPLETE_EVT:
-                bda2str(param->scan_rst.bda, bdaStr, MAC_STRLEN + 1); //TODO: Confirm param->scan_rst.bda exists
+                mac_bytes_to_string(param->scan_rst.bda, bdaStr); //TODO: Confirm param->scan_rst.bda exists
                 ESP_LOGI(BLE_TAG, "Got a complete BLE device name for %s: %s. Status %d",
                          bdaStr, param->get_dev_name_cmpl.name, param->get_dev_name_cmpl.status);
                 memcpy(dev.mac, param->scan_rst.bda, sizeof(esp_bd_addr_t));
@@ -514,7 +514,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                         dev.radio.bluetooth.eir_len = scan_result->scan_rst.adv_data_len;
                     }
                     // TODO: Can I find the COD (Class Of Device) anywhere?
-                    bda2str(dev.mac, bdaStr, MAC_STRLEN + 1);
+                    mac_bytes_to_string(dev.mac, bdaStr);
                     display_gap_device(&dev);
                     /* Add to or update all_gap_devices[] */
                     add_device(&dev);
@@ -845,7 +845,7 @@ static void bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
     switch (event) {
         case ESP_BT_GAP_DISC_RES_EVT:
             char bdaStr[MAC_STRLEN + 1];
-            bda2str(param->disc_res.bda, bdaStr, MAC_STRLEN + 1);
+            mac_bytes_to_string(param->disc_res.bda, bdaStr);
             wendigo_device *dev = device_from_gap_cb(param);
             if (dev == NULL) {
                 ESP_LOGE(BT_TAG, "Failed to obtain device from event parameters :(");
@@ -1048,18 +1048,6 @@ esp_err_t cod2shortStr(uint32_t cod, char *string, uint8_t *stringLen) {
     *stringLen = strlen(string);
 
     return err;
-}
-
-// TODO: Replace with bytes_to_string?
-/* Convert Bluetooth Device Address (equivalent to MAC) to a printable hex string */
-char *bda2str(esp_bd_addr_t bda, char *str, size_t size) {
-    if (bda == NULL || str == NULL || size < (MAC_STRLEN + 1)) {
-        return NULL;
-    }
-
-    uint8_t *p = bda;
-    sprintf(str, "%02x:%02x:%02x:%02x:%02x:%02x", p[0], p[1], p[2], p[3], p[4], p[5]);
-    return str;
 }
 
 /* Convert a UUID (service or attribute descriptor) to a printable hex string */

@@ -50,11 +50,11 @@ esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
 /* Convert the specified byte array to a string representing
    a MAC address. strMac must be a pointer initialised to
    contain at least 18 bytes (MAC + '\0') */
-// TODO: Refactor to use bytes_to_string()
    esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac) {
-    sprintf(strMac, "%02X:%02X:%02X:%02X:%02X:%02X", bMac[0],
-            bMac[1], bMac[2], bMac[3], bMac[4], bMac[5]);
-    return ESP_OK;
+    if (bMac == NULL || strMac == NULL ) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return wendigo_bytes_to_string(bMac, strMac, MAC_BYTES);
 }
 
 /* Convert the specified string to a byte array
