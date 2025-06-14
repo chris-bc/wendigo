@@ -145,8 +145,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     return result;
 }
 
-/** Parse an RTS frame and create or update the wendigo_device representing
- * the transmitting STA and receiving AP.
+/** Parse an RTS (request to send) frame and create or update the
+ * wendigo_device representing the transmitting STA and receiving AP.
  */
 esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     wendigo_device *sta = retrieve_by_mac(payload + RTS_CTS_SRCADDR);
@@ -210,10 +210,68 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     return result;
 }
 
+/** Parse a CTS (clear to send) packet and create or update the wendigo_device
+ * objects representing the AP and STA.
+ */
 esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
-    //
+    wendigo_device *sta = retrieve_by_mac(payload + RTS_CTS_DESTADDR);
+    wendigo_device *ap = retrieve_by_mac(payload + RTS_CTS_SRCADDR);
+    bool creating = false;
+    esp_err_t result = ESP_OK;
 
-    return ESP_OK;
+    if (ap == NULL) {
+        /* Create the AP */
+        creating = true;
+        ap = malloc(sizeof(wendigo_device));
+        if (ap == NULL) {
+            return outOfMemory();
+        }
+        memcpy(ap->mac, payload + RTS_CTS_SRCADDR, MAC_BYTES);
+        ap->tagged = false;
+        ap->radio.ap.ssid[0] = '\0';
+        ap->radio.ap.stations_count = 0;
+        ap->radio.ap.stations = NULL;
+    }
+    ap->scanType = SCAN_WIFI_AP;
+    ap->rssi = rx_ctrl.rssi;
+    ap->radio.ap.channel = rx_ctrl.channel;
+    result |= add_device(ap);
+    if (creating) {
+        free(ap);
+        creating = false;
+        ap = retrieve_by_mac(payload + RTS_CTS_SRCADDR);
+    }
+    if (sta == NULL) {
+        /* While the only thing we know about the STA is its MAC, create
+           a wendigo_device for it so it can be linked to the AP. */
+        creating = true;
+        sta = malloc(sizeof(wendigo_device));
+        if (sta == NULL) {
+            return outOfMemory();
+        }
+        memcpy(sta->mac, payload + RTS_CTS_DESTADDR, MAC_BYTES);
+        sta->tagged = false;
+        sta->radio.sta.ap = NULL;
+        memcpy(sta->radio.sta.apMac, nullMac, MAC_BYTES);
+    }
+    sta->scanType = SCAN_WIFI_STA;
+    sta->radio.sta.channel = rx_ctrl.channel;
+    result |= add_device(sta);
+    if (creating) {
+        free(sta);
+        sta = retrieve_by_mac(payload + RTS_CTS_DESTADDR);
+    }
+    /* Link the AP and STA */
+    if (ap != NULL && sta != NULL) {
+        sta->radio.sta.ap = ap;
+        memcpy(sta->radio.sta.apMac, ap->mac, MAC_BYTES);
+        wendigo_device **new_stations = realloc(ap->radio.ap.stations, sizeof(wendigo_device *) * (ap->radio.ap.stations_count + 1));
+        if (new_stations != NULL) {
+            ap->radio.ap.stations = (void **)new_stations;
+            ap->radio.ap.stations[ap->radio.ap.stations_count++] = sta;
+        }
+    }
+    return result;
 }
 
 esp_err_t parse_data(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
