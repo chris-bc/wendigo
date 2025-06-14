@@ -7,22 +7,29 @@ esp_err_t ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t ar
 
 esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     esp_err_t result = ESP_OK;
+    repeat_bytes(0x99, 4);
+    repeat_bytes(0x11, 4);
 
 
+    repeat_bytes(0xAA, 4);
+    repeat_bytes(0xFF, 4);
     return result;
 }
 
 esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
     esp_err_t result = ESP_OK;
 
-
     return result;
 }
 
 esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     esp_err_t result = ESP_OK;
+    repeat_bytes(0x99, 4);
+    repeat_bytes(0xFF, 4);
 
 
+    repeat_bytes(0xAA, 4);
+    repeat_bytes(0xFF, 4);
     return result;
 }
 

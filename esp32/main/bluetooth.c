@@ -144,10 +144,7 @@ esp_err_t display_gap_interactive(wendigo_device *dev) {
 
 /* Send device info to stdout to transmit over UART
    * Sends 4 bytes of 0xFF followed by 4 bytes of 0xAA to begin the transmission
-   * Sends the device structure (sizeof(wendigo_bt_device))
-   * Sends bdname if present (wendigo_bt_device.bdname_len + 1 bytes)
-   * Sends eir if present (wendigo_bt_device.eir_len bytes)
-   * Sends strlen(cod_short) (1 byte) followed by cod_short
+   * Sends device attributes
    * Ends the transmission with the reverse of the start: 4*0xAA 4*0xFF
 */
 esp_err_t display_gap_uart(wendigo_device *dev) {
