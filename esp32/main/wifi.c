@@ -305,9 +305,30 @@ esp_err_t parse_data(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     wendigo_device *dest = retrieve_by_mac(payload + DEAUTH_DESTADDR_OFFSET);
 
     if (src != NULL) {
-
+        /* Found the transmitting device - Update its details */
+        gettimeofday(&(src->lastSeen), NULL);
+        src->rssi = rx_ctrl.rssi;
+        if (src->scanType == SCAN_WIFI_AP) {
+            src->radio.ap.channel = rx_ctrl.channel;
+            if (dest != NULL && dest->scanType == SCAN_WIFI_STA) {
+                set_associated(dest, src);
+            }
+        } else if (src->scanType == SCAN_WIFI_STA) {
+            src->radio.sta.channel = rx_ctrl.channel;
+            if (dest != NULL && dest->scanType == SCAN_WIFI_AP) {
+                set_associated(src, dest);
+            }
+        }
     }
-
+    if (dest != NULL) {
+        /* Found the receiving device */
+        gettimeofday(&(dest->lastSeen), NULL);
+        if (dest->scanType == SCAN_WIFI_AP) {
+            dest->radio.ap.channel = rx_ctrl.channel;
+        } else if (dest->scanType == SCAN_WIFI_STA) {
+            dest->radio.ap.channel = rx_ctrl.channel;
+        }
+    }
     return ESP_OK;
 }
 
@@ -506,7 +527,6 @@ void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (result != ESP_OK) {
         // TODO: Something?
     }
-
     return;
 }
 
