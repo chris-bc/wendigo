@@ -58,6 +58,8 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     if (creating) {
         result = add_device(dev);
         free(dev);
+    } else {
+        gettimeofday(&(dev->lastSeen), NULL);
     }
     return result;
 }
@@ -89,6 +91,8 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     if (creating) {
         result = add_device(dev);
         free(dev);
+    } else {
+        gettimeofday(&(dev->lastSeen), NULL);
     }
     return result;
 }
@@ -126,6 +130,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
                 creating = false;
                 /* Get a pointer to the actual object so we can set its AP later */
                 sta = retrieve_by_mac(payload + PROBE_RESPONSE_DESTADDR_OFFSET);
+            } else {
+                gettimeofday(&(sta->lastSeen), NULL);
             }
         }
     }
@@ -153,6 +159,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         result |= add_device(ap);
         free(ap);
         ap = retrieve_by_mac(payload + PROBE_RESPONSE_BSSID_OFFSET);
+    } else {
+        gettimeofday(&(ap->lastSeen), NULL);
     }
     /* Even though this is a probe response, meaning the STA and AP have not successfully
        connected, link the AP and STA to each other because we don't currently parse enough
@@ -191,6 +199,8 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         free(sta);
         creating = false;
         sta = retrieve_by_mac(payload + RTS_CTS_SRCADDR);
+    } else {
+        gettimeofday(&(sta->lastSeen), NULL);
     }
     if (ap == NULL) {
         /* Even though the only AP info we have is MAC, we also know
@@ -213,6 +223,8 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         result |= add_device(ap);
         free(ap);
         ap = retrieve_by_mac(payload + RTS_CTS_DESTADDR);
+    } else {
+        gettimeofday(&(ap->lastSeen), NULL);
     }
     /* Link the AP and STA */
     if (ap != NULL && sta != NULL) {
@@ -251,6 +263,8 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         free(ap);
         creating = false;
         ap = retrieve_by_mac(payload + RTS_CTS_SRCADDR);
+    } else {
+        gettimeofday(&(ap->lastSeen), NULL);
     }
     if (sta == NULL) {
         /* While the only thing we know about the STA is its MAC, create
@@ -271,6 +285,8 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         result |= add_device(sta);
         free(sta);
         sta = retrieve_by_mac(payload + RTS_CTS_DESTADDR);
+    } else {
+        gettimeofday(&(sta->lastSeen), NULL);
     }
     /* Link the AP and STA */
     if (ap != NULL && sta != NULL) {
@@ -285,7 +301,12 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
  * both devices are present in the cache they are linked.
  */
 esp_err_t parse_data(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
-    // TODO
+    wendigo_device *src = retrieve_by_mac(payload + DEAUTH_SRCADDR_OFFSET);
+    wendigo_device *dest = retrieve_by_mac(payload + DEAUTH_DESTADDR_OFFSET);
+
+    if (src != NULL) {
+
+    }
 
     return ESP_OK;
 }
@@ -320,6 +341,8 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         creating = false;
         free(ap);
         ap = retrieve_by_mac(payload + DEAUTH_BSSID_OFFSET);
+    } else {
+        gettimeofday(&(ap->lastSeen), NULL);
     }
     /* End now if this is a broadcast packet */
     if (!memcmp(payload + DEAUTH_DESTADDR_OFFSET, broadcastMac, MAC_BYTES)) {
@@ -344,6 +367,8 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         result |= add_device(sta);
         free(sta);
         sta = retrieve_by_mac(payload + DEAUTH_DESTADDR_OFFSET);
+    } else {
+        gettimeofday(&(sta->lastSeen), NULL);
     }
     /* Link the AP and STA */
     if (ap != NULL && sta != NULL) {
@@ -381,6 +406,8 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         creating = false;
         free(sta);
         sta = retrieve_by_mac(payload + DEAUTH_SRCADDR_OFFSET);
+    } else {
+        gettimeofday(&(sta->lastSeen), NULL);
     }
     /* End now if it's a broadcast packet */
     if (!memcmp(payload + DEAUTH_DESTADDR_OFFSET, broadcastMac, MAC_BYTES)) {
@@ -407,6 +434,8 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         result |= add_device(ap);
         free(ap);
         ap = retrieve_by_mac(payload + DEAUTH_DESTADDR_OFFSET);
+    } else {
+        gettimeofday(&(ap->lastSeen), NULL);
     }
     /* Link the AP and STA */
     if (ap != NULL && sta != NULL) {
