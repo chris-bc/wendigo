@@ -137,9 +137,13 @@ esp_err_t free_device(wendigo_device *dev) {
             free(dev->radio.bluetooth.eir);
         }
     } else if (dev->scanType == SCAN_WIFI_AP) {
-        //
+        if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
+            free(dev->radio.ap.stations);
+            dev->radio.ap.stations = NULL;
+            dev->radio.ap.stations_count = 0;
+        }
     } else if (dev->scanType == SCAN_WIFI_STA) {
-        //
+        dev->radio.sta.ap = NULL;
     }
     return ESP_OK;
 }
