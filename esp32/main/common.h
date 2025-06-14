@@ -74,4 +74,9 @@ void repeat_bytes(uint8_t byte, uint8_t count);
 void send_bytes(uint8_t *bytes, uint8_t size);
 void send_end_of_packet();
 
+wendigo_device *retrieve_device(wendigo_device *dev);
+wendigo_device *retrieve_by_mac(esp_bd_addr_t bda);
+esp_err_t add_device(wendigo_device *dev);
+esp_err_t free_device(wendigo_device *dev);
+
 #endif

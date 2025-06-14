@@ -72,11 +72,6 @@ static esp_gattc_descr_elem_t *descr_elem_result    = NULL;
 bool BT_INITIALISED = false;
 bool BLE_INITIALISED = false;
 
-/* Storage to maintain a cache of recently-displayed devices */
-uint16_t devices_count = 0;
-uint16_t devices_capacity = 0;
-wendigo_device *devices;
-
 esp_err_t display_gap_interactive(wendigo_device *dev) {
     esp_err_t result = ESP_OK;
     /* Before doing anything else check if we have seen this device
@@ -199,117 +194,6 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     return result;
 }
 
-/* Determines whether the BDA of the specified device exists in all_gap_devices[].
-   Returns a pointer to the object in all_gap_devices[] if found, NULL otherwise */
-wendigo_device *retrieve_device(wendigo_device *dev) {
-    wendigo_device *result = NULL;
-    int idx = 0;
-    for (; idx < devices_count && memcmp(dev->mac, devices[idx].mac, ESP_BD_ADDR_LEN); ++idx) {}
-    if (idx < devices_count) {
-        result = &(devices[idx]);
-    }
-    return result;
-}
-
-wendigo_device *retrieve_by_mac(esp_bd_addr_t mac) {
-    wendigo_device dev;
-    memcpy(dev.mac, mac, ESP_BD_ADDR_LEN);
-    return retrieve_device(&dev);
-}
-
-/* Adds the specified device to devices[] if not already present.
-   Updates the attributes of the specified device in devices[]
-   if it already exists. */
-esp_err_t add_device(wendigo_device *dev) {
-    esp_err_t result = ESP_OK;
-    wendigo_device *existingDevice = retrieve_device(dev);
-    if (existingDevice == NULL) {
-        /* Device not found - add it to devices[] */
-        if (devices_count == devices_capacity) {
-            /* No spare array capacity - malloc more */
-            wendigo_device *new_devices = realloc(devices, sizeof(wendigo_device) * (devices_capacity + 10));
-            if (new_devices != NULL) {
-                devices_capacity += 10;
-                devices = new_devices;
-            } // Ignoring realloc() failure because we can still transmit `dev` to FZ
-        }
-        /* Check again whether we have capacity because the malloc might have failed */
-        if (devices_count < devices_capacity) {
-            memcpy(&(devices[devices_count]), dev, sizeof(wendigo_device));
-            gettimeofday(&(devices[devices_count].lastSeen), NULL);
-            if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-                /* Duplicate bdname and eir if they exist so the caller can call free() */
-                if (dev->radio.bluetooth.bdname_len > 0) {
-                    devices[devices_count].radio.bluetooth.bdname = malloc(dev->radio.bluetooth.bdname_len + 1);
-                    if (devices[devices_count].radio.bluetooth.bdname == NULL) {
-                        result = outOfMemory();
-                    } else {
-                        memcpy(devices[devices_count].radio.bluetooth.bdname,
-                               dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
-                        devices[devices_count].radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
-                        devices[devices_count].radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
-                    }
-                }
-                if (dev->radio.bluetooth.eir_len > 0) {
-                    devices[devices_count].radio.bluetooth.eir = malloc(dev->radio.bluetooth.eir_len);
-                    if (devices[devices_count].radio.bluetooth.eir == NULL) {
-                        result = outOfMemory();
-                    } else {
-                        memcpy(devices[devices_count].radio.bluetooth.eir,
-                               dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
-                        devices[devices_count].radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
-                    }
-                }
-            }
-            ++devices_count;
-        }
-    } else {
-        /* Device exists. Update RSSI, lastSeen, and anything else that has changed */
-        existingDevice->rssi = dev->rssi;
-        gettimeofday(&(existingDevice->lastSeen), NULL);
-        existingDevice->scanType = dev->scanType;
-        if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-            if (dev->radio.bluetooth.bdname_len > 0) {
-                if (existingDevice->radio.bluetooth.bdname_len > 0 &&
-                        existingDevice->radio.bluetooth.bdname != NULL) {
-                    free(existingDevice->radio.bluetooth.bdname);
-                    existingDevice->radio.bluetooth.bdname_len = 0;
-                }
-                existingDevice->radio.bluetooth.bdname = malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
-                if (existingDevice->radio.bluetooth.bdname == NULL) {
-                    result = outOfMemory();
-                } else {
-                    memcpy(existingDevice->radio.bluetooth.bdname,
-                           dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
-                    existingDevice->radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
-                    existingDevice->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
-                }
-            }
-            if (dev->radio.bluetooth.eir_len > 0) {
-                if (existingDevice->radio.bluetooth.eir_len > 0 &&
-                        existingDevice->radio.bluetooth.eir != NULL) {
-                    free(existingDevice->radio.bluetooth.eir);
-                }
-                existingDevice->radio.bluetooth.eir = malloc(dev->radio.bluetooth.eir_len);
-                if (existingDevice->radio.bluetooth.eir == NULL) {
-                    result = outOfMemory();
-                } else {
-                    memcpy(existingDevice->radio.bluetooth.eir,
-                           dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
-                    existingDevice->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
-                }
-            }
-            if (dev->radio.bluetooth.cod != 0) {
-                existingDevice->radio.bluetooth.cod = dev->radio.bluetooth.cod;
-            }
-        }
-        // TODO: Think about whether I should malloc memory for services or use previously-allocated memory
-        //       bt_uuid **known_services will make malloc'ing more difficult
-        // TODO: Decide how to merge services - Should probably be done with a separate function
-    }
-    return result;
-}
-
 /* Display the specified Bluetooth (Classic or LE) device */
 esp_err_t display_gap_device(wendigo_device *dev) {
     /* If we're in Focus Mode only display the device if it's tagged
@@ -323,18 +207,6 @@ esp_err_t display_gap_device(wendigo_device *dev) {
     } else {
         return display_gap_uart(dev);
     }
-}
-
-esp_err_t free_device(wendigo_device *dev) {
-    if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-        if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
-            free(dev->radio.bluetooth.bdname);
-        }
-        if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
-            free(dev->radio.bluetooth.eir);
-        }
-    }
-    return ESP_OK;
 }
 
 esp_err_t wendigo_bt_initialise() {
