@@ -15,8 +15,7 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     repeat_bytes(0x11, 4);
 
 
-    repeat_bytes(0xAA, 4);
-    repeat_bytes(0xFF, 4);
+    send_end_of_packet();
     return result;
 }
 
@@ -98,9 +97,25 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     repeat_bytes(0x99, 4);
     repeat_bytes(0xFF, 4);
 
+    send_bytes((uint8_t *)&(dev->scanType), sizeof(dev->scanType));
+    send_bytes(dev->mac, MAC_BYTES);
+    send_bytes(&(dev->radio.sta.channel), sizeof(dev->radio.sta.channel));
+    send_bytes((uint8_t *)&(dev->rssi), sizeof(dev->rssi));
+    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(dev->lastSeen));
+    send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
+    send_bytes(dev->radio.sta.apMac, MAC_BYTES);
+    uint8_t ssid_len = 0;
+    char *ssid = NULL;
+    if (dev->radio.sta.ap != NULL) {
+        ssid = (char *)(((wendigo_device *)dev->radio.sta.ap)->radio.ap.ssid);
+        ssid_len = strlen(ssid);
+    }
+    send_bytes(&ssid_len, sizeof(ssid_len));
+    if (ssid_len > 0 && ssid != NULL) {
+        send_bytes((uint8_t *)ssid, ssid_len + 1); /* Send null byte too */
+    }
 
-    repeat_bytes(0xAA, 4);
-    repeat_bytes(0xFF, 4);
+    send_end_of_packet();
     return result;
 }
 
