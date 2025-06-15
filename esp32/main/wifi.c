@@ -111,8 +111,49 @@ esp_err_t display_wifi_sta_interactive(wendigo_device *dev) {
     }
     char macStr[MAC_STRLEN + 1];
     mac_bytes_to_string(dev->mac, macStr);
-    printf("Found STA: %s\n", macStr);
-
+    
+    print_star(BANNER_WIDTH, true);
+    print_star(1, false);
+    print_space(4, false);
+    printf("%s: %s", radioShortNames[dev->scanType], macStr);
+    /* Calculate size of space blocks - 2 equally-sized block */
+    uint8_t space_len = (BANNER_WIDTH - strlen(radioShortNames[dev->scanType]) - MAC_STRLEN - 28) / 2;
+    print_space(space_len, false);
+    printf("Ch. %2d", dev->radio.sta.channel);
+    /* Cater for rounding in space_len */
+    uint8_t row_len = strlen(radioShortNames[dev->scanType]) + MAC_STRLEN + 28 + space_len;
+    print_space(BANNER_WIDTH - row_len, false);
+    printf("RSSI: %4d", dev->rssi);
+    print_space(4, false);
+    print_star(1, true);
+    /* Display AP info on next row (if available) */
+    print_star(1, false);
+    print_space(4, false);
+    if (dev->radio.sta.ap != NULL) {
+        char apMacStr[MAC_STRLEN + 1];
+        mac_bytes_to_string(dev->radio.sta.apMac, apMacStr);
+        char ssid[MAX_SSID_LEN + 1];
+        strncpy(ssid, (char *)((wendigo_device *)dev->radio.sta.ap)->radio.ap.ssid, MAX_SSID_LEN + 1);
+        ssid[MAX_SSID_LEN] = '\0';
+        uint8_t ssid_max_len = BANNER_WIDTH - MAC_STRLEN - 19;
+        if (strlen(ssid) > ssid_max_len) {
+            /* Truncate SSID and add ellipses */
+            for (uint8_t i = ssid_max_len - 3; i < ssid_max_len; ++i) {
+                ssid[i] = '.';
+            }
+            ssid[ssid_max_len] = '\0';
+        }
+        space_len = BANNER_WIDTH - strlen(ssid) - MAC_STRLEN - 18;
+        printf("AP: \"%s\"", ssid);
+        print_space(space_len, false);
+        printf("(%s)", apMacStr);
+        print_space(4, false);
+    } else {
+        printf("AP Not Yet Found");
+        print_space(BANNER_WIDTH - strlen("AP Not Yet Found") - 6, false);
+    }
+    print_star(1, true);
+    print_star(BANNER_WIDTH, true);
     return result;
 }
 
