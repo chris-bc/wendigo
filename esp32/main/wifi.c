@@ -14,7 +14,25 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     repeat_bytes(0x99, 4);
     repeat_bytes(0x11, 4);
 
-
+    send_bytes((uint8_t *)&(dev->scanType), sizeof(dev->scanType));
+    send_bytes(dev->mac, MAC_BYTES);
+    send_bytes(&(dev->radio.ap.channel), sizeof(dev->radio.ap.channel));
+    send_bytes((uint8_t *)&(dev->rssi), sizeof(dev->rssi));
+    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(dev->lastSeen));
+    send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
+    uint8_t ssid_len = strlen((char *)dev->radio.ap.ssid);
+    send_bytes(&ssid_len, sizeof(ssid_len));
+    send_bytes(dev->radio.ap.ssid, ssid_len);
+    send_bytes(&(dev->radio.ap.stations_count), sizeof(dev->radio.ap.stations_count));
+    for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+        /* Send the MAC of each connected device */
+        /* It should be impossible to get a NULL station, but cater for it anyway */
+        if (dev->radio.ap.stations == NULL || dev->radio.ap.stations[i] == NULL) {
+            send_bytes(nullMac, sizeof(nullMac));
+        } else {
+            send_bytes(((wendigo_device *)dev->radio.ap.stations[i])->mac, MAC_BYTES);
+        }
+    }
     send_end_of_packet();
     return result;
 }
@@ -114,7 +132,6 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     if (ssid_len > 0 && ssid != NULL) {
         send_bytes((uint8_t *)ssid, ssid_len + 1); /* Send null byte too */
     }
-
     send_end_of_packet();
     return result;
 }

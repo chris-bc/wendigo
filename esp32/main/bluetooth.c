@@ -186,8 +186,6 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     }
     /* Mark the end of transmission */
     send_end_of_packet();
-    fflush(stdout);
-
     return result;
 }
 

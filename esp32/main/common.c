@@ -241,4 +241,5 @@ void send_bytes(uint8_t *bytes, uint8_t size) {
 void send_end_of_packet() {
     repeat_bytes(0xAA, 4);
     repeat_bytes(0xFF, 4);
+    fflush(stdout);
 }

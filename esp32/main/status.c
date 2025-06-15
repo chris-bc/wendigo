@@ -193,6 +193,5 @@ void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
         send_bytes(&len, 1);
         send_bytes((uint8_t *)(attribute_values[i]), len);
     }
-    repeat_bytes(0xAA, 4);
-    repeat_bytes(0xFF, 4);
+    send_end_of_packet();
 }
