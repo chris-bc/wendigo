@@ -253,7 +253,8 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         dev->tagged = false;
         dev->radio.ap.stations = NULL;
         dev->radio.ap.stations_count = 0;
-        dev->radio.ap.ssid[0] = '\0';
+        /* Null out SSID */
+        memset(dev->radio.ap.ssid, 0x00, sizeof(dev->radio.ap.ssid));
     }
     dev->scanType = SCAN_WIFI_AP;
     dev->rssi = rx_ctrl.rssi;
@@ -355,7 +356,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         ap->tagged = false;
         ap->radio.ap.stations = NULL;   /* We'll update these later */
         ap->radio.ap.stations_count = 0;
-        ap->radio.ap.ssid[0] = '\0';
+        /* Null out SSID */
+        memset(ap->radio.ap.ssid, 0x00, sizeof(ap->radio.ap.ssid));
     }
     ap->scanType = SCAN_WIFI_AP;
     ap->rssi = rx_ctrl.rssi;
@@ -425,7 +427,8 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
            }
            memcpy(ap->mac, payload + RTS_CTS_DESTADDR, MAC_BYTES);
            ap->tagged = false;
-           ap->radio.ap.ssid[0] = '\0';
+           /* Null out SSID */
+           memset(ap->radio.ap.ssid, 0x00, sizeof(ap->radio.ap.ssid));
            ap->radio.ap.stations = NULL;
            ap->radio.ap.stations_count = 0;
     }
@@ -466,7 +469,8 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(ap->mac, payload + RTS_CTS_SRCADDR, MAC_BYTES);
         ap->tagged = false;
-        ap->radio.ap.ssid[0] = '\0';
+        /* Null out SSID */
+        memset(ap->radio.ap.ssid, 0x00, sizeof(ap->radio.ap.ssid));
         ap->radio.ap.stations_count = 0;
         ap->radio.ap.stations = NULL;
     }
@@ -569,7 +573,8 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(ap->mac, payload + DEAUTH_BSSID_OFFSET, MAC_BYTES);
         ap->tagged = false;
-        ap->radio.ap.ssid[0] = '\0';
+        /* Null out SSID */
+        memset(ap->radio.ap.ssid, 0x00, sizeof(ap->radio.ap.ssid));
         ap->radio.ap.stations = NULL;
         ap->radio.ap.stations_count = 0;
     }
@@ -663,7 +668,8 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(ap->mac, payload + DEAUTH_DESTADDR_OFFSET, MAC_BYTES);
         ap->tagged = false;
-        ap->radio.ap.ssid[0] = '\0';
+        /* Null out SSID */
+        memset(ap->radio.ap.ssid, 0x00, sizeof(ap->radio.ap.ssid));
         ap->radio.ap.stations = NULL;
         ap->radio.ap.stations_count = 0;
     }
