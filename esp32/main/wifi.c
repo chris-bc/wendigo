@@ -22,7 +22,7 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
     uint8_t ssid_len = strlen((char *)dev->radio.ap.ssid);
     send_bytes(&ssid_len, sizeof(ssid_len));
-    send_bytes(dev->radio.ap.ssid, ssid_len);
+    send_bytes(dev->radio.ap.ssid, ssid_len + 1);
     send_bytes(&(dev->radio.ap.stations_count), sizeof(dev->radio.ap.stations_count));
     for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
         /* Send the MAC of each connected device */
@@ -129,7 +129,7 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
         ssid_len = strlen(ssid);
     }
     send_bytes(&ssid_len, sizeof(ssid_len));
-    if (ssid_len > 0 && ssid != NULL) {
+    if (ssid_len > 0) {
         send_bytes((uint8_t *)ssid, ssid_len + 1); /* Send null byte too */
     }
     send_end_of_packet();
