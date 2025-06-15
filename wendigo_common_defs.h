@@ -26,6 +26,7 @@
  #define WENDIGO_OFFSET_BT_COD_LEN              (44)
  #define WENDIGO_OFFSET_BT_BDNAME               (45)
  /* bdname is bdname_len bytes, followed by eir_len bytes of EIR and cod_len bytes of CoD */
+
  /* Initial elements of AP and STA packets are common so are just defined once */
  #define WENDIGO_OFFSET_WIFI_SCANTYPE           (8)
  #define WENDIGO_OFFSET_WIFI_MAC                (12)
@@ -36,6 +37,7 @@
  /* Unique elements */
  #define WENDIGO_OFFSET_STA_AP_MAC              (37)
  #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (43)
+ #define WENDIGO_OFFSET_STA_AP_SSID             (44)
  /* AP SSID is AP SSID_len + 1 bytes if AP SSID_len > 0 */
  #define WENDIGO_OFFSET_AP_SSID_LEN             (37)
  #define WENDIGO_OFFSET_AP_STA_COUNT            (38)

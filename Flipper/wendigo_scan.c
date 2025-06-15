@@ -24,8 +24,6 @@ uint8_t PREAMBLE_WIFI_STA[] = {0x99, 0x99, 0x99, 0x99, 0xFF, 0xFF, 0xFF, 0xFF};
 uint8_t PREAMBLE_STATUS[]   = {0xEE, 0xEE, 0xEE, 0xEE, 0xBB, 0xBB, 0xBB, 0xBB};
 uint8_t PREAMBLE_VER[]      = {'W', 'e', 'n', 'd', 'i', 'g', 'o', ' '};
 uint8_t PACKET_TERM[]       = {0xAA, 0xAA, 0xAA, 0xAA, 0xFF, 0xFF, 0xFF, 0xFF};
-#define PACKET_MIN_SIZE_AP  (31)
-#define PACKET_MIN_SIZE_STA (36)
 
 /* How much will we increase bt_devices[] by when additional space is needed? */
 #define INC_BT_DEVICE_CAPACITY_BY   10
@@ -627,9 +625,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     /* Copy fixed-byte members */
     memcpy(&(dev->radio.bluetooth.bdname_len), buffer + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
     memcpy(&(dev->radio.bluetooth.eir_len), buffer + WENDIGO_OFFSET_BT_EIR_LEN, sizeof(uint8_t));
-    int32_t temp_rssi;
-    memcpy(&temp_rssi, buffer + WENDIGO_OFFSET_BT_RSSI, sizeof(int32_t));
-    dev->rssi = (int8_t)temp_rssi;
+    memcpy(&(dev->rssi), buffer + WENDIGO_OFFSET_BT_RSSI, sizeof(int8_t));
     memcpy(&(dev->radio.bluetooth.cod), buffer + WENDIGO_OFFSET_BT_COD, sizeof(uint32_t));
     memcpy(dev->mac, buffer + WENDIGO_OFFSET_BT_BDA, MAC_BYTES);
     memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(ScanType));
@@ -702,7 +698,8 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     // TODO
     UNUSED(app);
     uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
-    if (packetLen < PACKET_MIN_SIZE_AP + (2 * PREAMBLE_LEN)) {
+    /* Check the packet is a reasonable size */
+    if (packetLen < WENDIGO_OFFSET_AP_SSID + PREAMBLE_LEN) {
         // TODO: Display a warning after packet queueing has been implemented to prevent interleaved packets
         return packetLen;
     }
@@ -713,7 +710,8 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
     // TODO
     UNUSED(app);
     uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
-    if (packetLen < PACKET_MIN_SIZE_STA + (2 * PREAMBLE_LEN)) {
+    /* Check the packet length is acceptable */
+    if (packetLen < WENDIGO_OFFSET_STA_AP_SSID + PREAMBLE_LEN) {
         // TODO: Display a warning after packet queueing has been implemented to prevent interleaved packets
         return packetLen;
     }
