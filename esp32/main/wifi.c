@@ -1,5 +1,6 @@
 #include "wifi.h"
 bool WIFI_INITIALISED = false;
+uint8_t BANNER_WIDTH = 62;
 /* Override the default implementation so we can send arbitrary 802.11 packets */
 esp_err_t ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
     return ESP_OK;
@@ -26,9 +27,66 @@ esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
     }
     char macStr[MAC_STRLEN + 1];
     mac_bytes_to_string(dev->mac, macStr);
-    // TODO
-    printf("Found AP %s (%s)\n", (char *)dev->radio.ap.ssid, macStr);
 
+    print_star(BANNER_WIDTH, true);
+    print_star(1, false);
+    print_space(4, false);
+    /* Can we fit device type, SSID, MAC and RSSI all on a single line? */
+    uint8_t row_len = strlen(radioShortNames[dev->scanType]) + MAC_STRLEN + 25 + strlen((char *)dev->radio.ap.ssid);
+    uint8_t current_len = strlen(radioShortNames[dev->scanType]) + 1 + strlen((char *)dev->radio.ap.ssid);
+    /* Common elements */
+    if (strlen((char *)dev->radio.ap.ssid) > 0) {
+        printf("%s: %s ", radioShortNames[dev->scanType], dev->radio.ap.ssid);
+        current_len += 2;   /* Colon and extra space */
+        ++row_len;          /* Colon */
+    } else {
+        printf("%s %s", radioShortNames[dev->scanType], dev->radio.ap.ssid);
+    }
+    /* Calculate remaining line space */
+    uint8_t space_left = BANNER_WIDTH - current_len - 10; /* 10 banner elements */
+
+    if (row_len <= BANNER_WIDTH) {
+        /* Display MAC and RSSI on current row - How much space before MAC? */
+        /* (CA:FE:BA:BE:00:00) RSSI: -120 */
+        row_len = MAC_STRLEN + 13;
+        print_space(space_left - row_len, false);
+        printf("(%s) RSSI: %4d", macStr, dev->rssi);
+        print_space(4, false);
+        print_star(1, true);
+        print_star(1, false);
+        /* I have 28 characters to display as a block of 6 & of 22, & want them centred.
+           - I want 3 equal blocks of spaces, which should be (BANNER_WIDTH - 10 - 28) / 3.
+        */
+        space_left = (BANNER_WIDTH - 38) / 3; /* Check length of final block in case of rounding */
+        print_space(4 + space_left, false);
+        printf("Ch. %2d", dev->radio.ap.channel);
+        print_space(space_left, false);
+        printf("%3d Stations Connected", dev->radio.ap.stations_count);
+        row_len = 38 + (2 * space_left);
+        print_space(4 + BANNER_WIDTH - row_len, false);
+        print_star(1, true);
+    } else {
+        /* Just display RSSI on this row */
+        row_len = 10; /* RSSI: -120 */
+        print_space(space_left - row_len, false);
+        printf("RSSI: %4d", dev->rssi);
+        print_space(4, false);
+        print_star(1, true);
+        print_star(1, false);
+        print_space(4, false);
+        /* Display (00:CA:FE:BA:BE:00) Ch. 11 100 Stations Connected
+           Fully justified - 2 blocks of space centreing channel */
+        space_left = (BANNER_WIDTH - MAC_STRLEN - 40) / 2;
+        printf("(%s)", macStr);
+        print_space(space_left, false);
+        printf("Ch. %2d", dev->radio.ap.channel);
+        row_len = MAC_STRLEN + 40 + space_left;
+        print_space(BANNER_WIDTH - row_len, false);
+        printf("%3d Stations Connected", dev->radio.ap.stations_count);
+        print_space(4, false);
+        print_star(1, true);
+    }
+    print_star(BANNER_WIDTH, true);
     return result;
 }
 
@@ -484,7 +542,6 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(sta->radio.sta.apMac, nullMac, MAC_BYTES);
     }
     sta->scanType = SCAN_WIFI_STA;
-    sta->rssi = rx_ctrl.rssi;
     sta->radio.sta.channel = rx_ctrl.channel;
     if (creatingSta) {
         result |= add_device(sta);
@@ -553,7 +610,6 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         ap->radio.ap.stations_count = 0;
     }
     ap->scanType = SCAN_WIFI_AP;
-    ap->rssi = rx_ctrl.rssi;
     ap->radio.ap.channel = rx_ctrl.channel;
     if (creatingAp) {
         result |= add_device(ap);

@@ -185,6 +185,8 @@ Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some fu
 * [ ] When scanning is active device packets and scanning status or poll requests can be interleaved. Currently malformed device packets are simply dropped. Implement packet queueing on ESP32 to ensure sequential transmission.
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [ ] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped
+* [ ] BUG: Implementation of CONFIG_DELAY_AFTER_DEVICE_DISPLAYED is flawed - lastSeen is updated when device isn't displayed, if a device is always seen within that period it will never be displayed again.
+  * [ ] interactive display functions will need to track a lastDisplayed time to avoid this.
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
 * [X] BT Classic and LE device transmission from ESP32 to Flipper
