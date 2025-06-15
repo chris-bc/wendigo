@@ -149,8 +149,10 @@ esp_err_t display_wifi_sta_interactive(wendigo_device *dev) {
         printf("(%s)", apMacStr);
         print_space(4, false);
     } else {
+        space_len = (BANNER_WIDTH - strlen("AP Not Yet Found") - 10) / 2;
+        print_space(space_len, false);
         printf("AP Not Yet Found");
-        print_space(BANNER_WIDTH - strlen("AP Not Yet Found") - 6, false);
+        print_space(BANNER_WIDTH - strlen("AP Not Yet Found") - space_len - 6, false);
     }
     print_star(1, true);
     print_star(BANNER_WIDTH, true);
