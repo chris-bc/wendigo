@@ -16,16 +16,21 @@
  #define WENDIGO_OFFSET_BT_BDNAME_LEN           (8)
  #define WENDIGO_OFFSET_BT_EIR_LEN              (9)
  #define WENDIGO_OFFSET_BT_RSSI                 (10)
- #define WENDIGO_OFFSET_BT_COD                  (14)
- #define WENDIGO_OFFSET_BT_BDA                  (18)
- #define WENDIGO_OFFSET_BT_SCANTYPE             (24)
- #define WENDIGO_OFFSET_BT_TAGGED               (28)
- #define WENDIGO_OFFSET_BT_LASTSEEN             (29)
- #define WENDIGO_OFFSET_BT_NUM_SERVICES         (45)
- #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (46)
- #define WENDIGO_OFFSET_BT_COD_LEN              (47)
- #define WENDIGO_OFFSET_BT_BDNAME               (48)
+ #define WENDIGO_OFFSET_BT_COD                  (11)
+ #define WENDIGO_OFFSET_BT_BDA                  (15)
+ #define WENDIGO_OFFSET_BT_SCANTYPE             (21)
+ #define WENDIGO_OFFSET_BT_TAGGED               (25)
+ #define WENDIGO_OFFSET_BT_LASTSEEN             (26)
+ #define WENDIGO_OFFSET_BT_NUM_SERVICES         (42)
+ #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (43)
+ #define WENDIGO_OFFSET_BT_COD_LEN              (44)
+ #define WENDIGO_OFFSET_BT_BDNAME               (45)
  /* bdname is bdname_len bytes, followed by eir_len bytes of EIR and cod_len bytes of CoD */
+ #define WENDIGO_OFFSET_STA_SCANTYPE            (8)
+ #define WENDIGO_OFFSET_STA_MAC                 (12)
+ #define WENDIGO_OFFSET_STA_CHANNEL             (18)
+ #define WENDIGO_OFFSET_STA_RSSI                (19)
+ #define WENDIGO_OFFSET_STA_LASTSEEN            
 
  typedef enum {
     WIFI_AUTH_OPEN = 0,         /**< Authenticate mode : open */
