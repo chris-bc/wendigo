@@ -1,10 +1,15 @@
-#include "../wendigo_app_i.h"
 #include "../wendigo_scan.h"
 
 /* Public method from wendigo_scene_device_detail.c */
 extern void wendigo_scene_device_detail_set_device(wendigo_device *d);
 /* Internal method - I don't wan't to move all calling functions below it */
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem* item);
+
+/* For some obscene reason the ifndef barrier isn't stopping these from showing up in every single object file.
+   No longer shared. */
+char *authModeStrings[] = {"Open", "WEP", "WPA_PSK", "WPA2_PSK", "WPA_WPA2_PSK", "EAP (Enterprise)", "WPA3_PSK",
+                           "WPA2_WPA3_PSK", "WAPI_PSK", "OWE", "WPA_ENT_SUITE_B_192_BIT", "WPA3_PSK", "WPA3_PSK",
+                           "DPP", "WPA3-Enterprise", "WPA3-Enterprise Transition"};
 
 /* Enum to index the options menu for devices */
 enum wendigo_device_list_bt_options {
@@ -264,12 +269,16 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
                 snprintf(optionValue, sizeof(optionValue), "Ch. %d", dev->radio.sta.channel);
                 break;
             case WendigoOptionSTAAP:
-                if (dev->radio.sta.ap->ssid[0] == '\0') {
-                    /* No SSID for the AP - Display MAC instead */
-                    bytes_to_string(dev->radio.sta.apMac, MAC_BYTES, optionValue);
+                if (dev->radio.sta.ap == NULL) {
+                    snprintf(optionValue, sizeof(optionValue), "Unknown");
                 } else {
-                    /* Use AP's SSID */
-                    snprintf(optionValue, sizeof(optionValue), "%s", dev->radio.sta.ap->ssid);
+                    if (((wendigo_device *)dev->radio.sta.ap)->radio.ap.ssid[0] == '\0') {
+                        /* No SSID for the AP - Display MAC instead */
+                        bytes_to_string(dev->radio.sta.apMac, MAC_BYTES, optionValue);
+                    } else {
+                        /* Use AP's SSID */
+                        snprintf(optionValue, sizeof(optionValue), "%s", ((wendigo_device *)dev->radio.sta.ap)->radio.ap.ssid);
+                    }
                 }
                 break;
             default:
@@ -457,7 +466,7 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
             variable_item_set_current_value_text(item, tempStr);
         } else if (menu_item->scanType == SCAN_WIFI_STA && option_index == WendigoOptionSTAAP) {
             /* Use SSID if available, otherwise MAC */
-            if (menu_item->radio.sta.ap->ssid[0] == '\0') {
+            if (menu_item->radio.sta.ap == NULL || ((wendigo_device *)menu_item->radio.sta.ap)->radio.ap.ssid[0] == '\0') {
                 if (menu_item->radio.sta.apMac[0] == '\0') {
                     /* No MAC - Empty string */
                     tempStr[0] = '\0';
@@ -467,7 +476,7 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
                 }
             } else {
                 /* We have an SSID */
-                snprintf(tempStr, sizeof(tempStr), "%s", (char *)menu_item->radio.sta.ap->ssid);
+                snprintf(tempStr, sizeof(tempStr), "%s", (char *)((wendigo_device *)menu_item->radio.sta.ap)->radio.ap.ssid);
             }
             variable_item_set_current_value_text(item, tempStr);
         } // TODO: Else panic

@@ -162,8 +162,4 @@ typedef struct wendigo_device {
     } radio;
 } wendigo_device;
 
-char *authModeStrings[] = {"Open", "WEP", "WPA_PSK", "WPA2_PSK", "WPA_WPA2_PSK", "EAP (Enterprise)", "WPA3_PSK",
-                           "WPA2_WPA3_PSK", "WAPI_PSK", "OWE", "WPA_ENT_SUITE_B_192_BIT", "WPA3_PSK", "WPA3_PSK",
-                           "DPP", "WPA3-Enterprise", "WPA3-Enterprise Transition"};
-
 #endif
