@@ -739,7 +739,77 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     dev->radio.ap.stations = NULL;
     memset(dev->radio.ap.ssid, 0x00, MAX_SSID_LEN + 1);
     /* Copy fixed-length attributes from the packet */
-    // TODO
+    memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(dev->scanType));
+    memcpy(dev->mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
+    memcpy(&(dev->radio.ap.channel), buffer + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(dev->radio.ap.channel));
+    memcpy(&(dev->rssi), buffer + WENDIGO_OFFSET_WIFI_RSSI, sizeof(dev->rssi));
+    memcpy(&(dev->lastSeen), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(dev->lastSeen));
+    memcpy(&(dev->tagged), buffer + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(dev->tagged));
+    uint8_t ssid_len;
+    /* Index to track our way through stations */
+    uint8_t buffIdx = WENDIGO_OFFSET_AP_SSID + ssid_len;
+    memcpy(&ssid_len, buffer + WENDIGO_OFFSET_AP_SSID_LEN, sizeof(ssid_len));
+    memcpy(&(dev->radio.ap.stations_count), buffer + WENDIGO_OFFSET_AP_STA_COUNT, sizeof(dev->radio.ap.stations_count));
+    if (ssid_len > 0) {
+        memcpy(dev->radio.ap.ssid, buffer + WENDIGO_OFFSET_AP_SSID, ssid_len + 1);
+        dev->radio.ap.ssid[ssid_len] = '\0';
+        /* If ssid_len > 0 we need to account for the extra null character */
+        ++buffIdx;
+    }
+    /* Stations will be represented as an array of uint8_t[6] - Array of MACs - to be linked into the wendigo_device
+       by wendigo_link_wifi_devices(). */
+    uint8_t **macs = NULL;
+    if (dev->radio.ap.stations_count > 0) {
+        uint8_t destIdx = 0;
+        macs = malloc(sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+        if (macs != NULL) {
+            // TODO: Not ideal - Also defined in ESP32
+            uint8_t nullMac[MAC_BYTES] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+            uint8_t broadcastMac[MAC_BYTES] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+            /* Iterate through each station to retrieve its MAC */
+            for (uint8_t srcIdx = 0; srcIdx < dev->radio.ap.stations_count && buffIdx + MAC_BYTES < packetLen - PREAMBLE_LEN; ++srcIdx) {
+                if (dev->radio.ap.stations != NULL && dev->radio.ap.stations[srcIdx] != NULL) {
+                    macs[destIdx] = malloc(sizeof(uint8_t) * MAC_BYTES);
+                    if (macs[destIdx] != NULL) {
+                        memcpy(macs[destIdx], buffer + buffIdx, MAC_BYTES);
+                        if (memcmp(macs[destIdx], nullMac, MAC_BYTES) && memcmp(macs[destIdx], broadcastMac, MAC_BYTES)) {
+                            /* Is not a NULL or broadcast MAC - It can stay */
+                            ++destIdx;
+                        }
+                    }
+                }
+                buffIdx += MAC_BYTES;
+            }
+        }
+        /* Validate MACs[] - Change stations_count if we encountered problematic stations */
+        if (destIdx < dev->radio.ap.stations_count) {
+            // TODO: Validate and probably retire after testing
+            char msg[33];
+            snprintf(msg, sizeof(msg), "Expected %3d stations, found %3d", dev->radio.ap.stations_count, destIdx);
+            wendigo_display_popup(app, "AP Stations", msg);
+            dev->radio.ap.stations_count = destIdx;
+            uint8_t **new_macs = realloc(macs, destIdx * MAC_BYTES);
+            if (new_macs != NULL) {
+                macs = new_macs;
+            }
+        }
+    }
+    wendigo_link_wifi_devices(dev, (uint8_t **)macs, dev->radio.ap.stations_count); // I think this will work?
+    wendigo_add_device(app, dev);
+    /* Free station MACs */
+    if (dev->radio.ap.stations_count > 0) {
+        for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+            if (macs != NULL && macs[i] != NULL) {
+                free(macs[i]);
+                macs[i] = NULL;
+            }
+        }
+        if (macs != NULL) {
+            free(macs);
+            macs = NULL;
+        }
+    }
+    wendigo_free_device(dev);
     return 0;
 }
 
