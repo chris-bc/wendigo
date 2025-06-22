@@ -893,6 +893,12 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     wendigo_add_device(app, dev);
     wendigo_free_device(dev);
     if (stations != NULL) {
+        for (uint8_t staIdx = 0; staIdx < dev->radio.ap.stations_count; ++staIdx) {
+            if (stations[staIdx] != NULL) {
+                free(stations[staIdx]);
+                stations[staIdx] = NULL;
+            }
+        }
         free(stations);
     }
     return packetLen;
