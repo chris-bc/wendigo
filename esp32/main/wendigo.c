@@ -280,6 +280,9 @@ esp_err_t cmd_channel(int argc, char **argv) {
         }
         esp_err_t result = wendigo_set_channels(channel_list, channel_count);
         free(channel_list);
+        if (result == ESP_ERR_NO_MEM) {
+            outOfMemory();
+        }
         return result;
     }
 }

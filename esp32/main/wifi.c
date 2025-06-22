@@ -891,7 +891,18 @@ esp_err_t wendigo_get_channels() {
  * representing a channel that is to be enabled.
  */
 esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count) {
-    // TODO
-
+    if (channels != NULL) {
+        free(channels);
+        channels = NULL;
+        channels_count = 0;
+    }
+    if (new_channels_count > 0) {
+        channels = malloc(new_channels_count);
+        if (channels == NULL) {
+            return ESP_ERR_NO_MEM;
+        }
+        memcpy(channels, new_channels, new_channels_count);
+        channels_count = new_channels_count;
+    }
     return ESP_OK;
 }
