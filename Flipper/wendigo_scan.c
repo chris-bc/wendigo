@@ -541,9 +541,36 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
     if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
         wendigo_update_bt_device(dev, target);
     } else if (dev->scanType == SCAN_WIFI_AP) {
-        // TODO: channel, ssid, sta_count, stations
+        /* Copy channel, ssid, sta_count, stations */
+        target->radio.ap.channel = dev->radio.ap.channel;
+        uint8_t ssid_len = strlen((char *)dev->radio.ap.ssid);
+        if (ssid_len > 0) {
+            memcpy(target->radio.ap.ssid, dev->radio.ap.ssid, ssid_len + 1);
+            target->radio.ap.ssid[ssid_len] = '\0';
+        }
+        /* NOTE: wendigo_link_wifi_devices() *MUST* be called on dev to link in
+                 stations[] appropriately. This check should avoid a crash if that
+                 isn't done - but you should still do it! */
+        if (dev->radio.ap.stations_count >= target->radio.ap.stations_count) {
+            if (target->radio.ap.stations_count > 0 && target->radio.ap.stations != NULL) {
+                free(target->radio.ap.stations);
+            }
+            target->radio.ap.stations = dev->radio.ap.stations;
+            target->radio.ap.stations_count = dev->radio.ap.stations_count;
+            /* Remove stations[] from dev so it doesn't get free()d */
+            dev->radio.ap.stations = NULL;
+            dev->radio.ap.stations_count = 0;
+        }
     } else if (dev->scanType == SCAN_WIFI_STA) {
-        // TODO: channel, AP MAC, AP
+        /* Copy channel, AP MAC, AP */
+        target->radio.sta.channel = dev->radio.sta.channel;
+        /* Only replace AP and AP MAC if dev has a "better" AP than target -
+           If dev isn't nullMac. */
+        if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
+            memcpy(target->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
+            /* `ap` property is set by wendigo_link_wifi_devices() */
+            target->radio.sta.ap = dev->radio.sta.ap;
+        }
     }
 
     /* Update the device list if it's currently displayed */
