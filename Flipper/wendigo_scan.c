@@ -388,10 +388,55 @@ bool wendigo_link_wifi_devices(wendigo_device *dev, uint8_t **macs, uint8_t mac_
         /* We need to update dev to include any existing stations for the device as well as
            all stations specified in macs[] */
         // Get existing cache for dev if present
-        // Count stations in macs[] that aren't present in above
+        int8_t count = 0;
+        uint8_t real_index = device_index(dev);
+        wendigo_device *real_device = NULL;
+        wendigo_device temp_device;
+        uint8_t temp_idx;
+        if (real_index < devices_count) {
+            real_device = devices[real_index];
+            if (real_device->scanType != SCAN_WIFI_AP) {
+                return false;
+            }
+            count = real_device->radio.ap.stations_count;
+            // Count stations in macs[] that aren't in real_device
+            for (uint8_t i = 0; i < mac_count; ++i) {
+                /* Is macs[i] in real_device->radio.ap.stations_count? */
+                if (macs[i] != NULL) {
+                    memcpy(temp_device.mac, macs[i], MAC_BYTES);
+                    temp_idx = custom_device_index(&temp_device, (wendigo_device **)real_device->radio.ap.stations, real_device->radio.ap.stations_count);
+                    if (temp_idx == real_device->radio.ap.stations_count) {
+                        /* macs[i] is not in real_device->radio.ap.stations - We need to add it */
+                        ++count;
+                    }
+                }
+            }
+        } else {
+            count = mac_count;
+        }
         // Malloc new stations[]
+        if (dev->radio.ap.stations != NULL) {
+            free(dev->radio.ap.stations); // TODO: Possible source of error here
+        }
+        dev->radio.ap.stations = malloc(sizeof(wendigo_device *) * count);
+        if (dev->radio.ap.stations == NULL) {
+            return false;
+        }
         // Copy devices across
-        // Realloc if any MACs weren't found
+        uint8_t dev_idx = 0;
+        if (real_device != NULL) {
+            memcpy(dev->radio.ap.stations, real_device->radio.ap.stations, sizeof(wendigo_device *) * real_device->radio.ap.stations_count);
+            dev_idx = real_device->radio.ap.stations_count;
+        }
+        for (uint8_t i = 0; i < mac_count; ++i) {
+            if (macs[i] != NULL) {
+                temp_idx = device_index_from_mac(macs[i]);
+                if (temp_idx < devices_count) {
+                    dev->radio.ap.stations[dev_idx++] = devices[temp_idx];
+                }
+            }
+        }
+        dev->radio.ap.stations_count = count;
     } else {
         return false;
     }

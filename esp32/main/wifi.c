@@ -23,7 +23,9 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     uint8_t ssid_len = strlen((char *)dev->radio.ap.ssid);
     send_bytes(&ssid_len, sizeof(ssid_len));
     send_bytes(&(dev->radio.ap.stations_count), sizeof(dev->radio.ap.stations_count));
-    send_bytes(dev->radio.ap.ssid, ssid_len + 1);
+    if (ssid_len > 0) {
+        send_bytes(dev->radio.ap.ssid, ssid_len + 1);
+    }
     for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
         /* Send the MAC of each connected device */
         /* It should be impossible to get a NULL station, but cater for it anyway */

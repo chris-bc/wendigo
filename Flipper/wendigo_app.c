@@ -31,7 +31,6 @@ static void wendigo_app_tick_event_callback(void* context) {
             wendigo_set_scanning_active(app, true);
         }
     }
-
     scene_manager_handle_tick_event(app->scene_manager);
 }
 
