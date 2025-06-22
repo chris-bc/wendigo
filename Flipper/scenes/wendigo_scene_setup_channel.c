@@ -13,8 +13,7 @@ static const WendigoItem items[SETUP_CHANNEL_MENU_ITEMS] = {
     {"10", {"On", "Off"}, 2, NO_ACTION, OFF},
     {"11", {"On", "Off"}, 2, NO_ACTION, OFF},
     {"12", {"On", "Off"}, 2, NO_ACTION, OFF},
-    {"13", {"On", "Off"}, 2, NO_ACTION, OFF},
-};
+}; // TODO: Determine whether 5GHz channels are available, add them if so
 
 static const uint8_t CH_ON = 0;
 static const uint8_t CH_OFF = 1;
