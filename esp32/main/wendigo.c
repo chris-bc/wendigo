@@ -260,6 +260,30 @@ esp_err_t cmd_wifi(int argc, char **argv) {
     return ESP_OK;
 }
 
+esp_err_t cmd_channel(int argc, char **argv) {
+    if (argc == 1) {
+        return wendigo_get_channels();
+    } else {
+        /* Convert argv[] to a uint8_t[] (excluding argv[0]) */
+        uint8_t *channel_list = malloc(argc - 1);
+        uint8_t channel_count = 0;
+        uint8_t this_channel;
+        if (channel_list == NULL) {
+            return ESP_ERR_NO_MEM;
+        }
+        for (uint8_t i = 1; i < argc; ++i) {
+            // TODO: Is this cast always safe?
+            this_channel = (uint8_t)strtol(argv[i], NULL, 10);
+            if (wendigo_is_valid_channel(this_channel)) {
+                channel_list[channel_count++] = this_channel;
+            }
+        }
+        esp_err_t result = wendigo_set_channels(channel_list, channel_count);
+        free(channel_list);
+        return result;
+    }
+}
+
 /* The `status` command is intended to provide an overall picture of ESP32-Wendigo's current state:
    * Support for each radio
    * Scanning status for each radio

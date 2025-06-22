@@ -62,7 +62,8 @@ void wendigo_scene_setup_channel_on_enter(void* context) {
     VariableItemList* var_item_list = app->var_item_list;
     app->current_view = WendigoAppViewSetupChannel;
     variable_item_list_reset(var_item_list);
-    variable_item_list_set_enter_callback(var_item_list, wendigo_scene_setup_channel_var_list_enter_callback, app);
+    variable_item_list_set_enter_callback(var_item_list,
+        wendigo_scene_setup_channel_var_list_enter_callback, app);
 
     VariableItem* item;
     for(int i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
@@ -107,4 +108,6 @@ bool wendigo_scene_setup_channel_on_event(void* context, SceneManagerEvent event
 void wendigo_scene_setup_channel_on_exit(void* context) {
     WendigoApp* app = context;
     variable_item_list_reset(app->var_item_list);
+    /* Update ESP32-Wendigo's channels when the scene is exited */
+    // TODO: Send channel command
 }

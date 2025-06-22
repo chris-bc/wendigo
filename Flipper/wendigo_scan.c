@@ -21,6 +21,7 @@ uint8_t PREAMBLE_LEN = 8;
 uint8_t PREAMBLE_BT_BLE[]   = {0xFF, 0xFF, 0xFF, 0xFF, 0xAA, 0xAA, 0xAA, 0xAA};
 uint8_t PREAMBLE_WIFI_AP[]  = {0x99, 0x99, 0x99, 0x99, 0x11, 0x11, 0x11, 0x11};
 uint8_t PREAMBLE_WIFI_STA[] = {0x99, 0x99, 0x99, 0x99, 0xFF, 0xFF, 0xFF, 0xFF};
+uint8_t PREAMBLE_CHANNELS[] = {0x99, 0x99, 0x99, 0x99, 0xAA, 0xAA, 0xAA, 0xAA};
 uint8_t PREAMBLE_STATUS[]   = {0xEE, 0xEE, 0xEE, 0xEE, 0xBB, 0xBB, 0xBB, 0xBB};
 uint8_t PREAMBLE_VER[]      = {'W', 'e', 'n', 'd', 'i', 'g', 'o', ' '};
 uint8_t PACKET_TERM[]       = {0xAA, 0xAA, 0xAA, 0xAA, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -47,6 +48,7 @@ uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
             memcmp(bytes + result, PREAMBLE_WIFI_AP, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_WIFI_STA, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_STATUS, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_CHANNELS, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN); ++result) { }
     return result;
 }
@@ -974,6 +976,27 @@ uint16_t parseBufferVersion(WendigoApp *app) {
     return endSeq + PREAMBLE_LEN;
 }
 
+uint16_t parseBufferChannels(WendigoApp *app) {
+    uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
+    uint8_t channels_count;
+    uint8_t *channels = NULL;
+    uint16_t offset = PREAMBLE_LEN;
+    memcpy(&channels_count, buffer + offset, sizeof(uint8_t));
+    ++offset;
+    if (channels_count > 0) {
+        channels = malloc(channels_count);
+        if (channels != NULL) {
+            memcpy(channels, buffer + offset, channels_count);
+            offset += channels_count;
+        }
+    }
+    if (memcmp(PACKET_TERM, buffer + offset, PREAMBLE_LEN)) {
+        wendigo_display_popup(app, "Channel Packet", "Channel packet is unexpected length");
+    }
+    // TODO: Do something with channels
+    return packetLen;
+}
+
 /** Parse a status packet and display in the status view.
  * Returns the number of bytes consumed by the function, including the end-of-packet
  * bytes. DOES NOT remove these bytes, that is handled by the calling function.
@@ -1070,6 +1093,8 @@ void parseBuffer(WendigoApp *app) {
         consumedBytes = parseBufferStatus(app);
     } else if (bufferLen > PREAMBLE_LEN && !memcmp(PREAMBLE_VER, buffer, PREAMBLE_LEN)) {
         consumedBytes = parseBufferVersion(app);
+    } else if (bufferLen > PREAMBLE_LEN && !memcmp(PREAMBLE_CHANNELS, buffer, PREAMBLE_LEN)) {
+        consumedBytes = parseBufferChannels(app);
     } else {
         /* We reached this function by finding an end-of-packet sequence, but can't find
            a start-of-packet sequence. Assume the packet was corrupted and throw away

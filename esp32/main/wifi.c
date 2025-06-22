@@ -1,4 +1,13 @@
 #include "wifi.h"
+
+/* Array of channels that are to be included in channel hopping.
+   At startup this is initialised to include all supported channels. */
+uint8_t *channels = NULL;
+uint8_t channels_count = 0;
+// TODO: Refactor to support 5GHz channels if the device supports 5GHz channels
+const uint8_t WENDIGO_SUPPORTED_CHANNELS_COUNT = 12;
+const uint8_t WENDIGO_SUPPORTED_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+
 bool WIFI_INITIALISED = false;
 uint8_t BANNER_WIDTH = 62;
 /* Override the default implementation so we can send arbitrary 802.11 packets */
@@ -814,6 +823,19 @@ esp_err_t initialise_wifi() {
 
         WIFI_INITIALISED = true;
     }
+
+    /* Initialise channels[] to include all supported channels */
+    if (channels != NULL) {
+        free(channels);
+        channels_count = 0;
+    }
+    channels = malloc(WENDIGO_SUPPORTED_CHANNELS_COUNT);
+    if (channels != NULL) {
+        channels_count = WENDIGO_SUPPORTED_CHANNELS_COUNT;
+        for (uint8_t i = 0; i < channels_count; ++i) {
+            channels[i] = WENDIGO_SUPPORTED_CHANNELS[i];
+        }
+    }
     return ESP_OK;
 }
 
@@ -830,5 +852,46 @@ esp_err_t wendigo_wifi_enable() {
 /* Disable wifi scanning */
 esp_err_t wendigo_wifi_disable() {
     esp_wifi_set_promiscuous(false);
+    return ESP_OK;
+}
+
+/** Check whether the specified value is a valid WiFi channel */
+bool wendigo_is_valid_channel(uint8_t channel) {
+    uint8_t channelIdx;
+    for (channelIdx = 0; channelIdx < WENDIGO_SUPPORTED_CHANNELS_COUNT &&
+        WENDIGO_SUPPORTED_CHANNELS[channelIdx] != channel; ++channelIdx) { }
+    return (channelIdx < WENDIGO_SUPPORTED_CHANNELS_COUNT);
+}
+
+/** Display the channels that are currently included in channel hopping.
+ * In Interactive Mode this displays a readable string, in Flipper mode
+ * a comma-separated list of active channels.
+ */
+esp_err_t wendigo_get_channels() {
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+        printf("%d channels included in WiFi channel hopping: ", channels_count);
+        for (uint8_t i = 0; i < channels_count; ++i) {
+            printf("%s%d", (i > 0) ? ", " : "", channels[i]);
+        }
+        putchar('\n');
+    } else {
+        repeat_bytes(0x99, 4);
+        repeat_bytes(0xAA, 4);
+        send_bytes(&channels_count, 1);
+        if (channels_count > 0) {
+            send_bytes(channels, channels_count);
+        }
+        send_end_of_packet();
+    }
+    return ESP_OK;
+}
+
+/** Set the channels that are to be included in channel hopping.
+ * channels[] is an array of length channels_count, with each element
+ * representing a channel that is to be enabled.
+ */
+esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count) {
+    // TODO
+
     return ESP_OK;
 }

@@ -18,6 +18,7 @@
 esp_err_t cmd_bluetooth(int argc, char **argv);
 esp_err_t cmd_ble(int argc, char **argv);
 esp_err_t cmd_wifi(int argc, char **argv);
+esp_err_t cmd_channel(int argc, char **argv);
 esp_err_t cmd_status(int argc, char **argv);
 esp_err_t cmd_version(int argc, char **argv);
 esp_err_t cmd_interactive(int argc, char **argv);
@@ -31,7 +32,7 @@ ActionType parseCommand(int argc, char **argv);
 ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr);
 void wendigo_set_logging(esp_log_level_t level);
 
-#define CMD_COUNT 16
+#define CMD_COUNT 18
 esp_console_cmd_t commands[CMD_COUNT] = {
     {
         .command = "h",
@@ -63,6 +64,16 @@ esp_console_cmd_t commands[CMD_COUNT] = {
         .hint = "WiFi Commands",
         .help = "The `wifi` command allows management of the WiFi interface",
         .func = cmd_wifi
+    }, {
+        .command = "c",
+        .hint = "Set active channels",
+        .help = "The c[hannel] (num )* command sets the channels that will be hopped through.",
+        .func = cmd_channel
+    }, {
+        .command = "channel",
+        .hint = "Set active channels",
+        .help = "The c[hannel] (num )* command sets the channels that will be hopped through.",
+        .func = cmd_channel
     }, {
         .command = "t",
         .hint = "Tagging Commands",

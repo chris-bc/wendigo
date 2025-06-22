@@ -7,6 +7,9 @@ esp_err_t initialise_wifi();
 void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type);
 esp_err_t wendigo_wifi_disable();
 esp_err_t wendigo_wifi_enable();
+esp_err_t wendigo_get_channels();
+esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count);
+bool wendigo_is_valid_channel(uint8_t channel);
 
 /* Offsets for different packet types */
 uint8_t BEACON_SSID_OFFSET = 38;
