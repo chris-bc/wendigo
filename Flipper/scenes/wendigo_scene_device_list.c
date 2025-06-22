@@ -145,17 +145,14 @@ double elapsedTime(wendigo_device *dev, char *elapsedStr, uint8_t strlen) {
 /** Identify the device represented by the currently-selected menu item. NULL if it cannot be identified. */
 wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
     WendigoApp* app = variable_item_get_context(item);
-
-    if (current_devices_count == 0 || current_devices == NULL) {
-        current_devices_count = wendigo_set_current_devices(current_devices_mask);
-    }
+    
     if (app->device_list_selected_menu_index < current_devices_count) {
         return current_devices[app->device_list_selected_menu_index];
     }
 // TODO: Compare these methods - I'm tempted to remove the first approach (which is why it now gets its own function)
     /* Instead of indexing into the array, see if we can find the device with a reverse lookup from `item` */
     uint16_t idx = 0;
-    for (; idx < current_devices_count&& current_devices[idx]->view != item; ++idx) { }
+    for (; idx < current_devices_count && current_devices[idx]->view != item; ++idx) { }
     if (idx < current_devices_count) {
         return current_devices[idx];
     }
@@ -298,6 +295,8 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
             optionsCount,
             wendigo_scene_device_list_var_list_change_callback,
             app);
+        /* Update current_devices[] to include the new device */
+        wendigo_set_current_devices(current_devices_mask);
     } else {
         /* Update dev->view */
         variable_item_set_item_label(dev->view, (name == NULL) ? "" : name);
@@ -426,6 +425,8 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
 
     /* app->device_list_selected_menu_index should reliably point to the selected menu item.
        Use that to obtain the flipper_bt_device* */
+    WendigoApp *app = variable_item_get_context(item);
+    app->device_list_selected_menu_index = variable_item_list_get_selected_item_index(app->devices_var_item_list);
     wendigo_device *menu_item = wendigo_scene_device_list_selected_device(item);
 
     if (menu_item != NULL) {

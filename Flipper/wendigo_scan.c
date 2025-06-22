@@ -874,7 +874,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     uint8_t buffIndex = WENDIGO_OFFSET_AP_SSID + ssid_len;
     if (ssid_len > 0) {
         /* Account for the null byte */
-        ++ssid_len;
+        ++buffIndex;
     }
     uint8_t **stations = NULL;
     if (dev->radio.ap.stations_count > 0) {

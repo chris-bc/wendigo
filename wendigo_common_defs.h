@@ -92,7 +92,7 @@ typedef enum DeviceMask {
     DEVICE_WIFI_AP          = 4,
     DEVICE_WIFI_STA         = 8,
     DEVICE_SELECTED_ONLY    = 16,
-    DEVICE_ALL              = 31
+    DEVICE_ALL              = 15
 } DeviceMask;
 
 typedef struct {
