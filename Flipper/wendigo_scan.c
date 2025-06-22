@@ -855,7 +855,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     /* Initialise pointers */
     dev->view = NULL;
     dev->radio.ap.stations = NULL;
-    memset(dev->radio.ap.ssid, 0x00, MAX_SSID_LEN + 1);
+    memset(dev->radio.ap.ssid, '\0', MAX_SSID_LEN + 1);
     /* Copy fixed-length attributes from the packet */
     memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(dev->scanType));
     memcpy(dev->mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
@@ -893,10 +893,15 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
         }
     }
     /* buffIndex should now point to the packet terminator */
-    if (memcmp(buffer + buffIndex, PACKET_TERM, MAC_BYTES)) {
-        wendigo_display_popup(app, "AP Packet Error", "AP packet length inconsistent");
+    if (memcmp(buffer + buffIndex, PACKET_TERM, PREAMBLE_LEN)) {
+        char bytesFound[3 * PREAMBLE_LEN + 1];
+        char popupMsg[3 * PREAMBLE_LEN + 31];
+        bytes_to_string(buffer + buffIndex, PREAMBLE_LEN, bytesFound);
+        snprintf(popupMsg, sizeof(popupMsg), "Expected end of packet, found %s", bytesFound);
+        popupMsg[3 * PREAMBLE_LEN + 30] = '\0';
+        wendigo_display_popup(app, "AP Packet Error", popupMsg);
     }
-    wendigo_link_wifi_devices(dev, stations, dev->radio.ap.stations_count);
+    //wendigo_link_wifi_devices(dev, stations, dev->radio.ap.stations_count);
     wendigo_add_device(app, dev);
     wendigo_free_device(dev);
     if (stations != NULL) {
@@ -943,8 +948,15 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
             ap_ssid[ap_ssid_len] = '\0'; /* Just in case */
         }
     } /* Do I want to do anything with ap_ssid? */
-    // YAGNI: Packet validation - check whether buffer + SSID offset + SSID_len + 1 if len > 0 contains packet terminator
-    wendigo_link_wifi_devices(dev, (uint8_t **)&dev->radio.sta.apMac, 1); // I think this will work?
+    /* We should find the packet terminator after the SSID */
+    uint16_t term_idx = WENDIGO_OFFSET_STA_AP_SSID + ap_ssid_len;
+    if (ap_ssid_len > 0) {
+        ++term_idx;
+    }
+    if (memcmp(PACKET_TERM, buffer + term_idx, PREAMBLE_LEN)) {
+        wendigo_display_popup(app, "STA Packet", "STA Packet terminator not found where expected.");
+    }
+    //wendigo_link_wifi_devices(dev, (uint8_t **)&dev->radio.sta.apMac, 1); // I think this will work?
     wendigo_add_device(app, dev);
     wendigo_free_device(dev);
     return packetLen;

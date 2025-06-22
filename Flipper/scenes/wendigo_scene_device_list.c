@@ -321,16 +321,14 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
  */
 void wendigo_scene_device_list_redraw(WendigoApp *app) {
     variable_item_list_reset(app->devices_var_item_list);
-    char *item_str;
-    uint8_t options_count;
+    char *item_str = NULL;
+    uint8_t options_count = 0;
     uint8_t options_index;
-    if (current_devices == NULL || current_devices_count == 0) {
-        current_devices_count = wendigo_set_current_devices(current_devices_mask);
-    }
-    variable_item_list_set_selected_item(app->devices_var_item_list, 0);
+    bool free_item_str = false;
+    wendigo_set_current_devices(current_devices_mask);
     for(uint16_t i = 0; i < current_devices_count; ++i) {
         /* Label with bdname if it's bluetooth & we have a name */
-        if (current_devices[i]->scanType == SCAN_HCI || current_devices[i]->scanType == SCAN_BLE) {
+        if (current_devices[i] != NULL && (current_devices[i]->scanType == SCAN_HCI || current_devices[i]->scanType == SCAN_BLE)) {
             if (current_devices[i]->radio.bluetooth.bdname_len > 0 && current_devices[i]->radio.bluetooth.bdname != NULL) {
                 item_str = current_devices[i]->radio.bluetooth.bdname;
             } else {
@@ -339,11 +337,12 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
                 if (item_str != NULL) {
                     bytes_to_string(current_devices[i]->mac, MAC_BYTES, item_str);
                 }
+                free_item_str = true;
             }
             options_count = WendigoOptionsBTCount;
             options_index = WendigoOptionBTRSSI;
         /* Label with SSID if it's an AP and we have an SSID */
-        } else if (current_devices[i]->scanType == SCAN_WIFI_AP) {
+        } else if (current_devices[i] != NULL && current_devices[i]->scanType == SCAN_WIFI_AP) {
             if (current_devices[i]->radio.ap.ssid[0] != '\0') {
                 item_str = (char *)current_devices[i]->radio.ap.ssid;
             } else {
@@ -352,39 +351,41 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
                 if (item_str != NULL) {
                     bytes_to_string(current_devices[i]->mac, MAC_BYTES, item_str);
                 }
+                free_item_str = true;
             }
             options_count = WendigoOptionsAPCount;
             options_index = WendigoOptionAPRSSI;
         /* Otherwise use the MAC/BDA */
-        } else {
+        } else if (current_devices[i] != NULL) {
             item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
             if (item_str != NULL) {
                 bytes_to_string(current_devices[i]->mac, MAC_BYTES, item_str);
             }
+            free_item_str = true;
             options_count = WendigoOptionsSTACount;
             options_index = WendigoOptionSTARSSI;
         }
-        current_devices[i]->view = variable_item_list_add(
-            app->devices_var_item_list,
-            item_str,
-            options_count,
-            wendigo_scene_device_list_var_list_change_callback,
-            app);
+        if (current_devices[i] != NULL && item_str != NULL && options_count > 0) {
+            current_devices[i]->view = variable_item_list_add(
+                app->devices_var_item_list,
+                item_str,
+                options_count,
+                wendigo_scene_device_list_var_list_change_callback,
+                app);
+        }
         /* free item_str if we malloc'd it */
-        if (((current_devices[i]->scanType == SCAN_HCI || current_devices[i]->scanType == SCAN_BLE) &&
-                    (current_devices[i]->radio.bluetooth.bdname_len == 0 ||
-                     current_devices[i]->radio.bluetooth.bdname == NULL)) ||
-                (current_devices[i]->scanType == SCAN_WIFI_AP && current_devices[i]->radio.ap.ssid[0] == '\0') ||
-                (current_devices[i]->scanType != SCAN_HCI && current_devices[i]->scanType != SCAN_BLE &&
-                 current_devices[i]->scanType != SCAN_WIFI_AP)) {
+        if (free_item_str) {
             free(item_str);
         }
         /* Default to displaying RSSI in options menu */
-        char tempStr[10];
-        snprintf(tempStr, sizeof(tempStr), "%d dB", current_devices[i]->rssi);
-        variable_item_set_current_value_index(current_devices[i]->view, options_index);
-        variable_item_set_current_value_text(current_devices[i]->view, tempStr);
+        if (current_devices[i] != NULL && current_devices[i]->view != NULL) {
+            char tempStr[10];
+            snprintf(tempStr, sizeof(tempStr), "%d dB", current_devices[i]->rssi);
+            variable_item_set_current_value_index(current_devices[i]->view, options_index);
+            variable_item_set_current_value_text(current_devices[i]->view, tempStr);
+        }
     }
+    variable_item_list_set_selected_item(app->devices_var_item_list, 0);
 }
 
 static void wendigo_scene_device_list_var_list_enter_callback(void* context, uint32_t index) {

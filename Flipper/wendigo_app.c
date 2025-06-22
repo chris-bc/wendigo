@@ -45,11 +45,14 @@ void wendigo_popup_callback(void *context) {
     }
 }
 
-void wendigo_display_popup(WendigoApp *app, char *header, char*body) {
+void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
+    // TODO: Review and kill this
+    char * newBody = malloc(sizeof(char*) * (strlen(body) + 1));
+    strncpy(newBody, body, strlen(body) + 1);
     popup_set_header(app->popup, header, 64, 3, AlignCenter, AlignTop);
-    popup_set_text(app->popup, body, 64, 22, AlignCenter, AlignTop);
+    popup_set_text(app->popup, newBody, 64, 22, AlignCenter, AlignTop);
     popup_set_icon(app->popup, -1, -1, NULL); // TODO: Find a fun icon to use
-    popup_set_timeout(app->popup, 2000);
+    popup_set_timeout(app->popup, 5000); // was 2000
     popup_enable_timeout(app->popup);
     popup_set_callback(app->popup, wendigo_popup_callback);
     popup_set_context(app->popup, app);

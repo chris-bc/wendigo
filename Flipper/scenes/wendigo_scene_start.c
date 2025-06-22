@@ -160,6 +160,16 @@ void wendigo_scene_start_on_enter(void* context) {
             menu_items_num++;
             if (i == SETUP_IDX && app->is_scanning) {
                 variable_item_set_locked(item, true, LOCKED_MSG);
+            } else if (i == SCAN_IDX) {
+                if (app->is_scanning) {
+                    variable_item_set_current_value_index(item, SCAN_STOP_IDX);
+                    app->selected_option_index[i] = SCAN_STOP_IDX;
+                    variable_item_set_current_value_text(item, items[i].options_menu[SCAN_STOP_IDX]);
+                } else {
+                    variable_item_set_current_value_index(item, SCAN_START_IDX);
+                    app->selected_option_index[i] = SCAN_START_IDX;
+                    variable_item_set_current_value_text(item, items[i].options_menu[SCAN_START_IDX]);
+                }
             }
         }
     }
@@ -171,7 +181,6 @@ void wendigo_scene_start_on_enter(void* context) {
 }
 
 bool wendigo_scene_start_on_event(void* context, SceneManagerEvent event) {
-    UNUSED(context);
     WendigoApp* app = context;
     bool consumed = false;
 

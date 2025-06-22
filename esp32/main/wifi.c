@@ -15,6 +15,7 @@ TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
 
 bool WIFI_INITIALISED = false;
 uint8_t BANNER_WIDTH = 62;
+static const char *WIFI_TAG = "WiFi@Wendigo";
 
 /* Local function declarations */
 void create_hop_task_if_needed();
@@ -40,6 +41,9 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     send_bytes((uint8_t *)&(dev->lastSeen), sizeof(dev->lastSeen));
     send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
     uint8_t ssid_len = strlen((char *)dev->radio.ap.ssid);
+    if (dev->radio.ap.ssid[0] == '\0') {
+        ssid_len = 0;
+    }
     send_bytes(&ssid_len, sizeof(ssid_len));
     send_bytes(&(dev->radio.ap.stations_count), sizeof(dev->radio.ap.stations_count));
     if (ssid_len > 0) {
@@ -49,7 +53,7 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
         /* Send the MAC of each connected device */
         /* It should be impossible to get a NULL station, but cater for it anyway */
         if (dev->radio.ap.stations == NULL || dev->radio.ap.stations[i] == NULL) {
-            send_bytes(nullMac, sizeof(nullMac));
+            send_bytes(nullMac, MAC_BYTES);
         } else {
             send_bytes(((wendigo_device *)dev->radio.ap.stations[i])->mac, MAC_BYTES);
         }
@@ -292,14 +296,16 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         dev->radio.ap.stations = NULL;
         dev->radio.ap.stations_count = 0;
         /* Null out SSID */
-        memset(dev->radio.ap.ssid, 0x00, sizeof(dev->radio.ap.ssid));
+        memset(dev->radio.ap.ssid, '\0', sizeof(dev->radio.ap.ssid));
     }
     dev->scanType = SCAN_WIFI_AP;
     dev->rssi = rx_ctrl.rssi;
     dev->radio.ap.channel = rx_ctrl.channel;
     uint8_t ssid_len = payload[BEACON_SSID_OFFSET - 1];
-    memcpy(dev->radio.ap.ssid, payload + BEACON_SSID_OFFSET, ssid_len);
-    dev->radio.ap.ssid[ssid_len] = '\0';
+    if (ssid_len > 0) {
+        memcpy(dev->radio.ap.ssid, payload + BEACON_SSID_OFFSET, ssid_len);
+        dev->radio.ap.ssid[ssid_len] = '\0';
+    }
 
     esp_err_t result = ESP_OK;
     if (creating) {
@@ -395,7 +401,7 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         ap->radio.ap.stations = NULL;   /* We'll update these later */
         ap->radio.ap.stations_count = 0;
         /* Null out SSID */
-        memset(ap->radio.ap.ssid, 0x00, sizeof(ap->radio.ap.ssid));
+        memset(ap->radio.ap.ssid, '\0', sizeof(ap->radio.ap.ssid));
     }
     ap->scanType = SCAN_WIFI_AP;
     ap->rssi = rx_ctrl.rssi;
@@ -403,8 +409,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     uint8_t ssid_len = payload[PROBE_RESPONSE_SSID_OFFSET - 1];
     if (ssid_len > 0) {
         memcpy(ap->radio.ap.ssid, payload + PROBE_RESPONSE_SSID_OFFSET, ssid_len);
+        ap->radio.ap.ssid[ssid_len] = '\0';
     }
-    ap->radio.ap.ssid[ssid_len] = '\0';
     if (creatingAp) {
         result |= add_device(ap);
         free(ap);
@@ -508,7 +514,7 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->mac, payload + RTS_CTS_SRCADDR, MAC_BYTES);
         ap->tagged = false;
         /* Null out SSID */
-        memset(ap->radio.ap.ssid, 0x00, sizeof(ap->radio.ap.ssid));
+        memset(ap->radio.ap.ssid, '\0', sizeof(ap->radio.ap.ssid));
         ap->radio.ap.stations_count = 0;
         ap->radio.ap.stations = NULL;
     }
@@ -612,7 +618,7 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->mac, payload + DEAUTH_BSSID_OFFSET, MAC_BYTES);
         ap->tagged = false;
         /* Null out SSID */
-        memset(ap->radio.ap.ssid, 0x00, sizeof(ap->radio.ap.ssid));
+        memset(ap->radio.ap.ssid, '\0', sizeof(ap->radio.ap.ssid));
         ap->radio.ap.stations = NULL;
         ap->radio.ap.stations_count = 0;
     }
@@ -707,7 +713,7 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->mac, payload + DEAUTH_DESTADDR_OFFSET, MAC_BYTES);
         ap->tagged = false;
         /* Null out SSID */
-        memset(ap->radio.ap.ssid, 0x00, sizeof(ap->radio.ap.ssid));
+        memset(ap->radio.ap.ssid, '\0', sizeof(ap->radio.ap.ssid));
         ap->radio.ap.stations = NULL;
         ap->radio.ap.stations_count = 0;
     }
@@ -937,8 +943,6 @@ void create_hop_task_if_needed() {
 }
 
 void channelHopCallback(void *pvParameter) {
-    uint8_t ch;
-    wifi_second_chan_t sec;
     if (hop_millis == 0) {
         hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
     }
