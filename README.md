@@ -181,6 +181,7 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 ## Roadmap
 Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some further refinement is required to existing functionality, after which Wendigo will be extended to include WiFi scanning, Bluetooth service discovery, and additional features.
 
+* [ ] BUG: ESP32 returns an RSSI of -4 for all devices. Figure out why & fix.
 * [ ] Add options when starting wendigo_scene_device_list to view specific device types.
 * [ ] When scanning is active device packets and scanning status or poll requests can be interleaved. Currently malformed device packets are simply dropped. Implement packet queueing on ESP32 to ensure sequential transmission.
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
@@ -216,7 +217,7 @@ Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some fu
   * [X] Flipper WiFi data model
     * [X] Move data model definitions into a common header file, included by both ESP32 and Flipper apps
     * [X] Standardise data model as a struct with common attributes, and a union of specialised structs.
-  * [ ] Channel hopping
+  * [X] Channel hopping
   * [ ] Support for 5GHz channels (ESP32-C5)
   * [X] Display different options in wendigo_scene_device_list
     * [X] For STA

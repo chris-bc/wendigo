@@ -7,9 +7,16 @@ uint8_t channels_count = 0;
 // TODO: Refactor to support 5GHz channels if the device supports 5GHz channels
 const uint8_t WENDIGO_SUPPORTED_CHANNELS_COUNT = 12;
 const uint8_t WENDIGO_SUPPORTED_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+long hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
+TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
 
 bool WIFI_INITIALISED = false;
 uint8_t BANNER_WIDTH = 62;
+
+/* Local function declarations */
+void create_hop_task_if_needed();
+void channelHopCallback(void *pvParameter);
+
 /* Override the default implementation so we can send arbitrary 802.11 packets */
 esp_err_t ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
     return ESP_OK;
@@ -846,12 +853,20 @@ esp_err_t wendigo_wifi_enable() {
         result = initialise_wifi();
     }
     result |= esp_wifi_set_promiscuous(true);
+    create_hop_task_if_needed();
     return result;
 }
 
 /* Disable wifi scanning */
 esp_err_t wendigo_wifi_disable() {
     esp_wifi_set_promiscuous(false);
+    if (channelHopTask != NULL) {
+        if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+            ESP_LOGI(WIFI_TAG, "Killing WiFi channel hopping task %p...", &channelHopTask);
+        }
+        vTaskDelete(channelHopTask);
+        channelHopTask = NULL;
+    }
     return ESP_OK;
 }
 
@@ -905,4 +920,41 @@ esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count
         channels_count = new_channels_count;
     }
     return ESP_OK;
+}
+
+void create_hop_task_if_needed() {
+    if (channelHopTask == NULL) {
+        if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+            ESP_LOGI(WIFI_TAG, "Channel hopping task is not running, starting it now...");
+        }
+        xTaskCreate(channelHopCallback, "channelHopCallback", 2048, NULL, 5, &channelHopTask);
+    }
+}
+
+void channelHopCallback(void *pvParameter) {
+    uint8_t ch;
+    wifi_second_chan_t sec;
+    if (hop_millis == 0) {
+        hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
+    }
+    while (true) {
+        /* Delay hop_millis ms */
+        vTaskDelay(hop_millis / portTICK_PERIOD_MS);
+        /* Only hop if there are channels to hop to */
+        if (channels_count > 0) {
+            ESP_ERROR_CHECK(esp_wifi_get_channel(&ch, &sec));
+            uint8_t chan_idx;
+            /* Find the index of ch in channels[] */
+            for (chan_idx = 0; chan_idx < channels_count && channels[chan_idx] != ch; ++chan_idx) { }
+            ++chan_idx; /* Move to next supported channel */
+            if (chan_idx >= channels_count) {
+                /* Current channel is not in active channels or next channel is first channel */
+                chan_idx = 0;
+            }
+            if (esp_wifi_set_channel(channels[chan_idx], WIFI_SECOND_CHAN_NONE) != ESP_OK &&
+                    scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                ESP_LOGW(WIFI_TAG, "Failed to change to channel %d", channels[chan_idx]);
+            }
+        }
+    }
 }
