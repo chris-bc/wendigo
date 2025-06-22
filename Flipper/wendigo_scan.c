@@ -828,16 +828,11 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     memcpy(&(dev->lastSeen), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(dev->lastSeen));
     memcpy(&(dev->tagged), buffer + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(dev->tagged));
     uint8_t ssid_len;
-    char *ssid;
     memcpy(&ssid_len, buffer + WENDIGO_OFFSET_AP_SSID_LEN, sizeof(ssid_len));
     memcpy(&(dev->radio.ap.stations_count), buffer + WENDIGO_OFFSET_AP_STA_COUNT, sizeof(dev->radio.ap.stations_count));
     if (ssid_len > 0) {
-        ssid = malloc(sizeof(char) * (ssid_len + 1));
-        memcpy(ssid, buffer + WENDIGO_OFFSET_AP_SSID, ssid_len + 1);
-        if (ssid != NULL) {
-            memcpy(ssid, buffer + WENDIGO_OFFSET_AP_SSID, ssid_len + 1);
-            ssid[ssid_len] = '\0';
-        }
+        memcpy(dev->radio.ap.ssid, buffer + WENDIGO_OFFSET_AP_SSID, ssid_len + 1);
+        dev->radio.ap.ssid[ssid_len] = '\0';
     }
     /* Retrieve stations_count MAC addresses */
     uint8_t buffIndex = WENDIGO_OFFSET_AP_SSID + ssid_len;
