@@ -29,6 +29,11 @@ uint8_t nullMac[]           = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 /* How much will we increase bt_devices[] by when additional space is needed? */
 #define INC_DEVICE_CAPACITY_BY   10
+/* Maximum size of UART buffer - If a packet terminator isn't found within this region
+   older data will be removed */
+#define BUFFER_MAX_SIZE         4096
+/* How much will we increase buffer[] by when additional space is needed? */
+#define BUFFER_INC_CAPACITY_BY  128
 
 /** Search for the start-of-packet marker in the specified byte array
  *  This function is used during parsing to skip past any extraneous bytes
@@ -1096,16 +1101,26 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
 
     /* Extend the buffer if necessary */
     if (bufferLen + len >= bufferCap) {
-        /* Extend it by the larger of len and 128 bytes do avoid constant realloc()s */
-        uint16_t newCapacity = bufferCap + ((len > 128) ? len : 128);
-        uint8_t *newBuffer = realloc(buffer, sizeof(uint8_t *) * newCapacity); // Behaves like malloc() when buffer==NULL
-        if (newBuffer == NULL) {
-            /* Out of memory */
-            // TODO: Panic
-            return;
+        /* Extend it by the larger of len and BUFFER_INC_CAPACITY_BY bytes to avoid constant realloc()s */
+        uint8_t increase_by = (len > BUFFER_INC_CAPACITY_BY) ? len : BUFFER_INC_CAPACITY_BY;
+        uint16_t newCapacity = bufferCap + increase_by;
+        /* Will this exceed the maximum capacity? */
+        if (newCapacity > BUFFER_MAX_SIZE) {
+            /* Remove increase_by bytes from beginning of buffer[] instead */
+            uint8_t *new_start = buffer + increase_by;
+            memcpy(buffer, new_start, bufferLen - increase_by);
+            memset(buffer + bufferLen - increase_by, '\0', increase_by);
+            bufferLen -= increase_by;
+        } else {
+            uint8_t *newBuffer = realloc(buffer, sizeof(uint8_t *) * newCapacity); // Behaves like malloc() when buffer==NULL
+            if (newBuffer == NULL) {
+                /* Out of memory */
+                // TODO: Panic
+                return;
+            }
+            buffer = newBuffer;
+            bufferCap = newCapacity;
         }
-        buffer = newBuffer;
-        bufferCap = newCapacity;
     }
     memcpy(buffer + bufferLen, buf, len);
     bufferLen += len;
