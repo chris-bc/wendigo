@@ -4,9 +4,10 @@
    At startup this is initialised to include all supported channels. */
 uint8_t *channels = NULL;
 uint8_t channels_count = 0;
+uint8_t channel_index = 0;
 // TODO: Refactor to support 5GHz channels if the device supports 5GHz channels
-const uint8_t WENDIGO_SUPPORTED_CHANNELS_COUNT = 12;
-const uint8_t WENDIGO_SUPPORTED_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+const uint8_t WENDIGO_SUPPORTED_CHANNELS_COUNT = 14;
+const uint8_t WENDIGO_SUPPORTED_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 long hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
 TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
 
@@ -929,6 +930,8 @@ void create_hop_task_if_needed() {
         }
         xTaskCreate(channelHopCallback, "channelHopCallback", 2048, NULL, 5, &channelHopTask);
     }
+    /* Restart hopping from beginning of supported channels list */
+    channel_index = 0;
 }
 
 void channelHopCallback(void *pvParameter) {
@@ -942,18 +945,14 @@ void channelHopCallback(void *pvParameter) {
         vTaskDelay(hop_millis / portTICK_PERIOD_MS);
         /* Only hop if there are channels to hop to */
         if (channels_count > 0) {
-            ESP_ERROR_CHECK(esp_wifi_get_channel(&ch, &sec));
-            uint8_t chan_idx;
-            /* Find the index of ch in channels[] */
-            for (chan_idx = 0; chan_idx < channels_count && channels[chan_idx] != ch; ++chan_idx) { }
-            ++chan_idx; /* Move to next supported channel */
-            if (chan_idx >= channels_count) {
+            ++channel_index; /* Move to next supported channel */
+            if (channel_index >= channels_count) {
                 /* Current channel is not in active channels or next channel is first channel */
-                chan_idx = 0;
+                channel_index = 0;
             }
-            if (esp_wifi_set_channel(channels[chan_idx], WIFI_SECOND_CHAN_NONE) != ESP_OK &&
+            if (esp_wifi_set_channel(channels[channel_index], WIFI_SECOND_CHAN_NONE) != ESP_OK &&
                     scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-                ESP_LOGW(WIFI_TAG, "Failed to change to channel %d", channels[chan_idx]);
+                ESP_LOGW(WIFI_TAG, "Failed to change to channel %d", channels[channel_index]);
             }
         }
     }
