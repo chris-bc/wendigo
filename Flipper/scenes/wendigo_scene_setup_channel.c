@@ -13,6 +13,8 @@ static const WendigoItem items[SETUP_CHANNEL_MENU_ITEMS] = {
     {"10", {"On", "Off"}, 2, NO_ACTION, OFF},
     {"11", {"On", "Off"}, 2, NO_ACTION, OFF},
     {"12", {"On", "Off"}, 2, NO_ACTION, OFF},
+    {"13", {"On", "Off"}, 2, NO_ACTION, OFF},
+    {"14", {"On", "Off"}, 2, NO_ACTION, OFF},
 }; // TODO: Determine whether 5GHz channels are available, add them if so
 
 static const uint8_t CH_ON = 0;
@@ -108,5 +110,23 @@ void wendigo_scene_setup_channel_on_exit(void* context) {
     WendigoApp* app = context;
     variable_item_list_reset(app->var_item_list);
     /* Update ESP32-Wendigo's channels when the scene is exited */
-    // TODO: Send channel command
+    char channel_cmd[149];
+    char temp_ch[4];
+    bzero(channel_cmd, 149);
+    uint8_t cmd_idx = 0;
+    channel_cmd[cmd_idx++] = 'c';
+    for (uint8_t i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
+        /* Add this channel to channel_cmd if it's selected (or if all channels selected) */
+        if (((app->channel_mask & app->CH_MASK[i + 1]) == app->CH_MASK[i + 1]) ||
+                ((app->channel_mask & CH_MASK_ALL) == CH_MASK_ALL)) {
+            // TODO: This only works for 2.4GHz channels
+            snprintf(temp_ch, sizeof(temp_ch), " %d", i + 1);
+            for (uint8_t j = 0; j < strlen(temp_ch); ++j) {
+                channel_cmd[cmd_idx++] = temp_ch[j];
+            }
+        }
+    }
+    channel_cmd[cmd_idx++] = '\n';
+    wendigo_uart_set_binary_cb(app->uart);
+    wendigo_uart_tx(app->uart, (uint8_t *)channel_cmd, strlen(channel_cmd) + 1);
 }

@@ -182,6 +182,7 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some further refinement is required to existing functionality, after which Wendigo will be extended to include WiFi scanning, Bluetooth service discovery, and additional features.
 
 * [ ] BUG: ESP32 returns an RSSI of -4 for all devices. Figure out why & fix.
+* [ ] Add authMode (from probe response) to AP packet
 * [ ] Add options when starting wendigo_scene_device_list to view specific device types.
 * [ ] When scanning is active device packets and scanning status or poll requests can be interleaved. Currently malformed device packets are simply dropped. Implement packet queueing on ESP32 to ensure sequential transmission.
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
