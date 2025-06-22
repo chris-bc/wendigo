@@ -28,7 +28,7 @@ uint8_t PACKET_TERM[]       = {0xAA, 0xAA, 0xAA, 0xAA, 0xFF, 0xFF, 0xFF, 0xFF};
 uint8_t nullMac[]           = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 /* How much will we increase bt_devices[] by when additional space is needed? */
-#define INC_BT_DEVICE_CAPACITY_BY   10
+#define INC_DEVICE_CAPACITY_BY   10
 
 /** Search for the start-of-packet marker in the specified byte array
  *  This function is used during parsing to skip past any extraneous bytes
@@ -364,9 +364,6 @@ bool wendigo_update_bt_device(wendigo_device *dev, wendigo_device *new_device) {
  *  by this MAC, if it is known to Wendigo.
  */
 bool wendigo_link_wifi_devices(wendigo_device *dev, uint8_t **macs, uint8_t mac_count) {
-    UNUSED(dev);
-    UNUSED(macs);
-    UNUSED(mac_count);
     if (dev == NULL || macs == NULL || mac_count == 0) {
         return true;
     }
@@ -401,7 +398,7 @@ bool wendigo_link_wifi_devices(wendigo_device *dev, uint8_t **macs, uint8_t mac_
             count = real_device->radio.ap.stations_count;
             // Count stations in macs[] that aren't in real_device
             for (uint8_t i = 0; i < mac_count; ++i) {
-                /* Is macs[i] in real_device->radio.ap.stations_count? */
+                /* Is macs[i] in real_device->radio.ap.stations? */
                 if (macs[i] != NULL) {
                     memcpy(temp_device.mac, macs[i], MAC_BYTES);
                     temp_idx = custom_device_index(&temp_device, (wendigo_device **)real_device->radio.ap.stations, real_device->radio.ap.stations_count);
@@ -414,7 +411,7 @@ bool wendigo_link_wifi_devices(wendigo_device *dev, uint8_t **macs, uint8_t mac_
         } else {
             count = mac_count;
         }
-        // Malloc new stations[]
+        /* This condition should never be met, but better safe than sorry */
         if (dev->radio.ap.stations != NULL) {
             free(dev->radio.ap.stations); // TODO: Possible source of error here
         }
@@ -440,7 +437,6 @@ bool wendigo_link_wifi_devices(wendigo_device *dev, uint8_t **macs, uint8_t mac_
     } else {
         return false;
     }
-
     return true;
 }
 
@@ -458,15 +454,15 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
         /* A device with the provided BDA already exists - Update that instead */
         return wendigo_update_device(app, dev);
     }
-    /* Adding to devices - Increase capacity by an additional INC_BT_DEVICE_CAPACITY_BY if necessary */
+    /* Adding to devices - Increase capacity by an additional INC_DEVICE_CAPACITY_BY if necessary */
     if (devices == NULL || devices_capacity == devices_count) {
-        wendigo_device **new_devices = realloc(devices, sizeof(wendigo_device *) * (devices_capacity + INC_BT_DEVICE_CAPACITY_BY));
+        wendigo_device **new_devices = realloc(devices, sizeof(wendigo_device *) * (devices_capacity + INC_DEVICE_CAPACITY_BY));
         if (new_devices == NULL) {
             /* Can't store the device */
             return false;
         }
         devices = new_devices;
-        devices_capacity += INC_BT_DEVICE_CAPACITY_BY;
+        devices_capacity += INC_DEVICE_CAPACITY_BY;
     }
     wendigo_device *new_device = malloc(sizeof(wendigo_device));
     if (new_device == NULL) {
@@ -489,10 +485,16 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
         wendigo_add_bt_device(dev, new_device);
     } else if (dev->scanType == SCAN_WIFI_AP) {
         new_device->radio.ap.channel = dev->radio.ap.channel;
-        /* By the time this function's called stations should be in place */
+        /* By the time this function's called stations will be in place
+           Note to future developers: wendigo_link_wifi_devices() *MUST*
+           be called prior to this or linked stations may be lost.
+        */
         new_device->radio.ap.stations_count = dev->radio.ap.stations_count;
         if (dev->radio.ap.stations_count > 0) {
             new_device->radio.ap.stations = dev->radio.ap.stations;
+            /* Remove stations[] from dev so it isn't free()d when dev is */
+            dev->radio.ap.stations = NULL;
+            dev->radio.ap.stations_count = 0;
         } else {
             new_device->radio.ap.stations = NULL;
         }
