@@ -25,6 +25,11 @@ static const uint8_t CH_OFF = 1;
    use a static variable here */
 static uint8_t selected_menu_index = 0;
 
+static void wendigo_scene_setup_channel_var_list_enter_callback(void* context, uint32_t index) {
+    UNUSED(context);
+    UNUSED(index);
+}
+
 static void wendigo_scene_setup_channel_var_list_change_callback(VariableItem* item) {
     furi_assert(item);
 
@@ -56,8 +61,8 @@ void wendigo_scene_setup_channel_on_enter(void* context) {
     WendigoApp* app = context;
     VariableItemList* var_item_list = app->var_item_list;
     app->current_view = WendigoAppViewSetupChannel;
-
-    variable_item_list_set_enter_callback(var_item_list, NULL, app);
+    variable_item_list_reset(var_item_list);
+    variable_item_list_set_enter_callback(var_item_list, wendigo_scene_setup_channel_var_list_enter_callback, app);
 
     VariableItem* item;
     for(int i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
