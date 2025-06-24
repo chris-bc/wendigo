@@ -57,7 +57,8 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     memcpy(packet + WENDIGO_OFFSET_WIFI_MAC, dev->mac, MAC_BYTES);
     memcpy(packet + WENDIGO_OFFSET_WIFI_CHANNEL, (uint8_t *)channel, CHANNEL_LEN);
     memcpy(packet + WENDIGO_OFFSET_WIFI_RSSI, (uint8_t *)rssi, RSSI_LEN);
-    memcpy(packet + WENDIGO_OFFSET_WIFI_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
+    /* Don't bother sending lastSeen */
+    //memcpy(packet + WENDIGO_OFFSET_WIFI_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     memcpy(packet + WENDIGO_OFFSET_WIFI_TAGGED, &tagged, sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_AP_SSID_LEN, &ssid_len, sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_AP_STA_COUNT, &(dev->radio.ap.stations_count), sizeof(uint8_t));
@@ -182,7 +183,8 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     memcpy(packet + WENDIGO_OFFSET_WIFI_MAC, dev->mac, MAC_BYTES);
     memcpy(packet + WENDIGO_OFFSET_WIFI_CHANNEL, (uint8_t *)channel, CHANNEL_LEN);
     memcpy(packet + WENDIGO_OFFSET_WIFI_RSSI, (uint8_t *)rssi, RSSI_LEN);
-    memcpy(packet + WENDIGO_OFFSET_WIFI_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
+    /* Don't bother sending lastSeen */
+    //memcpy(packet + WENDIGO_OFFSET_WIFI_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     memcpy(packet + WENDIGO_OFFSET_WIFI_TAGGED, &tagged, sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_STA_AP_MAC, dev->radio.sta.apMac, MAC_BYTES);
     memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID_LEN, &ssid_len, sizeof(uint8_t));

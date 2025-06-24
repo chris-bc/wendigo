@@ -20,10 +20,10 @@
  #define WENDIGO_OFFSET_BT_SCANTYPE             (24)
  #define WENDIGO_OFFSET_BT_TAGGED               (25)
  #define WENDIGO_OFFSET_BT_LASTSEEN             (26)
- #define WENDIGO_OFFSET_BT_NUM_SERVICES         (34)
- #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (35)
- #define WENDIGO_OFFSET_BT_COD_LEN              (36)
- #define WENDIGO_OFFSET_BT_BDNAME               (37)
+ #define WENDIGO_OFFSET_BT_NUM_SERVICES         (45)
+ #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (46)
+ #define WENDIGO_OFFSET_BT_COD_LEN              (47)
+ #define WENDIGO_OFFSET_BT_BDNAME               (48)
  /* bdname is bdname_len bytes, followed by eir_len bytes of EIR and cod_len bytes of CoD */
 
  /* Initial elements of AP and STA packets are common so are just defined once */
@@ -32,17 +32,17 @@
  #define WENDIGO_OFFSET_WIFI_CHANNEL            (15)
  #define WENDIGO_OFFSET_WIFI_RSSI               (18)
  #define WENDIGO_OFFSET_WIFI_LASTSEEN           (22)
- #define WENDIGO_OFFSET_WIFI_TAGGED             (30)
+ #define WENDIGO_OFFSET_WIFI_TAGGED             (41)
  /* Unique elements */
- #define WENDIGO_OFFSET_STA_AP_MAC              (31)
- #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (37)
- #define WENDIGO_OFFSET_STA_AP_SSID             (38)
- #define WENDIGO_OFFSET_STA_TERM                (70)
+ #define WENDIGO_OFFSET_STA_AP_MAC              (42)
+ #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (48)
+ #define WENDIGO_OFFSET_STA_AP_SSID             (49)
+ #define WENDIGO_OFFSET_STA_TERM                (81)
  /* Packet terminator is PREAMBLE_LEN == 8 bytes */
- #define WENDIGO_OFFSET_AP_SSID_LEN             (31)
- #define WENDIGO_OFFSET_AP_STA_COUNT            (32)
- #define WENDIGO_OFFSET_AP_SSID                 (33)
- #define WENDIGO_OFFSET_AP_STA                  (65)
+ #define WENDIGO_OFFSET_AP_SSID_LEN             (42)
+ #define WENDIGO_OFFSET_AP_STA_COUNT            (43)
+ #define WENDIGO_OFFSET_AP_SSID                 (44)
+ #define WENDIGO_OFFSET_AP_STA                  (76)
  /* Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
  #ifdef IS_FLIPPER_APP
@@ -75,6 +75,7 @@ PSK and not recommended to be used. It will be deprecated in future, please use 
 #define MAC_BYTES       6
 #define RSSI_LEN        4       /** Length of RSSI string representation, e.g. "-127" */
 #define CHANNEL_LEN     3
+#define LASTSEEN_LEN    19
 
  /* enum ScanType being replaced with uint8_t */
 extern const uint8_t SCAN_HCI;

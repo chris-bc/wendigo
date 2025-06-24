@@ -780,7 +780,8 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(uint8_t));
     memcpy(&tagged, buffer + WENDIGO_OFFSET_BT_TAGGED, sizeof(uint8_t));
     dev->tagged = (tagged == 1);
-    memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_BT_LASTSEEN, sizeof(int64_t));
+    /* Ignore lastSeen */
+    //memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_BT_LASTSEEN, sizeof(int64_t));
     memcpy(&(dev->radio.bluetooth.bt_services.num_services), buffer + WENDIGO_OFFSET_BT_NUM_SERVICES, sizeof(uint8_t));
     memcpy(&(dev->radio.bluetooth.bt_services.known_services_len), buffer + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN, sizeof(uint8_t));
     uint8_t cod_len;
@@ -873,7 +874,8 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     dev->radio.ap.channel = strtol(channel, NULL, 10);
     memcpy(rssi, buffer + WENDIGO_OFFSET_WIFI_RSSI, RSSI_LEN);
     dev->rssi = strtol(rssi, NULL, 10);
-    memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(int64_t));
+    /* Ignore lastSeen */
+    //memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(int64_t));
     memcpy(&tagged, buffer + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(uint8_t));
     dev->tagged = (tagged == 1);
     uint8_t ssid_len;
@@ -950,7 +952,8 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
     dev->radio.sta.channel = strtol(channel, NULL, 10);
     memcpy(rssi, buffer + WENDIGO_OFFSET_WIFI_RSSI, RSSI_LEN);
     dev->rssi = strtol(rssi, NULL, 10);
-    memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(int64_t));
+    /* Ignore lastSeen */
+    //memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(int64_t));
     memcpy(&tagged, buffer + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(uint8_t));
     dev->tagged = (tagged == 1);
     memcpy(dev->radio.sta.apMac, buffer + WENDIGO_OFFSET_STA_AP_MAC, MAC_BYTES);

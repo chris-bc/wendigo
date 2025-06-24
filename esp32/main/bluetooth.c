@@ -177,7 +177,8 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     memcpy(packet + WENDIGO_OFFSET_BT_BDA, dev->mac, MAC_BYTES);
     memcpy(packet + WENDIGO_OFFSET_BT_SCANTYPE, &(dev->scanType), sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_BT_TAGGED, &tagged, sizeof(uint8_t));
-    memcpy(packet + WENDIGO_OFFSET_BT_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
+    /* Don't bother sending lastSeen */
+    //memcpy(packet + WENDIGO_OFFSET_BT_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     memcpy(packet + WENDIGO_OFFSET_BT_NUM_SERVICES,
         &(dev->radio.bluetooth.bt_services.num_services),
         sizeof(uint8_t));
