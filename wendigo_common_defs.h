@@ -42,10 +42,8 @@
  #define WENDIGO_OFFSET_AP_SSID_LEN             (37)
  #define WENDIGO_OFFSET_AP_STA_COUNT            (38)
  #define WENDIGO_OFFSET_AP_SSID                 (39)
- /* SSID is SSID_LEN + 1 bytes, including null character, if SSID_LEN > 0.
-    Stations begin at WENDIGO_OFFSET_AP_SSID + SSID_LEN (+1 if SSID_LEN > 0).
-    Each station is a 6-byte MAC. There are STA_COUNT stations.
- */
+ #define WENDIGO_OFFSET_AP_STA                  (71)
+ /* Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
  typedef enum {
     WIFI_AUTH_OPEN = 0,         /**< Authenticate mode : open */

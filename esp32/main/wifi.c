@@ -40,15 +40,13 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     send_bytes((uint8_t *)&(dev->rssi), sizeof(dev->rssi));
     send_bytes((uint8_t *)&(dev->lastSeen), sizeof(dev->lastSeen));
     send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
-    uint8_t ssid_len = strlen((char *)dev->radio.ap.ssid);
+    uint8_t ssid_len = strnlen((char *)dev->radio.ap.ssid, MAX_SSID_LEN + 1);
     if (dev->radio.ap.ssid[0] == '\0') {
         ssid_len = 0;
     }
     send_bytes(&ssid_len, sizeof(ssid_len));
     send_bytes(&(dev->radio.ap.stations_count), sizeof(dev->radio.ap.stations_count));
-    if (ssid_len > 0) {
-        send_bytes(dev->radio.ap.ssid, ssid_len + 1);
-    }
+    send_bytes(dev->radio.ap.ssid, MAX_SSID_LEN);
     for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
         /* Send the MAC of each connected device */
         /* It should be impossible to get a NULL station, but cater for it anyway */
@@ -154,9 +152,7 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
         ssid_len = strlen(ssid);
     }
     send_bytes(&ssid_len, sizeof(ssid_len));
-    if (ssid_len > 0) {
-        send_bytes((uint8_t *)ssid, ssid_len + 1); /* Send null byte too */
-    }
+    send_bytes((uint8_t *)ssid, MAX_SSID_LEN); /* Changed to fixed-length SSID */
     send_end_of_packet();
     return result;
 }
@@ -272,8 +268,9 @@ esp_err_t set_associated(wendigo_device *sta, wendigo_device *ap) {
         if (new_stations == NULL) {
             return outOfMemory();
         }
+        new_stations[ap->radio.ap.stations_count++] = sta;
         ap->radio.ap.stations = (void **)new_stations;
-        ap->radio.ap.stations[ap->radio.ap.stations_count++] = sta;
+        //ap->radio.ap.stations[ap->radio.ap.stations_count++] = sta;
     }
     return ESP_OK;
 }
