@@ -163,6 +163,12 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     /* Send tagged as 1 for true, 0 for false */
     uint8_t tagged = (dev->tagged) ? 1 : 0;
 
+    /* Assemble the packet and send it in one go - I can't figure out why AP packet length
+       is a byte too long, this will at least cover up the issue :/ */
+    uint8_t *packet = malloc(sizeof(uint8_t *) * (WENDIGO_OFFSET_BT_BDNAME +
+        dev->radio.bluetooth.bdname_len + dev->radio.bluetooth.eir_len +
+        cod_len + 2 + (2 * PREAMBLE_LEN)));
+
     /* Send a stream of bytes to mark beginning of transmission */
     repeat_bytes(0xFF, 4);
     repeat_bytes(0xAA, 4);

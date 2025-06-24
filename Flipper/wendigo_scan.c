@@ -16,18 +16,6 @@ uint16_t selected_devices_count = 0;
 uint16_t devices_capacity = 0;
 uint16_t selected_devices_capacity = 0;
 
-/* Packet identifiers */
-uint8_t PREAMBLE_LEN = 8;
-uint8_t PREAMBLE_BT_BLE[]   = {0xFF, 0xFF, 0xFF, 0xFF, 0xAA, 0xAA, 0xAA, 0xAA};
-uint8_t PREAMBLE_WIFI_AP[]  = {0x99, 0x99, 0x99, 0x99, 0x11, 0x11, 0x11, 0x11};
-uint8_t PREAMBLE_WIFI_STA[] = {0x99, 0x99, 0x99, 0x99, 0xFF, 0xFF, 0xFF, 0xFF};
-uint8_t PREAMBLE_CHANNELS[] = {0x99, 0x99, 0x99, 0x99, 0xAA, 0xAA, 0xAA, 0xAA};
-uint8_t PREAMBLE_STATUS[]   = {0xEE, 0xEE, 0xEE, 0xEE, 0xBB, 0xBB, 0xBB, 0xBB};
-uint8_t PREAMBLE_VER[]      = {'W', 'e', 'n', 'd', 'i', 'g', 'o', ' '};
-uint8_t PACKET_TERM[]       = {0xAA, 0xAA, 0xAA, 0xAA, 0xFF, 0xFF, 0xFF, 0xFF};
-// TODO: This is also defined in ESP32-Wendigo, move it to wendigo_common_defs.h
-uint8_t nullMac[]           = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
 /* How much will we increase bt_devices[] by when additional space is needed? */
 #define INC_DEVICE_CAPACITY_BY   10
 /* Maximum size of UART buffer - If a packet terminator isn't found within this region

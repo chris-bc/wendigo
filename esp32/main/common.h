@@ -15,7 +15,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "../../wendigo_common_defs.h"
+#include "wendigo_common_defs.h"
 
 #define WENDIGO_VERSION "0.1.0"
 

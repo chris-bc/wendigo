@@ -1,5 +1,6 @@
 #ifndef WENDIGO_COMMON_DEFS
 #define WENDIGO_COMMON_DEFS
+
 /**
  * Structs have just blown my mind - based on its members wendigo_bt_device
  * (excluding wendigo_bt_svc) should be 45 bytes but it's 56. Wendigo_bt_svc
@@ -10,9 +11,7 @@
  * based on their offsets. This file defines their offsets into a packet, with
  * offset 0 representing the first byte of the packet preamble.
  * 
- * The offsets are only required for the Flipper Zero app
  */
-#ifdef IS_FLIPPER_APP
  #define WENDIGO_OFFSET_BT_BDNAME_LEN           (8)
  #define WENDIGO_OFFSET_BT_EIR_LEN              (9)
  #define WENDIGO_OFFSET_BT_RSSI                 (10)
@@ -45,6 +44,7 @@
  #define WENDIGO_OFFSET_AP_STA                  (65)
  /* Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
+ #ifdef IS_FLIPPER_APP
  typedef enum {
     WIFI_AUTH_OPEN = 0,         /**< Authenticate mode : open */
     WIFI_AUTH_WEP,              /**< Authenticate mode : WEP */
@@ -161,5 +161,16 @@ typedef struct wendigo_device {
         wendigo_wifi_sta sta;
     } radio;
 } wendigo_device;
+
+extern uint8_t PREAMBLE_LEN;
+extern uint8_t PREAMBLE_BT_BLE[];
+extern uint8_t PREAMBLE_WIFI_AP[];
+extern uint8_t PREAMBLE_WIFI_STA[];
+extern uint8_t PREAMBLE_CHANNELS[];
+extern uint8_t PREAMBLE_STATUS[];
+extern uint8_t PREAMBLE_VER[];
+extern uint8_t PACKET_TERM[];
+extern uint8_t nullMac[];
+extern uint8_t broadcastMac[];
 
 #endif

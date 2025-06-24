@@ -21,7 +21,7 @@
 
 #define IS_FLIPPER_APP           (1)
 
-#include "../wendigo_common_defs.h"
+#include "wendigo_common_defs.h"
 
 /* How frequently should Flipper poll ESP32 when scanning to restart
    scanning in the event the device restarts (seconds)? */
