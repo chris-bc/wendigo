@@ -110,10 +110,10 @@ double _elapsedTime(uint32_t *from, uint32_t *to, char *elapsedStr, uint8_t strl
         }
         return 0;
     }
-    uint16_t elapsed = (uint16_t)(*to - *from);
+    uint32_t elapsed = *to - *from;
     if (elapsedStr != NULL && strlen > 0) {
         if (elapsed < 60) {
-            snprintf(elapsedStr, strlen, "%ds", elapsed);
+            snprintf(elapsedStr, strlen, "%lds", elapsed);
         } else {
             uint8_t minutes = elapsed / 60;
             uint8_t seconds = elapsed - (minutes * 60);
@@ -139,7 +139,7 @@ double elapsedTime(wendigo_device *dev, char *elapsedStr, uint8_t strlen) {
         return 0;
     }
     uint32_t nowTime = furi_hal_rtc_get_timestamp();
-    return _elapsedTime((uint32_t *)&(dev->lastSeen.tv_sec), &nowTime, elapsedStr, strlen);
+    return _elapsedTime(&(dev->lastSeen), &nowTime, elapsedStr, strlen);
 }
 
 /** Identify the device represented by the currently-selected menu item. NULL if it cannot be identified. */
@@ -543,7 +543,7 @@ bool wendigo_scene_device_list_on_event(void* context, SceneManagerEvent event) 
                     (current_devices[i]->scanType == SCAN_WIFI_AP && variable_item_get_current_value_index(current_devices[i]->view) == WendigoOptionAPLastSeen) ||
                     (current_devices[i]->scanType == SCAN_WIFI_STA && variable_item_get_current_value_index(current_devices[i]->view) == WendigoOptionSTALastSeen))) {
                 /* Update option text if lastSeen is selected for this device */
-                _elapsedTime((uint32_t *)&(current_devices[i]->lastSeen.tv_sec), &now, elapsedStr, sizeof(elapsedStr));
+                _elapsedTime(&(current_devices[i]->lastSeen), &now, elapsedStr, sizeof(elapsedStr));
                 variable_item_set_current_value_text(current_devices[i]->view, elapsedStr);
             }
         }

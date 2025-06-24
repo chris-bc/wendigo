@@ -154,9 +154,11 @@ typedef struct wendigo_device {
     int16_t rssi;
     uint8_t scanType;
     bool tagged;
-    struct timeval lastSeen;
     #ifdef IS_FLIPPER_APP
+        uint32_t lastSeen;
         VariableItem *view;
+    #else
+        struct timeval lastSeen;
     #endif
     union {
         wendigo_bt_device bluetooth;

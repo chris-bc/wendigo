@@ -482,7 +482,7 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
     new_device->view = dev->view; /* Copy the view pointer if we have one, NULL if we don't */
     /* ESP32 doesn't know the real time/date so overwrite the lastSeen value.
        time_t is just another way of saying long long int, so casting is OK */
-    new_device->lastSeen.tv_sec = (time_t)furi_hal_rtc_get_timestamp();
+    new_device->lastSeen = furi_hal_rtc_get_timestamp();
     /* Copy MAC/BDA */
     memcpy(new_device->mac, dev->mac, MAC_BYTES);
     /* Copy protocol-specific attributes */
@@ -538,7 +538,7 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
     target->rssi = dev->rssi;
     target->scanType = dev->scanType;
     /* Replace lastSeen - cast to long long int (aka time_t) */
-    target->lastSeen.tv_sec = (time_t)furi_hal_rtc_get_timestamp();
+    target->lastSeen = furi_hal_rtc_get_timestamp();
     /* Copy protocol-specific attributes */
     if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
         wendigo_update_bt_device(dev, target);

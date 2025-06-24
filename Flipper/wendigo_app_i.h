@@ -118,7 +118,7 @@ struct WendigoApp {
     Popup* popup; // Avoid continual allocation and freeing of Popup by initialising at launch
     WendigoRadio interfaces[IF_COUNT];
     InterfaceType active_interface;
-    int32_t last_packet;
+    uint32_t last_packet;
 
     uint8_t setup_selected_menu_index;
     uint16_t device_list_selected_menu_index;
