@@ -154,24 +154,30 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     cod2shortStr(dev->radio.bluetooth.cod, cod_short, &cod_len);
     /* Account for NULL terminator on cod_short */
     ++cod_len;
+    /* Send RSSI as a char[4] to avoid casting between uint8_t and int16_t */
+    char rssi[RSSI_LEN + 3];    /* +3 rather than 1 to avoid compiler errors - int16_t can be up to 6 chars */
+    memset(rssi, '\0', RSSI_LEN + 3);
+    snprintf(rssi, RSSI_LEN + 3, "%d", dev->rssi);
+    /* Cast scanType down to uint8_t because that's all it needs */
+    uint8_t scanType = (uint8_t)dev->scanType;
+    /* Send tagged as 1 for true, 0 for false */
+    uint8_t tagged = (dev->tagged) ? 1 : 0;
 
     /* Send a stream of bytes to mark beginning of transmission */
     repeat_bytes(0xFF, 4);
     repeat_bytes(0xAA, 4);
     /* Send fix-byte members */
-    send_bytes(&(dev->radio.bluetooth.bdname_len), sizeof(dev->radio.bluetooth.bdname_len));
-    send_bytes(&(dev->radio.bluetooth.eir_len), sizeof(dev->radio.bluetooth.eir_len));
-    send_bytes((uint8_t *)&(dev->rssi), sizeof(int16_t));
-    send_bytes((uint8_t *)&(dev->radio.bluetooth.cod), sizeof(dev->radio.bluetooth.cod));
-    send_bytes(dev->mac, sizeof(dev->mac));
-    send_bytes((uint8_t *)&(dev->scanType), sizeof(dev->scanType));
-    send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
-    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(dev->lastSeen));
-    send_bytes(&(dev->radio.bluetooth.bt_services.num_services),
-               sizeof(dev->radio.bluetooth.bt_services.num_services));
-    send_bytes(&(dev->radio.bluetooth.bt_services.known_services_len),
-               sizeof(dev->radio.bluetooth.bt_services.known_services_len));
-    send_bytes(&cod_len, sizeof(cod_len));
+    send_bytes(&(dev->radio.bluetooth.bdname_len), sizeof(uint8_t));
+    send_bytes(&(dev->radio.bluetooth.eir_len), sizeof(uint8_t));
+    send_bytes((uint8_t *)rssi, RSSI_LEN);
+    send_bytes((uint8_t *)&(dev->radio.bluetooth.cod), sizeof(uint32_t));
+    send_bytes(dev->mac, MAC_BYTES);
+    send_bytes(&scanType, sizeof(uint8_t));
+    send_bytes(&tagged, sizeof(uint8_t));
+    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(struct timeval));
+    send_bytes(&(dev->radio.bluetooth.bt_services.num_services), sizeof(uint8_t));
+    send_bytes(&(dev->radio.bluetooth.bt_services.known_services_len), sizeof(uint8_t));
+    send_bytes(&cod_len, sizeof(uint8_t));
 
     /* bdname */
     if (dev->radio.bluetooth.bdname_len > 0) {
