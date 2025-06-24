@@ -236,6 +236,7 @@ void send_bytes(uint8_t *bytes, uint8_t size) {
     for (int i = 0; i < size; ++i) {
         putc(bytes[i], stdout);
     }
+    fflush(stdout);
 }
 
 void send_end_of_packet() {

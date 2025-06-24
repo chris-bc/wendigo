@@ -163,39 +163,48 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
 
     /* Assemble the packet and send it in one go - I can't figure out why AP packet length
        is a byte too long, this will at least cover up the issue :/ */
-    uint8_t *packet = malloc(sizeof(uint8_t *) * (WENDIGO_OFFSET_BT_BDNAME +
-        dev->radio.bluetooth.bdname_len + dev->radio.bluetooth.eir_len +
-        cod_len + 2 + (2 * PREAMBLE_LEN)));
-
-    /* Send a stream of bytes to mark beginning of transmission */
-    repeat_bytes(0xFF, 4);
-    repeat_bytes(0xAA, 4);
-    /* Send fix-byte members */
-    send_bytes(&(dev->radio.bluetooth.bdname_len), sizeof(uint8_t));
-    send_bytes(&(dev->radio.bluetooth.eir_len), sizeof(uint8_t));
-    send_bytes((uint8_t *)rssi, RSSI_LEN);
-    send_bytes((uint8_t *)&(dev->radio.bluetooth.cod), sizeof(uint32_t));
-    send_bytes(dev->mac, MAC_BYTES);
-    send_bytes(&(dev->scanType), sizeof(uint8_t));
-    send_bytes(&tagged, sizeof(uint8_t));
-    send_bytes((uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
-    send_bytes(&(dev->radio.bluetooth.bt_services.num_services), sizeof(uint8_t));
-    send_bytes(&(dev->radio.bluetooth.bt_services.known_services_len), sizeof(uint8_t));
-    send_bytes(&cod_len, sizeof(uint8_t));
+    uint8_t packet_len = WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
+        dev->radio.bluetooth.eir_len + cod_len + PREAMBLE_LEN;
+    uint8_t *packet = malloc(sizeof(uint8_t *) * packet_len);
+    if (packet == NULL) {
+        return outOfMemory();
+    }
+    memcpy(packet, PREAMBLE_BT_BLE, PREAMBLE_LEN);
+    memcpy(packet + WENDIGO_OFFSET_BT_BDNAME_LEN, &(dev->radio.bluetooth.bdname_len), sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_EIR_LEN, &(dev->radio.bluetooth.eir_len), sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_RSSI, (uint8_t *)rssi, RSSI_LEN);
+    memcpy(packet + WENDIGO_OFFSET_BT_COD, (uint8_t *)&(dev->radio.bluetooth.cod), sizeof(uint32_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_BDA, dev->mac, MAC_BYTES);
+    memcpy(packet + WENDIGO_OFFSET_BT_SCANTYPE, &(dev->scanType), sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_TAGGED, &tagged, sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_NUM_SERVICES,
+        &(dev->radio.bluetooth.bt_services.num_services),
+        sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN,
+        &(dev->radio.bluetooth.bt_services.known_services_len),
+        sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_COD_LEN, &cod_len, sizeof(uint8_t));
 
     /* bdname */
     if (dev->radio.bluetooth.bdname_len > 0) {
-        send_bytes((uint8_t *)(dev->radio.bluetooth.bdname), dev->radio.bluetooth.bdname_len + 1); // Don't forget the NULL terminator!
+        memcpy(packet + WENDIGO_OFFSET_BT_BDNAME, (uint8_t *)(dev->radio.bluetooth.bdname),
+            dev->radio.bluetooth.bdname_len); /* NOTE: No longer null-terminated */
     }
     /* EIR */
     if (dev->radio.bluetooth.eir_len > 0) {
-        send_bytes(dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
+        memcpy(packet + WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len,
+            dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
     }
     if (cod_len > 0) {
-        send_bytes((uint8_t *)cod_short, cod_len + 1);
+        memcpy(packet + WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
+            dev->radio.bluetooth.eir_len, (uint8_t *)cod_short, cod_len); /* NOTE: No longer null-terminated */
     }
-    /* Mark the end of transmission */
-    send_end_of_packet();
+    memcpy(packet + WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
+        dev->radio.bluetooth.eir_len + cod_len, PACKET_TERM, PREAMBLE_LEN);
+    /* Send the packet */
+    send_bytes(packet, packet_len);
+    free(packet);
     return result;
 }
 

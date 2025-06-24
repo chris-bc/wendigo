@@ -37,7 +37,8 @@
  #define WENDIGO_OFFSET_STA_AP_MAC              (31)
  #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (37)
  #define WENDIGO_OFFSET_STA_AP_SSID             (38)
- /* AP SSID is MAX_SSID_LEN == 32 bytes */
+ #define WENDIGO_OFFSET_STA_TERM                (70)
+ /* Packet terminator is PREAMBLE_LEN == 8 bytes */
  #define WENDIGO_OFFSET_AP_SSID_LEN             (31)
  #define WENDIGO_OFFSET_AP_STA_COUNT            (32)
  #define WENDIGO_OFFSET_AP_SSID                 (33)

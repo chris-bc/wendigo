@@ -41,32 +41,42 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     char channel[CHANNEL_LEN + 3];
     memset(channel, '\0', CHANNEL_LEN + 3);
     snprintf(channel, CHANNEL_LEN + 3, "%d", dev->radio.ap.channel);
-    /* Send the packet */
-    repeat_bytes(0x99, 4);
-    repeat_bytes(0x11, 4);
-    send_bytes(&(dev->scanType), sizeof(uint8_t));
-    send_bytes(dev->mac, MAC_BYTES);
-    send_bytes((uint8_t *)channel, CHANNEL_LEN);
-    send_bytes((uint8_t *)rssi, RSSI_LEN);
-    send_bytes((uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
-    send_bytes(&tagged, sizeof(uint8_t));
+    /* Calculate ssid_len */
     uint8_t ssid_len = strnlen((char *)dev->radio.ap.ssid, MAX_SSID_LEN + 1);
     if (dev->radio.ap.ssid[0] == '\0') {
         ssid_len = 0;
     }
-    send_bytes(&ssid_len, sizeof(uint8_t));
-    send_bytes(&(dev->radio.ap.stations_count), sizeof(uint8_t));
-    send_bytes(dev->radio.ap.ssid, MAX_SSID_LEN);
+    /* Assemble the packet */
+    uint8_t packet_len = WENDIGO_OFFSET_AP_STA + (6 * dev->radio.ap.stations_count) + PREAMBLE_LEN;
+    uint8_t *packet = malloc(sizeof(uint8_t) * packet_len);
+    if (packet == NULL) {
+        return outOfMemory();
+    }
+    memcpy(packet, PREAMBLE_WIFI_AP, PREAMBLE_LEN);
+    memcpy(packet + WENDIGO_OFFSET_WIFI_SCANTYPE, &(dev->scanType), sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_WIFI_MAC, dev->mac, MAC_BYTES);
+    memcpy(packet + WENDIGO_OFFSET_WIFI_CHANNEL, (uint8_t *)channel, CHANNEL_LEN);
+    memcpy(packet + WENDIGO_OFFSET_WIFI_RSSI, (uint8_t *)rssi, RSSI_LEN);
+    memcpy(packet + WENDIGO_OFFSET_WIFI_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
+    memcpy(packet + WENDIGO_OFFSET_WIFI_TAGGED, &tagged, sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_AP_SSID_LEN, &ssid_len, sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_AP_STA_COUNT, &(dev->radio.ap.stations_count), sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_AP_SSID, dev->radio.ap.ssid, MAX_SSID_LEN);
+    /* Keep track of the offset while working through stations[] */
+    uint8_t current_offset = WENDIGO_OFFSET_AP_STA;
     for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
         /* Send the MAC of each connected device */
         /* It should be impossible to get a NULL station, but cater for it anyway */
         if (dev->radio.ap.stations == NULL || dev->radio.ap.stations[i] == NULL) {
-            send_bytes(nullMac, MAC_BYTES);
+            memcpy(packet + current_offset, nullMac, MAC_BYTES);
         } else {
-            send_bytes(((wendigo_device *)dev->radio.ap.stations[i])->mac, MAC_BYTES);
+            memcpy(packet + current_offset, ((wendigo_device *)dev->radio.ap.stations[i])->mac, MAC_BYTES);
         }
+        current_offset += MAC_BYTES;
     }
-    send_end_of_packet();
+    memcpy(packet + current_offset, PACKET_TERM, PREAMBLE_LEN);
+    send_bytes(packet, packet_len);
+    free(packet);
     return result;
 }
 
@@ -154,25 +164,33 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     char channel[CHANNEL_LEN + 3];
     memset(channel, '\0', CHANNEL_LEN + 3);
     snprintf(channel, CHANNEL_LEN + 3, "%d", dev->radio.sta.channel);
-    /* Send the packet */
-    repeat_bytes(0x99, 4);
-    repeat_bytes(0xFF, 4);
-    send_bytes(&(dev->scanType), sizeof(uint8_t));
-    send_bytes(dev->mac, MAC_BYTES);
-    send_bytes((uint8_t *)channel, CHANNEL_LEN);
-    send_bytes((uint8_t *)rssi, RSSI_LEN);
-    send_bytes((uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
-    send_bytes(&tagged, sizeof(uint8_t));
-    send_bytes(dev->radio.sta.apMac, MAC_BYTES);
+    /* Calculate ssid_len */
     uint8_t ssid_len = 0;
     char *ssid = NULL;
     if (dev->radio.sta.ap != NULL) {
         ssid = (char *)(((wendigo_device *)dev->radio.sta.ap)->radio.ap.ssid);
         ssid_len = strlen(ssid);
     }
-    send_bytes(&ssid_len, sizeof(uint8_t));
-    send_bytes((uint8_t *)ssid, MAX_SSID_LEN); /* Changed to fixed-length SSID */
-    send_end_of_packet();
+    /* Assemble the packet so it can be sent all at once */
+    uint8_t packet_len = WENDIGO_OFFSET_STA_TERM + PREAMBLE_LEN;
+    uint8_t *packet = malloc(sizeof(uint8_t) * packet_len);
+    if (packet == NULL) {
+        return outOfMemory();
+    }
+    memcpy(packet, PREAMBLE_WIFI_STA, PREAMBLE_LEN);
+    memcpy(packet + WENDIGO_OFFSET_WIFI_SCANTYPE, &(dev->scanType), sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_WIFI_MAC, dev->mac, MAC_BYTES);
+    memcpy(packet + WENDIGO_OFFSET_WIFI_CHANNEL, (uint8_t *)channel, CHANNEL_LEN);
+    memcpy(packet + WENDIGO_OFFSET_WIFI_RSSI, (uint8_t *)rssi, RSSI_LEN);
+    memcpy(packet + WENDIGO_OFFSET_WIFI_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
+    memcpy(packet + WENDIGO_OFFSET_WIFI_TAGGED, &tagged, sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_STA_AP_MAC, dev->radio.sta.apMac, MAC_BYTES);
+    memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID_LEN, &ssid_len, sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, (uint8_t *)ssid, MAX_SSID_LEN);
+    memcpy(packet + WENDIGO_OFFSET_STA_TERM, PACKET_TERM, PREAMBLE_LEN);
+    /* Send the packet */
+    send_bytes(packet, packet_len);
+    free(packet);
     return result;
 }
 
