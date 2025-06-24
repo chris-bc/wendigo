@@ -73,22 +73,16 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
     wifiSTACount = 0;
     wifiAPCount = 0;
     for (uint16_t i = 0; i < devices_count; ++i) {
-        switch (devices[i].scanType) {
-            case SCAN_HCI:
-                ++classicDeviceCount;
-                break;
-            case SCAN_BLE:
-                ++leDeviceCount;
-                break;
-            case SCAN_WIFI_AP:
-                ++wifiAPCount;
-                break;
-            case SCAN_WIFI_STA:
-                ++wifiSTACount;
-                break;
-            default:
-                /* No action required */
-                break;
+        if (devices[i].scanType == SCAN_HCI) {
+            ++classicDeviceCount;
+        } else if (devices[i].scanType == SCAN_BLE) {
+            ++leDeviceCount;
+        } else if (devices[i].scanType == SCAN_WIFI_AP) {
+            ++wifiAPCount;
+        } else if (devices[i].scanType == SCAN_WIFI_STA) {
+            ++wifiSTACount;
+        } else {
+            /* No action required */
         }
     }
 

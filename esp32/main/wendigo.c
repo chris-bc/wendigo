@@ -194,8 +194,11 @@ void wendigo_set_logging(esp_log_level_t level) {
    host throughout. If a command requires `radio` to be enabled or disabled the function pointer `enableFunction()`
    or `disableFunction` is executed. These functions must take no arguments and return esp_err_t (or int).
 */
-esp_err_t enableDisableRadios(int argc, char **argv, ScanType radio, esp_err_t (*enableFunction)(), esp_err_t (*disableFunction)()) {
+esp_err_t enableDisableRadios(int argc, char **argv, uint8_t radio, esp_err_t (*enableFunction)(), esp_err_t (*disableFunction)()) {
     esp_err_t result = ESP_OK;
+    if (radio >= SCAN_COUNT) {
+        return ESP_ERR_INVALID_ARG;
+    }
     ActionType action = parseCommand(argc, argv);
     if (action == ACTION_INVALID) {
         invalid_command(argv[0], argv[1], syntaxTip[radio]);

@@ -25,3 +25,13 @@ uint8_t PACKET_TERM[]       = {0xAA, 0xAA, 0xAA, 0xAA, 0xFF, 0xFF, 0xFF, 0xFF};
 
 uint8_t nullMac[]           = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 uint8_t broadcastMac[]	    = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+/* enum ScanType being replaced with uint8_t */
+const uint8_t SCAN_HCI          = 0;
+const uint8_t SCAN_BLE          = 1;
+const uint8_t SCAN_WIFI_AP      = 2;
+const uint8_t SCAN_WIFI_STA     = 3;
+const uint8_t SCAN_INTERACTIVE  = 4;
+const uint8_t SCAN_TAG          = 5;
+const uint8_t SCAN_FOCUS        = 6;
+const uint8_t SCAN_COUNT        = 7;

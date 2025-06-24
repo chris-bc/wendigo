@@ -75,16 +75,17 @@ PSK and not recommended to be used. It will be deprecated in future, please use 
 #define RSSI_LEN        4       /** Length of RSSI string representation, e.g. "-127" */
 #define CHANNEL_LEN     3
 
- typedef enum {
-    SCAN_HCI = 0,
-    SCAN_BLE,
-    SCAN_WIFI_AP,
-    SCAN_WIFI_STA,
-    SCAN_INTERACTIVE,
-    SCAN_TAG,
-    SCAN_FOCUS,
-    SCAN_COUNT
-} ScanType;
+ /* enum ScanType being replaced with uint8_t */
+extern const uint8_t SCAN_HCI;
+extern const uint8_t SCAN_BLE;
+extern const uint8_t SCAN_WIFI_AP;
+extern const uint8_t SCAN_WIFI_STA;
+extern const uint8_t SCAN_INTERACTIVE;
+extern const uint8_t SCAN_TAG;
+extern const uint8_t SCAN_FOCUS;
+extern const uint8_t SCAN_COUNT;
+/* But I want to use SCAN_COUNT for array declarations - How annoying */
+#define DEF_SCAN_COUNT      (7)
 
 typedef enum DeviceMask {
     DEVICE_BT_CLASSIC       = 1,
@@ -149,7 +150,7 @@ typedef struct wendigo_wifi_sta {
 typedef struct wendigo_device {
     uint8_t mac[MAC_BYTES];
     int16_t rssi;
-    ScanType scanType;
+    uint8_t scanType;
     bool tagged;
     struct timeval lastSeen;
     #ifdef IS_FLIPPER_APP

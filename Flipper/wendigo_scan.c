@@ -605,47 +605,41 @@ void wendigo_free_device(wendigo_device *dev) {
     if (dev == NULL) {
         return;
     }
-    switch (dev->scanType) {
-        case SCAN_HCI:
-        case SCAN_BLE:
-            if (dev->radio.bluetooth.cod_str != NULL) {
-                free(dev->radio.bluetooth.cod_str);
-                dev->radio.bluetooth.cod_str = NULL;
-            }
-            if (dev->radio.bluetooth.bdname != NULL) {
-                free(dev->radio.bluetooth.bdname);
-                dev->radio.bluetooth.bdname = NULL;
-                dev->radio.bluetooth.bdname_len = 0;
-            }
-            if (dev->radio.bluetooth.eir != NULL) {
-                free(dev->radio.bluetooth.eir);
-                dev->radio.bluetooth.eir = NULL;
-            }
-            if (dev->radio.bluetooth.bt_services.service_uuids != NULL) {
-                free(dev->radio.bluetooth.bt_services.service_uuids);
-                dev->radio.bluetooth.bt_services.service_uuids = NULL;
-                dev->radio.bluetooth.bt_services.num_services = 0;
-            }
-            if (dev->radio.bluetooth.bt_services.known_services != NULL) {
-                // TODO: After implementing BT services, ensure that the bt_uuid's are freed somewhere
-                free(dev->radio.bluetooth.bt_services.known_services);
-                dev->radio.bluetooth.bt_services.known_services = NULL;
-                dev->radio.bluetooth.bt_services.known_services_len = 0;
-            }
-            break;
-        case SCAN_WIFI_AP:
-            if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
-                free(dev->radio.ap.stations);
-                dev->radio.ap.stations = NULL;
-                dev->radio.ap.stations_count = 0;
-            }
-            break;
-        case SCAN_WIFI_STA:
-            dev->radio.sta.ap = NULL;
-            break;
-        default:
-            /* Nothing to do */
-            break;
+    if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
+        if (dev->radio.bluetooth.cod_str != NULL) {
+            free(dev->radio.bluetooth.cod_str);
+            dev->radio.bluetooth.cod_str = NULL;
+        }
+        if (dev->radio.bluetooth.bdname != NULL) {
+            free(dev->radio.bluetooth.bdname);
+            dev->radio.bluetooth.bdname = NULL;
+            dev->radio.bluetooth.bdname_len = 0;
+        }
+        if (dev->radio.bluetooth.eir != NULL) {
+            free(dev->radio.bluetooth.eir);
+            dev->radio.bluetooth.eir = NULL;
+        }
+        if (dev->radio.bluetooth.bt_services.service_uuids != NULL) {
+            free(dev->radio.bluetooth.bt_services.service_uuids);
+            dev->radio.bluetooth.bt_services.service_uuids = NULL;
+            dev->radio.bluetooth.bt_services.num_services = 0;
+        }
+        if (dev->radio.bluetooth.bt_services.known_services != NULL) {
+            // TODO: After implementing BT services, ensure that the bt_uuid's are freed somewhere
+            free(dev->radio.bluetooth.bt_services.known_services);
+            dev->radio.bluetooth.bt_services.known_services = NULL;
+            dev->radio.bluetooth.bt_services.known_services_len = 0;
+        }
+    } else if (dev->scanType == SCAN_WIFI_AP) {
+        if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
+            free(dev->radio.ap.stations);
+            dev->radio.ap.stations = NULL;
+            dev->radio.ap.stations_count = 0;
+        }
+    } else if (dev->scanType == SCAN_WIFI_STA) {
+        dev->radio.sta.ap = NULL;
+    } else {
+        /* Nothing to do */
     }
     dev->view = NULL;
     free(dev);
@@ -773,7 +767,6 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     dev->radio.bluetooth.cod_str = NULL;
     dev->view = NULL;
     /* Temporary variables for attributes that require transformation */
-    uint8_t scanType;
     uint8_t tagged;
     char rssi[RSSI_LEN + 1];
     memset(rssi, '\0', RSSI_LEN + 1);
@@ -784,8 +777,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     dev->rssi = strtol(rssi, NULL, 10);
     memcpy(&(dev->radio.bluetooth.cod), buffer + WENDIGO_OFFSET_BT_COD, sizeof(uint32_t));
     memcpy(dev->mac, buffer + WENDIGO_OFFSET_BT_BDA, MAC_BYTES);
-    memcpy(&scanType, buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(uint8_t));
-    dev->scanType = (ScanType)scanType;
+    memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(uint8_t));
     memcpy(&tagged, buffer + WENDIGO_OFFSET_BT_TAGGED, sizeof(uint8_t));
     dev->tagged = (tagged == 1);
     memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_BT_LASTSEEN, sizeof(int64_t));
@@ -869,15 +861,13 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     dev->radio.ap.stations = NULL;
     memset(dev->radio.ap.ssid, '\0', MAX_SSID_LEN + 1);
     /* Temporary variables for elements that need to be transformed */
-    uint8_t scanType;
     uint8_t tagged;
     char rssi[RSSI_LEN + 1];
     memset(rssi, '\0', RSSI_LEN + 1);
     char channel[CHANNEL_LEN + 1];
     memset(channel, '\0', CHANNEL_LEN + 1);
     /* Copy fixed-length attributes from the packet */
-    memcpy(&scanType, buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(uint8_t));
-    dev->scanType = (ScanType)scanType;
+    memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(uint8_t));
     memcpy(dev->mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
     memcpy(channel, buffer + WENDIGO_OFFSET_WIFI_CHANNEL, CHANNEL_LEN);
     dev->radio.ap.channel = strtol(channel, NULL, 10);
@@ -948,15 +938,13 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
     dev->view = NULL;
     dev->radio.sta.ap = NULL;
     /* Temp variables for attributes that need to be transformed */
-    uint8_t scanType;
     uint8_t tagged;
     char rssi[RSSI_LEN + 1];
     memset(rssi, '\0', RSSI_LEN + 1);
     char channel[CHANNEL_LEN + 1];
     memset(channel, '\0', CHANNEL_LEN + 1);
     /* Copy fixed-length attributes */
-    memcpy(&scanType, buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(uint8_t));
-    dev->scanType = (ScanType)scanType;
+    memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(uint8_t));
     memcpy(dev->mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
     memcpy(channel, buffer + WENDIGO_OFFSET_WIFI_CHANNEL, CHANNEL_LEN);
     dev->radio.sta.channel = strtol(channel, NULL, 10);

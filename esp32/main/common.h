@@ -53,10 +53,10 @@ typedef enum {
 
 /* Globals for state management */
 const char *TAG = "WENDIGO";
-ActionType scanStatus[SCAN_COUNT] = { ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE };
-char *syntaxTip[SCAN_COUNT] = { "H[CI]", "B[LE]", "W[IFI]", "W[IFI]", "I[NTERACTIVE]", "T[AG] ( B[T] | W[IFI] ) <MAC>", "F[OCUS]" };
-char *radioShortNames[SCAN_COUNT] = { "HCI", "BLE", "WiFi AP", "WiFi STA", "Interactive", "Tag", "Focus" };
-char *radioFullNames[SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi Access Point", "WiFi Station", "Interactive Mode", "Tag Devices", "Focus Mode" };
+ActionType scanStatus[DEF_SCAN_COUNT] = { ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE };
+char *syntaxTip[DEF_SCAN_COUNT] = { "H[CI]", "B[LE]", "W[IFI]", "W[IFI]", "I[NTERACTIVE]", "T[AG] ( B[T] | W[IFI] ) <MAC>", "F[OCUS]" };
+char *radioShortNames[DEF_SCAN_COUNT] = { "HCI", "BLE", "WiFi AP", "WiFi STA", "Interactive", "Tag", "Focus" };
+char *radioFullNames[DEF_SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi Access Point", "WiFi Station", "Interactive Mode", "Tag Devices", "Focus Mode" };
 uint8_t nullMac[MAC_BYTES] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t broadcastMac[MAC_BYTES] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 

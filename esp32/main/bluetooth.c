@@ -158,8 +158,6 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     char rssi[RSSI_LEN + 3];    /* +3 rather than 1 to avoid compiler errors - int16_t can be up to 6 chars */
     memset(rssi, '\0', RSSI_LEN + 3);
     snprintf(rssi, RSSI_LEN + 3, "%d", dev->rssi);
-    /* Cast scanType down to uint8_t because that's all it needs */
-    uint8_t scanType = (uint8_t)dev->scanType;
     /* Send tagged as 1 for true, 0 for false */
     uint8_t tagged = (dev->tagged) ? 1 : 0;
 
@@ -178,7 +176,7 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     send_bytes((uint8_t *)rssi, RSSI_LEN);
     send_bytes((uint8_t *)&(dev->radio.bluetooth.cod), sizeof(uint32_t));
     send_bytes(dev->mac, MAC_BYTES);
-    send_bytes(&scanType, sizeof(uint8_t));
+    send_bytes(&(dev->scanType), sizeof(uint8_t));
     send_bytes(&tagged, sizeof(uint8_t));
     send_bytes((uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     send_bytes(&(dev->radio.bluetooth.bt_services.num_services), sizeof(uint8_t));

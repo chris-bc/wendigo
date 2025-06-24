@@ -31,8 +31,6 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     if (dev->scanType != SCAN_WIFI_AP) {
         return ESP_ERR_INVALID_ARG;
     }
-    /* Only need 1 byte for scanType, cast down from 4 */
-    uint8_t scanType = (uint8_t)dev->scanType;
     /* Send RSSI as a string to avoid issues casting negative values between uint8_t and int8_t */
     char rssi[RSSI_LEN + 3]; /* +3 rather than 1 to avoid compiler errors - In theory int16_t can be up to 6 chars */
     memset(rssi, '\0', RSSI_LEN + 3);
@@ -46,7 +44,7 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     /* Send the packet */
     repeat_bytes(0x99, 4);
     repeat_bytes(0x11, 4);
-    send_bytes(&scanType, sizeof(uint8_t));
+    send_bytes(&(dev->scanType), sizeof(uint8_t));
     send_bytes(dev->mac, MAC_BYTES);
     send_bytes((uint8_t *)channel, CHANNEL_LEN);
     send_bytes((uint8_t *)rssi, RSSI_LEN);
@@ -146,8 +144,6 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     if (dev->scanType != SCAN_WIFI_STA) {
         return ESP_ERR_INVALID_ARG;
     }
-    /* scanType only needs 1 byte, cast down from 4 */
-    uint8_t scanType = (uint8_t)dev->scanType;
     /* Send RSSI as a string to avoid casting to and from uint8_t and int8_t */
     char rssi[RSSI_LEN + 3]; /* +3 rather than 1 to avoid compiler errors - int16_t can be up to 6 chars */
     memset(rssi, '\0', RSSI_LEN + 3);
@@ -161,7 +157,7 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     /* Send the packet */
     repeat_bytes(0x99, 4);
     repeat_bytes(0xFF, 4);
-    send_bytes(&scanType, sizeof(uint8_t));
+    send_bytes(&(dev->scanType), sizeof(uint8_t));
     send_bytes(dev->mac, MAC_BYTES);
     send_bytes((uint8_t *)channel, CHANNEL_LEN);
     send_bytes((uint8_t *)rssi, RSSI_LEN);
