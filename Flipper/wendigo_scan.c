@@ -569,12 +569,16 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
             if (target->radio.ap.stations_count > 0 && target->radio.ap.stations != NULL) {
                 free(target->radio.ap.stations);
             }
-            goto other; // TODO: Create new array
-            target->radio.ap.stations = dev->radio.ap.stations;
-            target->radio.ap.stations_count = dev->radio.ap.stations_count;
-            /* Remove stations[] from dev so it doesn't get free()d */
-            dev->radio.ap.stations = NULL;
-            dev->radio.ap.stations_count = 0;
+            /* Copy stations[] */
+            target->radio.ap.stations = malloc(sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+            if (target->radio.ap.stations == NULL) {
+                target->radio.ap.stations_count = 0;
+            } else {
+                for (idx = 0; idx < dev->radio.ap.stations_count; ++idx) {
+                    target->radio.ap.stations[idx] = dev->radio.ap.stations[idx];
+                }
+                target->radio.ap.stations_count = dev->radio.ap.stations_count;
+            }
         }
     } else if (dev->scanType == SCAN_WIFI_STA) {
         /* Copy channel, AP MAC, AP */
@@ -587,14 +591,12 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
             target->radio.sta.ap = dev->radio.sta.ap;
         }
     }
-other:
     /* Update the device list if it's currently displayed */
     if (app->current_view == WendigoAppViewDeviceList) {
         wendigo_scene_device_list_update(app, target);
     } else if (app->current_view == WendigoAppViewDeviceDetail) { // && selectedDevice == bt_devices[idx]
         // TODO: Update existing view
     }
-
     return true;
 }
 
@@ -639,7 +641,7 @@ void wendigo_free_device(wendigo_device *dev) {
             }
             break;
         case SCAN_WIFI_AP:
-            if (dev->radio.ap.stations != NULL) {
+            if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
                 free(dev->radio.ap.stations);
                 dev->radio.ap.stations = NULL;
                 dev->radio.ap.stations_count = 0;
@@ -945,7 +947,7 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
     memset(ap_ssid, '\0', MAX_SSID_LEN + 1);
     memcpy(&ap_ssid_len, buffer + WENDIGO_OFFSET_STA_AP_SSID_LEN, sizeof(ap_ssid_len));
     memcpy(ap_ssid, buffer + WENDIGO_OFFSET_STA_AP_SSID, MAX_SSID_LEN);
-    ap_ssid[MAX_SSID_LEN] = '\0'; /* Just in case */
+    ap_ssid[ap_ssid_len] = '\0';
     /* Do I want to do anything with ap_ssid? */
     /* We should find the packet terminator after the SSID */
     uint16_t term_idx = WENDIGO_OFFSET_STA_AP_SSID + MAX_SSID_LEN;
