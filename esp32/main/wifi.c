@@ -39,12 +39,16 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     snprintf(rssi, RSSI_LEN + 3, "%d", dev->rssi);
     /* Send dev->tagged as 1 for true, 0 for false */
     uint8_t tagged = (dev->tagged) ? 1 : 0;
+    /* Send channel as a string in case MSB/LSB differences are contributing to packet reception issues */
+    char channel[CHANNEL_LEN + 3];
+    memset(channel, '\0', CHANNEL_LEN + 3);
+    snprintf(channel, CHANNEL_LEN + 3, "%d", dev->radio.ap.channel);
     /* Send the packet */
     repeat_bytes(0x99, 4);
     repeat_bytes(0x11, 4);
     send_bytes(&scanType, sizeof(uint8_t));
     send_bytes(dev->mac, MAC_BYTES);
-    send_bytes((uint8_t *)&(dev->radio.ap.channel), sizeof(uint16_t));
+    send_bytes((uint8_t *)channel, CHANNEL_LEN);
     send_bytes((uint8_t *)rssi, RSSI_LEN);
     send_bytes((uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     send_bytes(&tagged, sizeof(uint8_t));
@@ -150,12 +154,16 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     snprintf(rssi, RSSI_LEN + 3, "%d", dev->rssi);
     /* Send tagged as 1 for true, 0 for false */
     uint8_t tagged = (dev->tagged) ? 1 : 0;
+    /* Send channel as a string - Perhaps MSB/LSB differences are part of the with packet inconsistency? */
+    char channel[CHANNEL_LEN + 3];
+    memset(channel, '\0', CHANNEL_LEN + 3);
+    snprintf(channel, CHANNEL_LEN + 3, "%d", dev->radio.sta.channel);
     /* Send the packet */
     repeat_bytes(0x99, 4);
     repeat_bytes(0xFF, 4);
     send_bytes(&scanType, sizeof(uint8_t));
     send_bytes(dev->mac, MAC_BYTES);
-    send_bytes((uint8_t *)&(dev->radio.sta.channel), sizeof(uint16_t));
+    send_bytes((uint8_t *)channel, CHANNEL_LEN);
     send_bytes((uint8_t *)rssi, RSSI_LEN);
     send_bytes((uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     send_bytes(&tagged, sizeof(uint8_t));

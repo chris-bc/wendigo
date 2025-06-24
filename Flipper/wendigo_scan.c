@@ -885,11 +885,14 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     uint8_t tagged;
     char rssi[RSSI_LEN + 1];
     memset(rssi, '\0', RSSI_LEN + 1);
+    char channel[CHANNEL_LEN + 1];
+    memset(channel, '\0', CHANNEL_LEN + 1);
     /* Copy fixed-length attributes from the packet */
     memcpy(&scanType, buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(uint8_t));
     dev->scanType = (ScanType)scanType;
     memcpy(dev->mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
-    memcpy(&(dev->radio.ap.channel), buffer + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(uint16_t));
+    memcpy(channel, buffer + WENDIGO_OFFSET_WIFI_CHANNEL, CHANNEL_LEN);
+    dev->radio.ap.channel = strtol(channel, NULL, 10);
     memcpy(rssi, buffer + WENDIGO_OFFSET_WIFI_RSSI, RSSI_LEN);
     dev->rssi = strtol(rssi, NULL, 10);
     memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(int64_t));
@@ -961,11 +964,14 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
     uint8_t tagged;
     char rssi[RSSI_LEN + 1];
     memset(rssi, '\0', RSSI_LEN + 1);
+    char channel[CHANNEL_LEN + 1];
+    memset(channel, '\0', CHANNEL_LEN + 1);
     /* Copy fixed-length attributes */
     memcpy(&scanType, buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(uint8_t));
     dev->scanType = (ScanType)scanType;
     memcpy(dev->mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
-    memcpy(&(dev->radio.sta.channel), buffer + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(uint16_t));
+    memcpy(channel, buffer + WENDIGO_OFFSET_WIFI_CHANNEL, CHANNEL_LEN);
+    dev->radio.sta.channel = strtol(channel, NULL, 10);
     memcpy(rssi, buffer + WENDIGO_OFFSET_WIFI_RSSI, RSSI_LEN);
     dev->rssi = strtol(rssi, NULL, 10);
     memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(int64_t));

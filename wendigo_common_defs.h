@@ -31,18 +31,18 @@
  #define WENDIGO_OFFSET_WIFI_SCANTYPE           (8)
  #define WENDIGO_OFFSET_WIFI_MAC                (9)
  #define WENDIGO_OFFSET_WIFI_CHANNEL            (15)
- #define WENDIGO_OFFSET_WIFI_RSSI               (17)
- #define WENDIGO_OFFSET_WIFI_LASTSEEN           (21)
- #define WENDIGO_OFFSET_WIFI_TAGGED             (29)
+ #define WENDIGO_OFFSET_WIFI_RSSI               (18)
+ #define WENDIGO_OFFSET_WIFI_LASTSEEN           (22)
+ #define WENDIGO_OFFSET_WIFI_TAGGED             (30)
  /* Unique elements */
- #define WENDIGO_OFFSET_STA_AP_MAC              (30)
- #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (36)
- #define WENDIGO_OFFSET_STA_AP_SSID             (37)
+ #define WENDIGO_OFFSET_STA_AP_MAC              (31)
+ #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (37)
+ #define WENDIGO_OFFSET_STA_AP_SSID             (38)
  /* AP SSID is MAX_SSID_LEN == 32 bytes */
- #define WENDIGO_OFFSET_AP_SSID_LEN             (30)
- #define WENDIGO_OFFSET_AP_STA_COUNT            (31)
- #define WENDIGO_OFFSET_AP_SSID                 (32)
- #define WENDIGO_OFFSET_AP_STA                  (64)
+ #define WENDIGO_OFFSET_AP_SSID_LEN             (31)
+ #define WENDIGO_OFFSET_AP_STA_COUNT            (32)
+ #define WENDIGO_OFFSET_AP_SSID                 (33)
+ #define WENDIGO_OFFSET_AP_STA                  (65)
  /* Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
  typedef enum {
@@ -73,6 +73,7 @@ PSK and not recommended to be used. It will be deprecated in future, please use 
 #define MAC_STRLEN      17
 #define MAC_BYTES       6
 #define RSSI_LEN        4       /** Length of RSSI string representation, e.g. "-127" */
+#define CHANNEL_LEN     3
 
  typedef enum {
     SCAN_HCI = 0,
