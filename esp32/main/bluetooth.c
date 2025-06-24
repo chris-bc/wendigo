@@ -174,7 +174,7 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     send_bytes(dev->mac, MAC_BYTES);
     send_bytes(&scanType, sizeof(uint8_t));
     send_bytes(&tagged, sizeof(uint8_t));
-    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(struct timeval));
+    send_bytes((uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     send_bytes(&(dev->radio.bluetooth.bt_services.num_services), sizeof(uint8_t));
     send_bytes(&(dev->radio.bluetooth.bt_services.known_services_len), sizeof(uint8_t));
     send_bytes(&cod_len, sizeof(uint8_t));

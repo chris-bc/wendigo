@@ -46,7 +46,7 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     send_bytes(dev->mac, MAC_BYTES);
     send_bytes((uint8_t *)&(dev->radio.ap.channel), sizeof(uint16_t));
     send_bytes((uint8_t *)rssi, RSSI_LEN);
-    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(struct timeval));
+    send_bytes((uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     send_bytes(&tagged, sizeof(uint8_t));
     uint8_t ssid_len = strnlen((char *)dev->radio.ap.ssid, MAX_SSID_LEN + 1);
     if (dev->radio.ap.ssid[0] == '\0') {
@@ -157,7 +157,7 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     send_bytes(dev->mac, MAC_BYTES);
     send_bytes((uint8_t *)&(dev->radio.sta.channel), sizeof(uint16_t));
     send_bytes((uint8_t *)rssi, RSSI_LEN);
-    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(struct timeval));
+    send_bytes((uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     send_bytes(&tagged, sizeof(uint8_t));
     send_bytes(dev->radio.sta.apMac, MAC_BYTES);
     uint8_t ssid_len = 0;
