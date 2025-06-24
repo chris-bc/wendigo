@@ -161,7 +161,7 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     /* Send fix-byte members */
     send_bytes(&(dev->radio.bluetooth.bdname_len), sizeof(dev->radio.bluetooth.bdname_len));
     send_bytes(&(dev->radio.bluetooth.eir_len), sizeof(dev->radio.bluetooth.eir_len));
-    send_bytes((uint8_t *)&(dev->rssi), sizeof(dev->rssi));
+    send_bytes((uint8_t *)&(dev->rssi), sizeof(int16_t));
     send_bytes((uint8_t *)&(dev->radio.bluetooth.cod), sizeof(dev->radio.bluetooth.cod));
     send_bytes(dev->mac, sizeof(dev->mac));
     send_bytes((uint8_t *)&(dev->scanType), sizeof(dev->scanType));
@@ -357,7 +357,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 case ESP_GAP_SEARCH_INQ_RES_EVT:
                     /* Get device info */
                     memcpy(dev.mac, scan_result->scan_rst.bda, sizeof(esp_bd_addr_t));
-                    dev.rssi = scan_result->scan_rst.rssi;
+                    dev.rssi = (int16_t)scan_result->scan_rst.rssi;
                     dev.scanType = SCAN_BLE;
                     /* Name */
                     adv_name = esp_ble_resolve_adv_data(scan_result->scan_rst.ble_adv,
@@ -666,7 +666,7 @@ wendigo_device *device_from_gap_cb(esp_bt_gap_cb_param_t *param) {
                 cod2deviceStr(dev->radio.bluetooth.cod, codDevType, &codDevTypeLen);
                 break;
             case ESP_BT_GAP_DEV_PROP_RSSI:
-                dev->rssi = *(int8_t *)(p->val);
+                dev->rssi = *(int16_t *)(p->val);
                 break;
             case ESP_BT_GAP_DEV_PROP_BDNAME:
                 dev->radio.bluetooth.bdname_len = (p->len > ESP_BT_GAP_MAX_BDNAME_LEN) ?

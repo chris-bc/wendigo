@@ -72,6 +72,7 @@ PSK and not recommended to be used. It will be deprecated in future, please use 
 #define MAX_SSID_LEN    32
 #define MAC_STRLEN      17
 #define MAC_BYTES       6
+#define RSSI_LEN        4       /** Length of RSSI string representation, e.g. "-127" */
 
  typedef enum {
     SCAN_HCI = 0,
@@ -146,7 +147,7 @@ typedef struct wendigo_wifi_sta {
 
 typedef struct wendigo_device {
     uint8_t mac[MAC_BYTES];
-    int8_t rssi;
+    int16_t rssi;
     ScanType scanType;
     bool tagged;
     struct timeval lastSeen;

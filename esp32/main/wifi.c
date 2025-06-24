@@ -10,7 +10,6 @@ const uint8_t WENDIGO_SUPPORTED_24_CHANNELS_COUNT = 14;
 const uint16_t WENDIGO_SUPPORTED_24_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 const uint8_t WENDIGO_SUPPORTED_5_CHANNELS_COUNT = 31;
 const uint16_t WENDIGO_SUPPORTED_5_CHANNELS[] = {32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
-const uint8_t RSSI_LEN = 4; /* "-127" */
 long hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
 TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
 
@@ -35,9 +34,9 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     /* Only need 1 byte for scanType, cast down from 4 */
     uint8_t scanType = (uint8_t)dev->scanType;
     /* Send RSSI as a string to avoid issues casting negative values between uint8_t and int8_t */
-    char rssi[RSSI_LEN + 1];
-    memset(rssi, '\0', RSSI_LEN + 1);
-    snprintf(rssi, RSSI_LEN + 1, "%d", dev->rssi);
+    char rssi[RSSI_LEN + 3]; /* +3 rather than 1 to avoid compiler errors - In theory int16_t can be up to 6 chars */
+    memset(rssi, '\0', RSSI_LEN + 3);
+    snprintf(rssi, RSSI_LEN + 3, "%d", dev->rssi);
     /* Send dev->tagged as 1 for true, 0 for false */
     uint8_t tagged = (dev->tagged) ? 1 : 0;
     /* Send the packet */
@@ -146,9 +145,9 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     /* scanType only needs 1 byte, cast down from 4 */
     uint8_t scanType = (uint8_t)dev->scanType;
     /* Send RSSI as a string to avoid casting to and from uint8_t and int8_t */
-    char rssi[RSSI_LEN + 1];
-    memset(rssi, '\0', RSSI_LEN + 1);
-    snprintf(rssi, RSSI_LEN + 1, "%d", dev->rssi);
+    char rssi[RSSI_LEN + 3]; /* +3 rather than 1 to avoid compiler errors - int16_t can be up to 6 chars */
+    memset(rssi, '\0', RSSI_LEN + 3);
+    snprintf(rssi, RSSI_LEN + 3, "%d", dev->rssi);
     /* Send tagged as 1 for true, 0 for false */
     uint8_t tagged = (dev->tagged) ? 1 : 0;
     /* Send the packet */
