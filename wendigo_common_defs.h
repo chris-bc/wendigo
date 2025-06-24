@@ -16,9 +16,9 @@
  #define WENDIGO_OFFSET_BT_BDNAME_LEN           (8)
  #define WENDIGO_OFFSET_BT_EIR_LEN              (9)
  #define WENDIGO_OFFSET_BT_RSSI                 (10)
- #define WENDIGO_OFFSET_BT_COD                  (11)
- #define WENDIGO_OFFSET_BT_BDA                  (15)
- #define WENDIGO_OFFSET_BT_SCANTYPE             (21)
+ #define WENDIGO_OFFSET_BT_COD                  (14)
+ #define WENDIGO_OFFSET_BT_BDA                  (18)
+ #define WENDIGO_OFFSET_BT_SCANTYPE             (24)
  #define WENDIGO_OFFSET_BT_TAGGED               (25)
  #define WENDIGO_OFFSET_BT_LASTSEEN             (26)
  #define WENDIGO_OFFSET_BT_NUM_SERVICES         (42)
@@ -29,20 +29,20 @@
 
  /* Initial elements of AP and STA packets are common so are just defined once */
  #define WENDIGO_OFFSET_WIFI_SCANTYPE           (8)
- #define WENDIGO_OFFSET_WIFI_MAC                (12)
- #define WENDIGO_OFFSET_WIFI_CHANNEL            (18)
- #define WENDIGO_OFFSET_WIFI_RSSI               (19)
- #define WENDIGO_OFFSET_WIFI_LASTSEEN           (20)
- #define WENDIGO_OFFSET_WIFI_TAGGED             (36)
+ #define WENDIGO_OFFSET_WIFI_MAC                (9)
+ #define WENDIGO_OFFSET_WIFI_CHANNEL            (15)
+ #define WENDIGO_OFFSET_WIFI_RSSI               (17)
+ #define WENDIGO_OFFSET_WIFI_LASTSEEN           (21)
+ #define WENDIGO_OFFSET_WIFI_TAGGED             (37)
  /* Unique elements */
- #define WENDIGO_OFFSET_STA_AP_MAC              (37)
- #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (43)
- #define WENDIGO_OFFSET_STA_AP_SSID             (44)
- /* AP SSID is AP SSID_len + 1 bytes if AP SSID_len > 0 */
- #define WENDIGO_OFFSET_AP_SSID_LEN             (37)
- #define WENDIGO_OFFSET_AP_STA_COUNT            (38)
- #define WENDIGO_OFFSET_AP_SSID                 (39)
- #define WENDIGO_OFFSET_AP_STA                  (71)
+ #define WENDIGO_OFFSET_STA_AP_MAC              (38)
+ #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (44)
+ #define WENDIGO_OFFSET_STA_AP_SSID             (45)
+ /* AP SSID is MAX_SSID_LEN == 32 bytes */
+ #define WENDIGO_OFFSET_AP_SSID_LEN             (38)
+ #define WENDIGO_OFFSET_AP_STA_COUNT            (39)
+ #define WENDIGO_OFFSET_AP_SSID                 (40)
+ #define WENDIGO_OFFSET_AP_STA                  (72)
  /* Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
  typedef enum {

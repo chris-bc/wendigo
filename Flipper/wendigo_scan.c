@@ -784,14 +784,22 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
     dev->radio.bluetooth.bt_services.service_uuids = NULL;
     dev->radio.bluetooth.cod_str = NULL;
     dev->view = NULL;
+    /* Temporary variables for attributes that require transformation */
+    uint8_t scanType;
+    uint8_t tagged;
+    char rssi[RSSI_LEN + 1];
+    memset(rssi, '\0', RSSI_LEN + 1);
     /* Copy fixed-byte members */
     memcpy(&(dev->radio.bluetooth.bdname_len), buffer + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
     memcpy(&(dev->radio.bluetooth.eir_len), buffer + WENDIGO_OFFSET_BT_EIR_LEN, sizeof(uint8_t));
-    memcpy(&(dev->rssi), buffer + WENDIGO_OFFSET_BT_RSSI, sizeof(int8_t));
+    memcpy(rssi, buffer + WENDIGO_OFFSET_BT_RSSI, RSSI_LEN);
+    dev->rssi = strtol(rssi, NULL, 10);
     memcpy(&(dev->radio.bluetooth.cod), buffer + WENDIGO_OFFSET_BT_COD, sizeof(uint32_t));
     memcpy(dev->mac, buffer + WENDIGO_OFFSET_BT_BDA, MAC_BYTES);
-    memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(ScanType));
-    memcpy(&(dev->tagged), buffer + WENDIGO_OFFSET_BT_TAGGED, sizeof(bool));
+    memcpy(&scanType, buffer + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(uint8_t));
+    dev->scanType = (ScanType)scanType;
+    memcpy(&tagged, buffer + WENDIGO_OFFSET_BT_TAGGED, sizeof(uint8_t));
+    dev->tagged = (tagged == 1);
     memcpy(&(dev->lastSeen), buffer + WENDIGO_OFFSET_BT_LASTSEEN, sizeof(struct timeval)); // TODO: Should lastSeen be removed from here as well?
     memcpy(&(dev->radio.bluetooth.bt_services.num_services), buffer + WENDIGO_OFFSET_BT_NUM_SERVICES, sizeof(uint8_t));
     memcpy(&(dev->radio.bluetooth.bt_services.known_services_len), buffer + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN, sizeof(uint8_t));
@@ -859,8 +867,9 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
 uint16_t parseBufferWifiAp(WendigoApp *app) {
     uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
     /* Check the packet is a reasonable size */
-    if (packetLen < WENDIGO_OFFSET_AP_SSID + PREAMBLE_LEN) {
+    if (packetLen < WENDIGO_OFFSET_AP_STA + PREAMBLE_LEN) {
         // TODO: Display a warning after packet queueing has been implemented to prevent interleaved packets
+        wendigo_display_popup(app, "AP too short", "AP too short, skipping.");
         return packetLen;
     }
     wendigo_device *dev = malloc(sizeof(wendigo_device));
@@ -871,16 +880,24 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     dev->view = NULL;
     dev->radio.ap.stations = NULL;
     memset(dev->radio.ap.ssid, '\0', MAX_SSID_LEN + 1);
+    /* Temporary variables for elements that need to be transformed */
+    uint8_t scanType;
+    uint8_t tagged;
+    char rssi[RSSI_LEN + 1];
+    memset(rssi, '\0', RSSI_LEN + 1);
     /* Copy fixed-length attributes from the packet */
-    memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(dev->scanType));
+    memcpy(&scanType, buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(uint8_t));
+    dev->scanType = (ScanType)scanType;
     memcpy(dev->mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
-    memcpy(&(dev->radio.ap.channel), buffer + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(dev->radio.ap.channel));
-    memcpy(&(dev->rssi), buffer + WENDIGO_OFFSET_WIFI_RSSI, sizeof(dev->rssi));
-    memcpy(&(dev->lastSeen), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(dev->lastSeen));
-    memcpy(&(dev->tagged), buffer + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(dev->tagged));
+    memcpy(&(dev->radio.ap.channel), buffer + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(uint16_t));
+    memcpy(rssi, buffer + WENDIGO_OFFSET_WIFI_RSSI, RSSI_LEN);
+    dev->rssi = strtol(rssi, NULL, 10);
+    memcpy(&(dev->lastSeen), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(struct timeval));
+    memcpy(&tagged, buffer + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(uint8_t));
+    dev->tagged = (tagged == 1);
     uint8_t ssid_len;
-    memcpy(&ssid_len, buffer + WENDIGO_OFFSET_AP_SSID_LEN, sizeof(ssid_len));
-    memcpy(&(dev->radio.ap.stations_count), buffer + WENDIGO_OFFSET_AP_STA_COUNT, sizeof(dev->radio.ap.stations_count));
+    memcpy(&ssid_len, buffer + WENDIGO_OFFSET_AP_SSID_LEN, sizeof(uint8_t));
+    memcpy(&(dev->radio.ap.stations_count), buffer + WENDIGO_OFFSET_AP_STA_COUNT, sizeof(uint8_t));
     memcpy(dev->radio.ap.ssid, buffer + WENDIGO_OFFSET_AP_SSID, MAX_SSID_LEN);
     dev->radio.ap.ssid[ssid_len] = '\0';
     /* Retrieve stations_count MAC addresses */
@@ -939,18 +956,26 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
     /* Initialise all pointers */
     dev->view = NULL;
     dev->radio.sta.ap = NULL;
+    /* Temp variables for attributes that need to be transformed */
+    uint8_t scanType;
+    uint8_t tagged;
+    char rssi[RSSI_LEN + 1];
+    memset(rssi, '\0', RSSI_LEN + 1);
     /* Copy fixed-length attributes */
-    memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(dev->scanType));
+    memcpy(&scanType, buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(uint8_t));
+    dev->scanType = (ScanType)scanType;
     memcpy(dev->mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
-    memcpy(&(dev->radio.sta.channel), buffer + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(dev->radio.sta.channel));
-    memcpy(&(dev->rssi), buffer + WENDIGO_OFFSET_WIFI_RSSI, sizeof(dev->rssi));
-    memcpy(&(dev->lastSeen), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(dev->lastSeen));
-    memcpy(&(dev->tagged), buffer + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(dev->tagged));
-    memcpy(dev->radio.sta.apMac, buffer + WENDIGO_OFFSET_STA_AP_MAC, sizeof(dev->radio.sta.apMac));
+    memcpy(&(dev->radio.sta.channel), buffer + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(uint16_t));
+    memcpy(rssi, buffer + WENDIGO_OFFSET_WIFI_RSSI, RSSI_LEN);
+    dev->rssi = strtol(rssi, NULL, 10);
+    memcpy(&(dev->lastSeen), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(struct timeval));
+    memcpy(&tagged, buffer + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(uint8_t));
+    dev->tagged = (tagged == 1);
+    memcpy(dev->radio.sta.apMac, buffer + WENDIGO_OFFSET_STA_AP_MAC, MAC_BYTES);
     uint8_t ap_ssid_len;
     char ap_ssid[MAX_SSID_LEN + 1];
     memset(ap_ssid, '\0', MAX_SSID_LEN + 1);
-    memcpy(&ap_ssid_len, buffer + WENDIGO_OFFSET_STA_AP_SSID_LEN, sizeof(ap_ssid_len));
+    memcpy(&ap_ssid_len, buffer + WENDIGO_OFFSET_STA_AP_SSID_LEN, sizeof(uint8_t));
     memcpy(ap_ssid, buffer + WENDIGO_OFFSET_STA_AP_SSID, MAX_SSID_LEN);
     ap_ssid[ap_ssid_len] = '\0';
     /* Do I want to do anything with ap_ssid? */
