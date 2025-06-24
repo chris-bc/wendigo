@@ -123,7 +123,7 @@ typedef struct wendigo_wifi_ap {
     void **stations;                      /** wendigo_device** */
     uint8_t stations_count;               /** Count of devices in stations */
     uint8_t ssid[MAX_SSID_LEN + 1];       /** SSID of AP */
-    uint8_t channel;
+    uint16_t channel;
     wifi_auth_mode_t authmode;
     uint32_t phy_11b: 1;                  /**< Bit: 0 flag to identify if 11b mode is enabled or not */
     uint32_t phy_11g: 1;                  /**< Bit: 1 flag to identify if 11g mode is enabled or not */
@@ -141,7 +141,7 @@ typedef struct wendigo_wifi_ap {
 typedef struct wendigo_wifi_sta {
     void *ap;                   /* wendigo_device* */
     uint8_t apMac[MAC_BYTES];
-    uint8_t channel;
+    uint16_t channel;
 } wendigo_wifi_sta;
 
 typedef struct wendigo_device {

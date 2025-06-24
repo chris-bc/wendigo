@@ -2,14 +2,15 @@
 
 /* Array of channels that are to be included in channel hopping.
    At startup this is initialised to include all supported channels. */
-uint8_t *channels = NULL;
+uint16_t *channels = NULL;
 uint8_t channels_count = 0;
 uint8_t channel_index = 0;
 // TODO: Refactor to support 5GHz channels if the device supports 5GHz channels
 const uint8_t WENDIGO_SUPPORTED_24_CHANNELS_COUNT = 14;
-const uint8_t WENDIGO_SUPPORTED_24_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+const uint16_t WENDIGO_SUPPORTED_24_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 const uint8_t WENDIGO_SUPPORTED_5_CHANNELS_COUNT = 31;
-const uint8_t WENDIGO_SUPPORTED_5_CHANNELS[] = {32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
+const uint16_t WENDIGO_SUPPORTED_5_CHANNELS[] = {32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
+const uint8_t RSSI_LEN = 4; /* "-127" */
 long hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
 TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
 
@@ -31,21 +32,29 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     if (dev->scanType != SCAN_WIFI_AP) {
         return ESP_ERR_INVALID_ARG;
     }
+    /* Only need 1 byte for scanType, cast down from 4 */
+    uint8_t scanType = (uint8_t)dev->scanType;
+    /* Send RSSI as a string to avoid issues casting negative values between uint8_t and int8_t */
+    char rssi[RSSI_LEN + 1];
+    memset(rssi, '\0', RSSI_LEN + 1);
+    snprintf(rssi, RSSI_LEN + 1, "%d", dev->rssi);
+    /* Send dev->tagged as 1 for true, 0 for false */
+    uint8_t tagged = (dev->tagged) ? 1 : 0;
+    /* Send the packet */
     repeat_bytes(0x99, 4);
     repeat_bytes(0x11, 4);
-
-    send_bytes((uint8_t *)&(dev->scanType), sizeof(dev->scanType));
+    send_bytes(&scanType, sizeof(uint8_t));
     send_bytes(dev->mac, MAC_BYTES);
-    send_bytes(&(dev->radio.ap.channel), sizeof(dev->radio.ap.channel));
-    send_bytes((uint8_t *)&(dev->rssi), sizeof(dev->rssi));
-    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(dev->lastSeen));
-    send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
+    send_bytes((uint8_t *)&(dev->radio.ap.channel), sizeof(uint16_t));
+    send_bytes((uint8_t *)rssi, RSSI_LEN);
+    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(struct timeval));
+    send_bytes(&tagged, sizeof(uint8_t));
     uint8_t ssid_len = strnlen((char *)dev->radio.ap.ssid, MAX_SSID_LEN + 1);
     if (dev->radio.ap.ssid[0] == '\0') {
         ssid_len = 0;
     }
-    send_bytes(&ssid_len, sizeof(ssid_len));
-    send_bytes(&(dev->radio.ap.stations_count), sizeof(dev->radio.ap.stations_count));
+    send_bytes(&ssid_len, sizeof(uint8_t));
+    send_bytes(&(dev->radio.ap.stations_count), sizeof(uint8_t));
     send_bytes(dev->radio.ap.ssid, MAX_SSID_LEN);
     for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
         /* Send the MAC of each connected device */
@@ -99,7 +108,7 @@ esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
         */
         space_left = (BANNER_WIDTH - 38) / 3; /* Check length of final block in case of rounding */
         print_space(4 + space_left, false);
-        printf("Ch. %2d", dev->radio.ap.channel);
+        printf("Ch. %2d", dev->radio.ap.channel); // TODO: Make space for an additional character, for 5GHz channels
         print_space(space_left, false);
         printf("%3d Stations Connected", dev->radio.ap.stations_count);
         row_len = 38 + (2 * space_left);
@@ -119,8 +128,7 @@ esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
         space_left = (BANNER_WIDTH - MAC_STRLEN - 40) / 2;
         printf("(%s)", macStr);
         print_space(space_left, false);
-        printf("Ch. %2d", dev->radio.ap.channel);
-        row_len = MAC_STRLEN + 40 + space_left;
+        printf("Ch. %2d", dev->radio.ap.channel); // TODO: Make space for a additional character, for 5GHz channels        row_len = MAC_STRLEN + 40 + space_left;
         print_space(BANNER_WIDTH - row_len, false);
         printf("%3d Stations Connected", dev->radio.ap.stations_count);
         print_space(4, false);
@@ -135,15 +143,23 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     if (dev->scanType != SCAN_WIFI_STA) {
         return ESP_ERR_INVALID_ARG;
     }
+    /* scanType only needs 1 byte, cast down from 4 */
+    uint8_t scanType = (uint8_t)dev->scanType;
+    /* Send RSSI as a string to avoid casting to and from uint8_t and int8_t */
+    char rssi[RSSI_LEN + 1];
+    memset(rssi, '\0', RSSI_LEN + 1);
+    snprintf(rssi, RSSI_LEN + 1, "%d", dev->rssi);
+    /* Send tagged as 1 for true, 0 for false */
+    uint8_t tagged = (dev->tagged) ? 1 : 0;
+    /* Send the packet */
     repeat_bytes(0x99, 4);
     repeat_bytes(0xFF, 4);
-
-    send_bytes((uint8_t *)&(dev->scanType), sizeof(dev->scanType));
+    send_bytes(&scanType, sizeof(uint8_t));
     send_bytes(dev->mac, MAC_BYTES);
-    send_bytes(&(dev->radio.sta.channel), sizeof(dev->radio.sta.channel));
-    send_bytes((uint8_t *)&(dev->rssi), sizeof(dev->rssi));
-    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(dev->lastSeen));
-    send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
+    send_bytes((uint8_t *)&(dev->radio.sta.channel), sizeof(uint16_t));
+    send_bytes((uint8_t *)rssi, RSSI_LEN);
+    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(struct timeval));
+    send_bytes(&tagged, sizeof(uint8_t));
     send_bytes(dev->radio.sta.apMac, MAC_BYTES);
     uint8_t ssid_len = 0;
     char *ssid = NULL;
@@ -151,7 +167,7 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
         ssid = (char *)(((wendigo_device *)dev->radio.sta.ap)->radio.ap.ssid);
         ssid_len = strlen(ssid);
     }
-    send_bytes(&ssid_len, sizeof(ssid_len));
+    send_bytes(&ssid_len, sizeof(uint8_t));
     send_bytes((uint8_t *)ssid, MAX_SSID_LEN); /* Changed to fixed-length SSID */
     send_end_of_packet();
     return result;
@@ -172,7 +188,7 @@ esp_err_t display_wifi_sta_interactive(wendigo_device *dev) {
     /* Calculate size of space blocks - 2 equally-sized block */
     uint8_t space_len = (BANNER_WIDTH - strlen(radioShortNames[dev->scanType]) - MAC_STRLEN - 28) / 2;
     print_space(space_len, false);
-    printf("Ch. %2d", dev->radio.sta.channel);
+    printf("Ch. %2d", dev->radio.sta.channel); // TODO: Make space for an additional character, for 5GHz channels
     /* Cater for rounding in space_len */
     uint8_t row_len = strlen(radioShortNames[dev->scanType]) + MAC_STRLEN + 28 + space_len;
     print_space(BANNER_WIDTH - row_len, false);
@@ -898,9 +914,9 @@ esp_err_t wendigo_get_channels() {
     } else {
         repeat_bytes(0x99, 4);
         repeat_bytes(0xAA, 4);
-        send_bytes(&channels_count, 1);
+        send_bytes(&channels_count, sizeof(uint8_t));
         if (channels_count > 0) {
-            send_bytes(channels, channels_count);
+            send_bytes((uint8_t *)channels, sizeof(uint16_t) * channels_count);
         }
         send_end_of_packet();
     }
