@@ -569,15 +569,20 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
             if (target->radio.ap.stations_count > 0 && target->radio.ap.stations != NULL) {
                 free(target->radio.ap.stations);
             }
-            /* Copy stations[] */
-            target->radio.ap.stations = malloc(sizeof(wendigo_device *) * dev->radio.ap.stations_count);
-            if (target->radio.ap.stations == NULL) {
+            if (dev->radio.ap.stations_count == 0) {
+                target->radio.ap.stations = NULL;
                 target->radio.ap.stations_count = 0;
             } else {
-                for (idx = 0; idx < dev->radio.ap.stations_count; ++idx) {
-                    target->radio.ap.stations[idx] = dev->radio.ap.stations[idx];
+                /* Copy stations[] */
+                target->radio.ap.stations = malloc(sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+                if (target->radio.ap.stations == NULL) {
+                    target->radio.ap.stations_count = 0;
+                } else {
+                    for (idx = 0; idx < dev->radio.ap.stations_count; ++idx) {
+                        target->radio.ap.stations[idx] = dev->radio.ap.stations[idx];
+                    }
+                    target->radio.ap.stations_count = dev->radio.ap.stations_count;
                 }
-                target->radio.ap.stations_count = dev->radio.ap.stations_count;
             }
         }
     } else if (dev->scanType == SCAN_WIFI_STA) {
