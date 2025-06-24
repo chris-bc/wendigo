@@ -21,10 +21,10 @@
  #define WENDIGO_OFFSET_BT_SCANTYPE             (24)
  #define WENDIGO_OFFSET_BT_TAGGED               (25)
  #define WENDIGO_OFFSET_BT_LASTSEEN             (26)
- #define WENDIGO_OFFSET_BT_NUM_SERVICES         (42)
- #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (43)
- #define WENDIGO_OFFSET_BT_COD_LEN              (44)
- #define WENDIGO_OFFSET_BT_BDNAME               (45)
+ #define WENDIGO_OFFSET_BT_NUM_SERVICES         (34)
+ #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (35)
+ #define WENDIGO_OFFSET_BT_COD_LEN              (36)
+ #define WENDIGO_OFFSET_BT_BDNAME               (37)
  /* bdname is bdname_len bytes, followed by eir_len bytes of EIR and cod_len bytes of CoD */
 
  /* Initial elements of AP and STA packets are common so are just defined once */
@@ -33,16 +33,16 @@
  #define WENDIGO_OFFSET_WIFI_CHANNEL            (15)
  #define WENDIGO_OFFSET_WIFI_RSSI               (17)
  #define WENDIGO_OFFSET_WIFI_LASTSEEN           (21)
- #define WENDIGO_OFFSET_WIFI_TAGGED             (37)
+ #define WENDIGO_OFFSET_WIFI_TAGGED             (29)
  /* Unique elements */
- #define WENDIGO_OFFSET_STA_AP_MAC              (38)
- #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (44)
- #define WENDIGO_OFFSET_STA_AP_SSID             (45)
+ #define WENDIGO_OFFSET_STA_AP_MAC              (30)
+ #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (36)
+ #define WENDIGO_OFFSET_STA_AP_SSID             (37)
  /* AP SSID is MAX_SSID_LEN == 32 bytes */
- #define WENDIGO_OFFSET_AP_SSID_LEN             (38)
- #define WENDIGO_OFFSET_AP_STA_COUNT            (39)
- #define WENDIGO_OFFSET_AP_SSID                 (40)
- #define WENDIGO_OFFSET_AP_STA                  (72)
+ #define WENDIGO_OFFSET_AP_SSID_LEN             (30)
+ #define WENDIGO_OFFSET_AP_STA_COUNT            (31)
+ #define WENDIGO_OFFSET_AP_SSID                 (32)
+ #define WENDIGO_OFFSET_AP_STA                  (64)
  /* Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
  typedef enum {
