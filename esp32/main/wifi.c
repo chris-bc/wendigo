@@ -188,7 +188,9 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     memcpy(packet + WENDIGO_OFFSET_WIFI_TAGGED, &tagged, sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_STA_AP_MAC, dev->radio.sta.apMac, MAC_BYTES);
     memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID_LEN, &ssid_len, sizeof(uint8_t));
-    memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, (uint8_t *)ssid, MAX_SSID_LEN);
+    memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, (uint8_t *)ssid, MAX_SSID_LEN); // TODO: Crash here?
+        // Big question: Revert to piecemeal sending or refactor everything to send a full packet?
+        // Also add a semaphore to send_bytes() - ensure only one packet can be sent at a time?
     memcpy(packet + WENDIGO_OFFSET_STA_TERM, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
     send_bytes(packet, packet_len);
