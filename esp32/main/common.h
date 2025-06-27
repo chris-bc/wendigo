@@ -60,9 +60,13 @@ char *radioFullNames[DEF_SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Ene
 uint8_t nullMac[MAC_BYTES] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t broadcastMac[MAC_BYTES] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
-/* Device caches accessible across Wendige */
+/* Device caches accessible across Wendigo */
 extern uint16_t devices_count;
 extern wendigo_device *devices;
+
+/* Concurrency management */
+bool wendigo_get_tx_lock(bool wait);
+void wendigo_release_tx_lock();
 
 /* Function declarations */
 esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount);

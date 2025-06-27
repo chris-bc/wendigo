@@ -171,8 +171,8 @@ void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
                                 bool btBLESupported, bool wifiSupported) {
     initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
 
-    repeat_bytes(0xEE, 4);
-    repeat_bytes(0xBB, 4);
+    wendigo_get_tx_lock(true); /* Wait for the talking stick */
+    send_bytes(PREAMBLE_STATUS, PREAMBLE_LEN);
 
     uint8_t attr_count = ATTR_COUNT_MAX;
     send_bytes(&attr_count, 1);
@@ -188,4 +188,5 @@ void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
         send_bytes((uint8_t *)(attribute_values[i]), len);
     }
     send_end_of_packet();
+    wendigo_release_tx_lock();
 }

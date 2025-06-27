@@ -47,7 +47,7 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
         ssid_len = 0;
     }
     /* Assemble the packet */
-    uint8_t packet_len = WENDIGO_OFFSET_AP_STA + (6 * dev->radio.ap.stations_count) + PREAMBLE_LEN;
+    uint8_t packet_len = WENDIGO_OFFSET_AP_STA + (MAC_BYTES * dev->radio.ap.stations_count) + PREAMBLE_LEN;
     uint8_t *packet = malloc(sizeof(uint8_t) * packet_len);
     if (packet == NULL) {
         return outOfMemory();
@@ -76,7 +76,10 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
         current_offset += MAC_BYTES;
     }
     memcpy(packet + current_offset, PACKET_TERM, PREAMBLE_LEN);
+    /* Send the packet */
+    wendigo_get_tx_lock(true);
     send_bytes(packet, packet_len);
+    wendigo_release_tx_lock();
     free(packet);
     return result;
 }
@@ -137,10 +140,12 @@ esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
         print_space(4, false);
         /* Display (00:CA:FE:BA:BE:00) Ch. 11 100 Stations Connected
            Fully justified - 2 blocks of space centreing channel */
-        space_left = (BANNER_WIDTH - MAC_STRLEN - 40) / 2;
+        space_left = (BANNER_WIDTH - MAC_STRLEN - 39) / 2;
         printf("(%s)", macStr);
         print_space(space_left, false);
-        printf("Ch. %2d", dev->radio.ap.channel); // TODO: Make space for a additional character, for 5GHz channels        row_len = MAC_STRLEN + 40 + space_left;
+        printf("Ch. %2d", dev->radio.ap.channel); // TODO: Make space for a additional character, for 5GHz channels
+        /* Cater for rounding in space_left */
+        row_len = MAC_STRLEN + 40 + space_left;
         print_space(BANNER_WIDTH - row_len, false);
         printf("%3d Stations Connected", dev->radio.ap.stations_count);
         print_space(4, false);
@@ -188,12 +193,18 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     memcpy(packet + WENDIGO_OFFSET_WIFI_TAGGED, &tagged, sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_STA_AP_MAC, dev->radio.sta.apMac, MAC_BYTES);
     memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID_LEN, &ssid_len, sizeof(uint8_t));
-    memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, (uint8_t *)ssid, MAX_SSID_LEN); // TODO: Crash here?
+    if (dev->radio.sta.ap == NULL) {
+        memset(packet + WENDIGO_OFFSET_STA_AP_SSID, '\0', MAX_SSID_LEN);
+    } else {
+        memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, (uint8_t *)ssid, MAX_SSID_LEN); // TODO: Crash here?
+    }
         // Big question: Revert to piecemeal sending or refactor everything to send a full packet?
         // Also add a semaphore to send_bytes() - ensure only one packet can be sent at a time?
     memcpy(packet + WENDIGO_OFFSET_STA_TERM, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
+    wendigo_get_tx_lock(true);
     send_bytes(packet, packet_len);
+    wendigo_release_tx_lock();
     free(packet);
     return result;
 }
