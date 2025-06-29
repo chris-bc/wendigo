@@ -22,6 +22,7 @@ static bool wendigo_app_back_event_callback(void* context) {
 }
 
 static void wendigo_app_tick_event_callback(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_tick_event_callback()\n----------");
     furi_assert(context);
     WendigoApp* app = context;
     if (app->is_scanning) {
@@ -32,10 +33,12 @@ static void wendigo_app_tick_event_callback(void* context) {
         }
     }
     scene_manager_handle_tick_event(app->scene_manager);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app_tick_event_callback()");
 }
 
 /* Generic handler for app->popup that restores the previous view */
 void wendigo_popup_callback(void *context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_popup_callback()\n----------");
     WendigoApp *app = (WendigoApp *)context;
     bool done = scene_manager_previous_scene(app->scene_manager);
     if (!done) {
@@ -43,9 +46,11 @@ void wendigo_popup_callback(void *context) {
         // TODO: Alongside wendigo_display_popup() (below), restore the scene that was actually running prior to the popup
         scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_popup_callback()");
 }
 
 void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_display_popup()\n----------");
     // TODO: Review and kill this
     char * newBody = malloc(sizeof(char*) * (strlen(body) + 1));
     strncpy(newBody, body, strlen(body) + 1);
@@ -59,10 +64,12 @@ void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
     // TODO: Check which scene is active so we can restore it later. For now assuming we're on the main menu.
     scene_manager_set_scene_state(app->scene_manager, WendigoSceneStart, app->selected_menu_index);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_display_popup()");
 }
 
 /* Initialise app->interfaces - Default all radios to on */
 void wendigo_interface_init(WendigoApp* app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_interface_init()\n----------");
     for(int i = 0; i < IF_COUNT; ++i) {
         app->interfaces[i].active = true;
         app->interfaces[i].mutable = true;
@@ -73,9 +80,11 @@ void wendigo_interface_init(WendigoApp* app) {
     memcpy(app->interfaces[IF_WIFI].mac_bytes, mac_wifi, MAC_BYTES);
     memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, mac_bt, MAC_BYTES);
     memcpy(app->interfaces[IF_BLE].mac_bytes, mac_bt, MAC_BYTES);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_interface_init()");
 }
 
 WendigoApp* wendigo_app_alloc() {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_alloc()\n----------");
     WendigoApp* app = malloc(sizeof(WendigoApp));
 
     app->gui = furi_record_open(RECORD_GUI);
@@ -166,10 +175,12 @@ WendigoApp* wendigo_app_alloc() {
 
     scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
 
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app_alloc()");
     return app;
 }
 
 void wendigo_app_free(WendigoApp* app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_free()\n----------");
     furi_assert(app);
 
     // Views
@@ -201,16 +212,17 @@ void wendigo_app_free(WendigoApp* app) {
     wendigo_free_devices();
     // TODO: WiFi device cache
 
-
     wendigo_uart_free(app->uart);
 
     // Close records
     furi_record_close(RECORD_GUI);
 
     free(app);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app_free()");
 }
 
 int32_t wendigo_app(void* p) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app()\n----------");
     UNUSED(p);
     // Disable expansion protocol to avoid interference with UART Handle
     Expansion* expansion = furi_record_open(RECORD_EXPANSION);
@@ -230,6 +242,7 @@ int32_t wendigo_app(void* p) {
     expansion_enable(expansion);
     furi_record_close(RECORD_EXPANSION);
 
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app()");
     return 0;
 }
 

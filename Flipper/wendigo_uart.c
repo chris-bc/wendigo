@@ -25,6 +25,7 @@ void wendigo_uart_set_handle_rx_data_cb(
 #define WORKER_ALL_RX_EVENTS (WorkerEvtStop | WorkerEvtRxDone)
 
 void wendigo_uart_on_irq_cb(FuriHalSerialHandle* handle, FuriHalSerialRxEvent event, void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_uart_on_irq_cb()\n----------");
     Wendigo_Uart* uart = (Wendigo_Uart*)context;
 
     if(event == FuriHalSerialRxEventData) {
@@ -32,9 +33,11 @@ void wendigo_uart_on_irq_cb(FuriHalSerialHandle* handle, FuriHalSerialRxEvent ev
         furi_stream_buffer_send(uart->rx_stream, &data, 1, 0);
         furi_thread_flags_set(furi_thread_get_id(uart->rx_thread), WorkerEvtRxDone);
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_uart_on_irq_cb()");
 }
 
 static int32_t wendigo_worker(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_worker()\n----------");
     Wendigo_Uart* uart = (void*)context;
 
     while(1) {
@@ -51,15 +54,18 @@ static int32_t wendigo_worker(void* context) {
     }
 
     furi_stream_buffer_free(uart->rx_stream);
-
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_worker()");
     return 0;
 }
 
 void wendigo_uart_tx(Wendigo_Uart* uart, uint8_t* data, size_t len) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_uart_tx()\n----------");
     furi_hal_serial_tx(uart->serial_handle, data, len);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_uart_tx()");
 }
 
 Wendigo_Uart* wendigo_uart_init(WendigoApp* app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_uart_init()\n----------");
     Wendigo_Uart* uart = malloc(sizeof(Wendigo_Uart));
     uart->app = app;
     // Init all rx stream and thread early to avoid crashes
@@ -81,11 +87,12 @@ Wendigo_Uart* wendigo_uart_init(WendigoApp* app) {
     furi_hal_serial_init(uart->serial_handle, app->BAUDRATE);
 
     furi_hal_serial_async_rx_start(uart->serial_handle, wendigo_uart_on_irq_cb, uart, false);
-
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_uart_init()");
     return uart;
 }
 
 void wendigo_uart_free(Wendigo_Uart* uart) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_uart_free()\n----------");
     furi_assert(uart);
 
     furi_hal_serial_async_rx_stop(uart->serial_handle);
@@ -97,4 +104,5 @@ void wendigo_uart_free(Wendigo_Uart* uart) {
     furi_thread_free(uart->rx_thread);
 
     free(uart);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_uart_free()");
 }

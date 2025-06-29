@@ -30,6 +30,7 @@ uint16_t selected_devices_capacity = 0;
  *  Returns `size` if not found, otherwise returns the index of the first byte of the sequence.
  */
 uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
+    FURI_LOG_T(WENDIGO_TAG, "Start start_of_packet()\n----------");
     uint16_t result = 0;
     if (bytes == NULL) { return size; }
     for (; result + PREAMBLE_LEN <= size && memcmp(bytes + result, PREAMBLE_BT_BLE, PREAMBLE_LEN) &&
@@ -38,6 +39,7 @@ uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
             memcmp(bytes + result, PREAMBLE_STATUS, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_CHANNELS, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN); ++result) { }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd start_of_packet()");
     return result;
 }
 
@@ -47,9 +49,11 @@ uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
  *  specified `size` if not found.
  */
 uint16_t end_of_packet(uint8_t *theBytes, uint16_t size) {
+    FURI_LOG_T(WENDIGO_TAG, "Start end_of_packet()\n----------");
     uint16_t result = PREAMBLE_LEN - 1; /* Start by checking bytes [0] through [7] */
     if (theBytes == NULL) { return size; }
     for (; result < size && memcmp(theBytes + result - PREAMBLE_LEN + 1, PACKET_TERM, PREAMBLE_LEN); ++result) { }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd end_of_packet()");
     return result;
 }
 
@@ -60,6 +64,7 @@ uint16_t end_of_packet(uint8_t *theBytes, uint16_t size) {
  * bufferLen bytes are removed from the buffer, emptying it.
  */
 void consumeBufferBytes(uint16_t bytes) {
+    FURI_LOG_T(WENDIGO_TAG, "Start consumeBufferBytes()\n----------");
     if (bytes == 0 || buffer == NULL || bufferLen == 0) {
         // That was a bit of a waste
         return;
@@ -77,15 +82,18 @@ void consumeBufferBytes(uint16_t bytes) {
     memset(buffer + bufferLen - bytes, '\0', bytes);
     /* Buffer is now bufferLen - bytes */
     bufferLen -= bytes;
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd consumeBufferBytes()");
 }
 
 /* Returns the index of the first occurrence of `\n` in `theString`, searching the first `size` characters.
    Returns size if not found (which is outside the array bounds).
    TODO: This function is a candidate for deletion now that packets use an alternate packet terminator */
 uint16_t bytes_contains_newline(uint8_t *theBytes, uint16_t size) {
+    FURI_LOG_T(WENDIGO_TAG, "Start bytes_contains_newline()\n----------");
     if (theBytes == NULL) { return size; }
     uint16_t result = 0;
     for (; result < size && theBytes[result] != '\n'; ++result) { }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd bytes_contains_newline()");
     return result;
 }
 
@@ -116,6 +124,7 @@ void wendigo_esp_version(WendigoApp *app) {
 /* Manage the tagged/selected status of the specified flipper_bt_device
    Maintains bt_selected_devices[] as needed */
 bool wendigo_set_device_selected(wendigo_device *device, bool selected) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_device_selected()\n----------");
     /* NULL device check */
     if (device == NULL) { return false; }
     if (selected && !device->tagged) {
@@ -145,6 +154,7 @@ bool wendigo_set_device_selected(wendigo_device *device, bool selected) {
         }
     }
     device->tagged = selected;
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_set_device_selected()");
     return true;
 }
 
@@ -156,6 +166,7 @@ bool wendigo_set_device_selected(wendigo_device *device, bool selected) {
    so this function also returns void.
 */
 void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_scanning_active()\n----------");
     char cmd;
     uint8_t arg;
     const uint8_t CMD_LEN = 5; // e.g. "b 1\n\0"
@@ -170,14 +181,17 @@ void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
         snprintf(cmdString, CMD_LEN, "%c %d\n", cmd, arg);
         wendigo_uart_tx(app->uart, (uint8_t *)cmdString, CMD_LEN);
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_set_scanning_active()");
 }
 
 /* Returns the index into `array` of the device with MAC/BDA matching dev->mac.
    Returns `array_count` if the device was not found. */
 uint16_t custom_device_index(wendigo_device *dev, wendigo_device **array, uint16_t array_count) {
+    FURI_LOG_T(WENDIGO_TAG, "Start custom_device_index()\n----------");
     uint16_t result;
     if (dev == NULL || array == NULL) { return array_count; }
     for (result = 0; result < array_count && memcmp(dev->mac, array[result]->mac, MAC_BYTES); ++result) { }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd custom_device_index()");
     return result;
 }
 
@@ -191,7 +205,7 @@ uint16_t device_index(wendigo_device *dev) {
 /** Returns the index into devices[] of the device with MAC/BDA matching mac.
  *  Returns devices_count if the device was not found.
  */
-uint16_t device_index_from_mac(uint8_t mac[6]) {
+uint16_t device_index_from_mac(uint8_t mac[MAC_BYTES]) {
     wendigo_device dev;
     memcpy(dev.mac, mac, MAC_BYTES);
     return device_index(&dev);
@@ -205,6 +219,7 @@ bool device_exists(wendigo_device *dev) {
 }
 
 bool wendigo_add_bt_device(wendigo_device *dev, wendigo_device *new_device) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_add_bt_device()\n----------");
     new_device->radio.bluetooth.cod = dev->radio.bluetooth.cod;
     if (dev->radio.bluetooth.cod_str != NULL) {
         new_device->radio.bluetooth.cod_str = malloc(sizeof(char) * (strlen(dev->radio.bluetooth.cod_str) + 1));
@@ -285,10 +300,12 @@ bool wendigo_add_bt_device(wendigo_device *dev, wendigo_device *new_device) {
         new_device->radio.bluetooth.bt_services.known_services = NULL;
         new_device->radio.bluetooth.bt_services.known_services_len = 0;
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_add_bt_device()");
     return true;
 }
 
 bool wendigo_update_bt_device(wendigo_device *dev, wendigo_device *new_device) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_update_bt_device()\n----------");
     new_device->radio.bluetooth.cod = dev->radio.bluetooth.cod;
     /* cod_str present in update? */
     if (dev->radio.bluetooth.cod_str != NULL && strlen(dev->radio.bluetooth.cod_str) > 0) {
@@ -346,6 +363,7 @@ bool wendigo_update_bt_device(wendigo_device *dev, wendigo_device *new_device) {
                 dev->radio.bluetooth.bt_services.known_services_len;
         }
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_update_bt_device()");
     return true;
 }
 
@@ -359,6 +377,7 @@ bool wendigo_update_bt_device(wendigo_device *dev, wendigo_device *new_device) {
  *  by this MAC, if it is known to Wendigo.
  */
 bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev, uint8_t **macs, uint8_t mac_count) {
+    FURI_LOG_T(WENDIGO_TAG, "Start link_wifi_devices()\n----------");
     if (dev == NULL || macs == NULL || mac_count == 0 || !memcmp(macs[0], nullMac, MAC_BYTES)) {
         return true;
     }
@@ -441,6 +460,7 @@ bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev, uint8_t **m
     } else {
         return false;
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_link_wifi_devices()");
     return true;
 }
 
@@ -453,6 +473,7 @@ bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev, uint8_t **m
  * its own memory to hold the specified device and its attributes.
  */
 bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_add_device()\n----------");
     uint16_t idx = device_index(dev);
     if (idx < devices_count) {
         /* A device with the provided BDA already exists - Update that instead */
@@ -514,6 +535,7 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
     if (app->current_view == WendigoAppViewDeviceList) {
         wendigo_scene_device_list_update(app, new_device);
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_add_device()");
     return true;
 }
 
@@ -527,6 +549,7 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
  * objects that form part of service descriptors.
  */
 bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_update_device()\n----------");
     uint16_t idx = device_index(dev);
     if (idx == devices_count) {
         /* Device doesn't exist in bt_devices[] - Add it instead */
@@ -590,6 +613,7 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
     } else if (app->current_view == WendigoAppViewDeviceDetail) { // && selectedDevice == bt_devices[idx]
         // TODO: Update existing view
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_update_device()");
     return true;
 }
 
@@ -602,6 +626,7 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
  * pointers will attempt to use deallocated memory.
  */
 void wendigo_free_device(wendigo_device *dev) {
+    FURI_LOG_T(WENDIGO_T, "Start wendigo_free_device()\n----------");
     if (dev == NULL) {
         return;
     }
@@ -643,6 +668,7 @@ void wendigo_free_device(wendigo_device *dev) {
     }
     dev->view = NULL;
     free(dev);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_free_device()");
 }
 
 /** Deallocates all memory allocated to the device cache.
@@ -651,6 +677,7 @@ void wendigo_free_device(wendigo_device *dev) {
  * variables set to zero.
  */
 void wendigo_free_devices() {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_free_devices()\n----------");
     /* Start by freeing selected_devices[] */
     if (selected_devices_capacity > 0 && selected_devices != NULL) {
         free(selected_devices); /* Elements will be freed when addressing bt_devices[] */
@@ -669,6 +696,7 @@ void wendigo_free_devices() {
         devices_count = 0;
         devices_capacity = 0;
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_free_devices()");
 }
 
 /** During testing I bumped the ESP32 reset button and was irritated that Flipper's device
@@ -677,6 +705,7 @@ void wendigo_free_devices() {
  * attributes prior to displaying them, allowing this issue to be overcome.
  */
 void process_and_display_status_attribute(WendigoApp *app, char *attribute_name, char *attribute_value) {
+    FURI_LOG_T(WENDIGO_TAG, "Start process_and_display_status_attribute()\n----------");
     char *interesting_attributes[] = {"BT Classic Devices:", "BT Low Energy Devices:",
                                       "WiFi STA Devices:", "WiFi APs:"};
     uint8_t interesting_attributes_count = 4;
@@ -731,6 +760,7 @@ void process_and_display_status_attribute(WendigoApp *app, char *attribute_name,
         }
     }
     wendigo_scene_status_add_attribute(app, attribute_name, attribute_value);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd process_and_display_status_attribute()");
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT remove consumed bytes
@@ -741,6 +771,7 @@ void process_and_display_status_attribute(WendigoApp *app, char *attribute_name,
    * 4 bytes of 0xAA followed by 4 bytes of 0xFF
 */
 uint16_t parseBufferBluetooth(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start parseBufferBluetooth\n----------");
     /* Packet length is end_of_packet() + 1 because end_of_packet() points to the last byte of the packet */
     uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
     /* Sanity check - we should have at least 55 bytes including header and footer */
@@ -753,6 +784,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
             //wendigo_display_popup(app, "Packet Error", "Bluetooth packet is shorter than expected");
         }
         // Skip this packet
+        FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferBluetooth()");
         return packetLen;
     }
     wendigo_device *dev = malloc(sizeof(wendigo_device));
@@ -840,12 +872,14 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
 
     /* We've consumed `index` bytes as well as the packet terminator */
     // TODO: Consider pros & cons of this vs. returning packetLen. At the very least comparing the two could help find corrupted packets.
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferBluetooth()");
     return index + PREAMBLE_LEN;
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes, this must be handled by the calling function. */
 uint16_t parseBufferWifiAp(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start parseBufferWifiAp()\n----------");
     /* Check the packet is a reasonable size */
     uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
     uint16_t expectedLen = WENDIGO_OFFSET_AP_STA + PREAMBLE_LEN;
@@ -854,6 +888,31 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
         snprintf(shortMsg, sizeof(shortMsg), "AP packet too short, expected %d actual %d. Skipping.", expectedLen, packetLen);
         wendigo_display_popup(app, "AP too short", shortMsg);
         wendigo_log_with_packet(MSG_ERROR, shortMsg, buffer, packetLen);
+        FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferWifiAp()");
+        return packetLen;
+    }
+    /* Retrieve stations_count from the packet for further validation */
+    uint8_t sta_count;
+    memcpy(&sta_count, buffer + WENDIGO_OFFSET_AP_STA_COUNT, sizeof(uint8_t));
+    /* Now we have stations_count we know exactly how big the packet should be */
+    expectedLen = WENDIGO_OFFSET_AP_STA + (MAC_BYTES * sta_count) + PREAMBLE_LEN;
+    if (packetLen < expectedLen) {
+        /* Packet is too short - Likely reflects a corrupted packet with the wrong byte in stations_count.
+           Log and display the error and free `dev`.
+        */
+       char shortMsg[77];
+       snprintf(shortMsg, sizeof(shortMsg), "Packet's stations_count requires packet of size %d, actual %d. Skipping.", expectedLen, packetLen);
+       wendigo_log_with_packet(MSG_ERROR, shortMsg, buffer, packetLen);
+       wendigo_display_popup(app, "AP too short for STAtions", shortMsg);
+       FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferWifiAp()");
+       return packetLen;
+    }
+    /* Finally check that MAC hasn't been corrupted */
+    uint8_t dev_mac[MAC_BYTES];
+    memcpy(dev_mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
+    if (!memcmp(dev_mac, PREAMBLE_WIFI_AP, MAC_BYTES)) {
+        wendigo_log_with_packet(MSG_ERROR, "AP with preamble in MAC", buffer, bufferLen);
+        FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferWifiAp()");
         return packetLen;
     }
     wendigo_device *dev = malloc(sizeof(wendigo_device));
@@ -884,23 +943,10 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     dev->tagged = (tagged == 1);
     uint8_t ssid_len;
     memcpy(&ssid_len, buffer + WENDIGO_OFFSET_AP_SSID_LEN, sizeof(uint8_t));
-    memcpy(&(dev->radio.ap.stations_count), buffer + WENDIGO_OFFSET_AP_STA_COUNT, sizeof(uint8_t));
+    dev->radio.ap.stations_count = sta_count;
     memcpy(dev->radio.ap.ssid, buffer + WENDIGO_OFFSET_AP_SSID, MAX_SSID_LEN);
     dev->radio.ap.ssid[ssid_len] = '\0';
-    /* Now we have stations_count we know exactly what size the packet should be */
-    expectedLen = WENDIGO_OFFSET_AP_STA + (6 * dev->radio.ap.stations_count) + PREAMBLE_LEN;
-    if (packetLen < expectedLen) {
-        /* Packet is too short - Likely reflects a corrupted packet with the wrong byte in stations_count.
-           Log and display the error and free `dev`.
-        */
-       // Packet's stations_count requires packet of size %d, actual %d. Skipping.
-       char shortMsg[77];
-       snprintf(shortMsg, sizeof(shortMsg), "Packet's stations_count requires packet of size %d, actual %d. Skipping.", expectedLen, packetLen);
-       wendigo_log_with_packet(MSG_ERROR, shortMsg, buffer, packetLen);
-       wendigo_display_popup(app, "AP too short for STAtions", shortMsg);
-       free(dev);
-       return packetLen;
-    }
+    
     /* Retrieve stations_count MAC addresses */
     uint8_t buffIndex = WENDIGO_OFFSET_AP_STA;
     uint8_t **stations = NULL;
@@ -908,6 +954,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
         stations = malloc(sizeof(uint8_t *) * dev->radio.ap.stations_count);
         if (stations == NULL) {
             free(dev);
+            FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferWifiAp()");
             return packetLen;
         }
         for (uint8_t staIdx = 0; staIdx < dev->radio.ap.stations_count; ++staIdx) {
@@ -930,7 +977,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
         wendigo_display_popup(app, "AP Packet Error", popupMsg);
         wendigo_log_with_packet(MSG_ERROR, popupMsg, buffer, packetLen);
     } else {
-        wendigo_link_wifi_devices(app, dev, stations, dev->radio.ap.stations_count);
+        // TODO: wendigo_link_wifi_devices(app, dev, stations, dev->radio.ap.stations_count);
         wendigo_add_device(app, dev);
     }
     wendigo_free_device(dev);
@@ -943,10 +990,12 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
         }
         free(stations);
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferWifiAp()");
     return packetLen;
 }
 
 uint16_t parseBufferWifiSta(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start parseBufferWifiSta()\n----------");
     uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
     uint8_t expectedLen = WENDIGO_OFFSET_STA_TERM + PREAMBLE_LEN;
     if (packetLen < expectedLen) {
@@ -956,6 +1005,15 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
         wendigo_log_with_packet(MSG_ERROR, shortMsg, buffer, packetLen);
         /* Also display a popup */
         wendigo_display_popup(app, "STA packet too short", shortMsg);
+        FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferWifiSta()");
+        return packetLen;
+    }
+    /* The packet is big enough, has its MAC been overwritten? */
+    uint8_t dev_mac[MAC_BYTES];
+    memcpy(dev_mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
+    if (!memcmp(dev_mac, PREAMBLE_WIFI_STA, MAC_BYTES)) {
+        wendigo_log_with_packet(MSG_ERROR, "STA packet with preamble in MAC skipper", buffer, bufferLen);
+        FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferWifiSta()");
         return packetLen;
     }
     wendigo_device *dev = malloc(sizeof(wendigo_device));
@@ -973,7 +1031,8 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
     memset(channel, '\0', CHANNEL_LEN + 1);
     /* Copy fixed-length attributes */
     memcpy(&(dev->scanType), buffer + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(uint8_t));
-    memcpy(dev->mac, buffer + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
+    memcpy(dev->mac, dev_mac, MAC_BYTES);
+
     memcpy(channel, buffer + WENDIGO_OFFSET_WIFI_CHANNEL, CHANNEL_LEN);
     dev->radio.sta.channel = strtol(channel, NULL, 10);
     memcpy(rssi, buffer + WENDIGO_OFFSET_WIFI_RSSI, RSSI_LEN);
@@ -1000,12 +1059,14 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
         wendigo_add_device(app, dev);
     }
     wendigo_free_device(dev);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferWifiSta()");
     return packetLen;
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes, this must be handled by the calling function. */
 uint16_t parseBufferVersion(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start parseBufferVersion()\n----------");
     /* Find the end-of-packet sequence to determine version string length */
     uint16_t endSeq = end_of_packet(buffer, bufferLen);
     if (endSeq == bufferLen) {
@@ -1026,10 +1087,12 @@ uint16_t parseBufferVersion(WendigoApp *app) {
     }
     wendigo_popup_text[endSeq - 1] = '\0'; /* Just in case */
     wendigo_display_popup(app, "ESP32 Version", wendigo_popup_text);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferVersion()");
     return endSeq + PREAMBLE_LEN;
 }
 
 uint16_t parseBufferChannels(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start parseBufferChannels()\n----------");
     uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
     uint8_t channels_count;
     uint8_t *channels = NULL;
@@ -1047,6 +1110,7 @@ uint16_t parseBufferChannels(WendigoApp *app) {
         wendigo_display_popup(app, "Channel Packet", "Channel packet is unexpected length");
     }
     // TODO: Do something with channels
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferChannels()");
     return packetLen;
 }
 
@@ -1054,9 +1118,10 @@ uint16_t parseBufferChannels(WendigoApp *app) {
  * Returns the number of bytes consumed by the function, including the end-of-packet
  * bytes. DOES NOT remove these bytes, that is handled by the calling function.
  * This function requires that Wendigo_AppViewStatus be the currently-displayed view
- * (otherwise the packet is discarded).devdevdevddevoooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;e;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj kjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjev
+ * (otherwise the packet is discarded).
  */
 uint16_t parseBufferStatus(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start parseBufferStatus()\n----------");
     /* Ignore the packet if the status scene isn't displayed */
     uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
     if (app->current_view != WendigoAppViewStatus) {
@@ -1114,6 +1179,7 @@ uint16_t parseBufferStatus(WendigoApp *app) {
         // TODO: Panic
         return packetLen;
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBufferStatus()");
     return offset + PREAMBLE_LEN;
 }
 
@@ -1127,6 +1193,7 @@ uint16_t parseBufferStatus(WendigoApp *app) {
  *  beginning and end of packet markers.
  */
 void parseBuffer(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start parseBuffer()\n----------");
     uint16_t consumedBytes = 0;
     /* Update the last packet received time */
     app->last_packet = furi_hal_rtc_get_timestamp();
@@ -1155,13 +1222,14 @@ void parseBuffer(WendigoApp *app) {
         consumedBytes = end_of_packet(buffer, bufferLen);
         if (consumedBytes == bufferLen) {
             /* We got here by finding a packet terminator, but now can't find one. */
-            // TODO: Report error
+            wendigo_log_with_packet(MSG_ERROR, "Packet terminator not found in parseBuffer()", buffer, bufferLen);
             return;
         }
         /* Currently points to the last byte in the sequence, move forward */
         ++consumedBytes;
     }
     consumeBufferBytes(consumedBytes);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd parseBuffer()");
 }
 
 /* Callback invoked when UART data is received. When an end-of-packet sequence is
@@ -1174,6 +1242,7 @@ void parseBuffer(WendigoApp *app) {
    is called after using the console to re-establish this function as the UART callback.
 */
 void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scan_handle_rx_data_cb()\n----------");
     furi_assert(context);
     WendigoApp* app = context;
 
@@ -1209,9 +1278,11 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
     if (endFound < bufferLen) {
         parseBuffer(app);
    }
+   FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scan_handle_rx_data_cb()");
 }
 
 void wendigo_free_uart_buffer() {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_free_uart_buffer()\n----------");
     if (bufferCap > 0) {
         free(buffer);
         bufferLen = 0;
@@ -1223,6 +1294,7 @@ void wendigo_free_uart_buffer() {
         free(wendigo_popup_text);
         wendigo_popup_text = NULL;
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_free_uart_buffer()");
 }
 
 void wendigo_log(MsgType logType, char *message) {

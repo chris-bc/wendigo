@@ -48,7 +48,9 @@ uint8_t current_devices_mask = DEVICE_ALL;
 
 /** Determine whether the specified device should be displayed, based on the criteria provided in wendigo_set_current_devices() */
 bool wendigo_device_is_displayed(wendigo_device *dev) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_device_is_displayed()\n----------");
     bool display_selected = ((current_devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_device_is_displayed()");
     return ((dev->scanType == SCAN_HCI && ((current_devices_mask & DEVICE_BT_CLASSIC) == DEVICE_BT_CLASSIC) && (!display_selected || dev->tagged)) ||
             (dev->scanType == SCAN_BLE && ((current_devices_mask & DEVICE_BT_LE) == DEVICE_BT_LE) && (!display_selected || dev->tagged)) ||
             (dev->scanType == SCAN_WIFI_AP && ((current_devices_mask & DEVICE_WIFI_AP) == DEVICE_WIFI_AP) && (!display_selected || dev->tagged)) ||
@@ -61,6 +63,7 @@ bool wendigo_device_is_displayed(wendigo_device *dev) {
  * Returns the number of devices that meet the specified criteria.
  */
 uint16_t wendigo_set_current_devices(uint8_t deviceMask) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_current_devices()\n----------");
     if (deviceMask == 0) {
         deviceMask = DEVICE_ALL;
     }
@@ -93,6 +96,7 @@ uint16_t wendigo_set_current_devices(uint8_t deviceMask) {
         }
     }
     furi_assert(current_index == deviceCount);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_set_current_devices()");
     return deviceCount;
 }
 
@@ -103,6 +107,7 @@ uint16_t wendigo_set_current_devices(uint8_t deviceMask) {
  * Returns zero and the empty string on failure.
  */
 double _elapsedTime(uint32_t *from, uint32_t *to, char *elapsedStr, uint8_t strlen) {
+    FURI_LOG_T(WENDIGO_TAG, "Start _elapsedTime()\n----------");
     /* Validate everything before we touch it */
     if (from == NULL || to == NULL) {
         if (elapsedStr != NULL && strlen > 0) {
@@ -120,6 +125,7 @@ double _elapsedTime(uint32_t *from, uint32_t *to, char *elapsedStr, uint8_t strl
             snprintf(elapsedStr, strlen, "%2d:%02d", minutes, seconds);
         }
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd _elapsedTime()");
     return elapsed;
 }
 
@@ -131,6 +137,7 @@ double _elapsedTime(uint32_t *from, uint32_t *to, char *elapsedStr, uint8_t strl
  * Returns zero and an empty string on failure.
  */
 double elapsedTime(wendigo_device *dev, char *elapsedStr, uint8_t strlen) {
+    FURI_LOG_T(WENDIGO_TAG, "Start elapsedTime()\n----------");
     if (dev == NULL) {
         /* Return sensible values on failure */
         if (strlen > 0 && elapsedStr != NULL) {
@@ -139,14 +146,17 @@ double elapsedTime(wendigo_device *dev, char *elapsedStr, uint8_t strlen) {
         return 0;
     }
     uint32_t nowTime = furi_hal_rtc_get_timestamp();
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd elapsedTime()");
     return _elapsedTime(&(dev->lastSeen), &nowTime, elapsedStr, strlen);
 }
 
 /** Identify the device represented by the currently-selected menu item. NULL if it cannot be identified. */
 wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_selected_device()\n----------");
     WendigoApp* app = variable_item_get_context(item);
     
     if (app->device_list_selected_menu_index < current_devices_count) {
+        FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_list_selected_device()");
         return current_devices[app->device_list_selected_menu_index];
     }
 // TODO: Compare these methods - I'm tempted to remove the first approach (which is why it now gets its own function)
@@ -154,9 +164,11 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
     uint16_t idx = 0;
     for (; idx < current_devices_count && current_devices[idx]->view != item; ++idx) { }
     if (idx < current_devices_count) {
+        FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_list_selected_device()");
         return current_devices[idx];
     }
     /* Device not found */
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_list_selected_device()");
     return NULL;
 }
 
@@ -168,6 +180,7 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
  * either information about a new device or updated information about an existing device.
  */
 void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_update()\n----------");
     if (!wendigo_device_is_displayed(dev)) {
         return;
     }
@@ -313,6 +326,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
             dev->scanType == SCAN_WIFI_STA) {
         free(name);    
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_list_update()");
 }
 
 /** Re-render the variable item list. This function exists because there is no method to remove
@@ -320,6 +334,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
  * devices and de-selecting a device).
  */
 void wendigo_scene_device_list_redraw(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_redraw()\n----------");
     variable_item_list_reset(app->devices_var_item_list);
     char *item_str = NULL;
     uint8_t options_count = 0;
@@ -386,9 +401,11 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
         }
     }
     variable_item_list_set_selected_item(app->devices_var_item_list, 0);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_list_redraw()");
 }
 
 static void wendigo_scene_device_list_var_list_enter_callback(void* context, uint32_t index) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_var_list_enter_callback()\n----------");
     furi_assert(context);
     WendigoApp* app = context;
 
@@ -419,9 +436,11 @@ static void wendigo_scene_device_list_var_list_enter_callback(void* context, uin
         wendigo_scene_device_detail_set_device(item);
         // TODO Fix detail scene, then view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_list_var_list_enter_callback()");
 }
 
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem* item) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_var_list_change_callback()\n----------");
     furi_assert(item);
 
     /* app->device_list_selected_menu_index should reliably point to the selected menu item.
@@ -482,14 +501,15 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
             }
             variable_item_set_current_value_text(item, tempStr);
         } // TODO: Else panic
-
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_list_var_list_change_callback()");
 }
 
 /* Initialise the device list
    TODO: When "display options" are implemented include consideration of selected device types and sorting options
 */
 void wendigo_scene_device_list_on_enter(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_enter()\n----------");
     WendigoApp* app = context;
     app->current_view = WendigoAppViewDeviceList;
 
@@ -510,9 +530,11 @@ void wendigo_scene_device_list_on_enter(void* context) {
     }
     variable_item_list_set_selected_item(app->devices_var_item_list, selected_item);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewDeviceList);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_list_on_enter()");
 }
 
 bool wendigo_scene_device_list_on_event(void* context, SceneManagerEvent event) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_event()\n----------");
     WendigoApp* app = context;
     bool consumed = false;
 
@@ -548,10 +570,12 @@ bool wendigo_scene_device_list_on_event(void* context, SceneManagerEvent event) 
             }
         }
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_list_on_event()");
     return consumed;
 }
 
 void wendigo_scene_device_list_on_exit(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_exit()\n----------");
     WendigoApp* app = context;
     variable_item_list_reset(app->devices_var_item_list);
     for (uint16_t i = 0; i < devices_count; ++i) {
@@ -562,4 +586,5 @@ void wendigo_scene_device_list_on_exit(void* context) {
         current_devices = NULL;
         current_devices_count = 0;
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_list_on_exit()");
 }
