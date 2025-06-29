@@ -61,11 +61,12 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     //memcpy(packet + WENDIGO_OFFSET_WIFI_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     memcpy(packet + WENDIGO_OFFSET_WIFI_TAGGED, &tagged, sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_AP_SSID_LEN, &ssid_len, sizeof(uint8_t));
-    memcpy(packet + WENDIGO_OFFSET_AP_STA_COUNT, &(dev->radio.ap.stations_count), sizeof(uint8_t));
+// TODO    memcpy(packet + WENDIGO_OFFSET_AP_STA_COUNT, &(dev->radio.ap.stations_count), sizeof(uint8_t));
+    packet[WENDIGO_OFFSET_AP_STA_COUNT] = 0;
     memcpy(packet + WENDIGO_OFFSET_AP_SSID, dev->radio.ap.ssid, MAX_SSID_LEN);
     /* Keep track of the offset while working through stations[] */
     uint8_t current_offset = WENDIGO_OFFSET_AP_STA;
-    for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+    for (uint8_t i = 0; i < 0 && i < dev->radio.ap.stations_count; ++i) { // TODO Update when STA should be sent again
         /* Send the MAC of each connected device */
         /* It should be impossible to get a NULL station, but cater for it anyway */
         if (dev->radio.ap.stations == NULL || dev->radio.ap.stations[i] == NULL) {
@@ -196,10 +197,8 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     if (dev->radio.sta.ap == NULL) {
         memset(packet + WENDIGO_OFFSET_STA_AP_SSID, '\0', MAX_SSID_LEN);
     } else {
-        memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, (uint8_t *)ssid, MAX_SSID_LEN); // TODO: Crash here?
+        memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, (uint8_t *)ssid, MAX_SSID_LEN);
     }
-        // Big question: Revert to piecemeal sending or refactor everything to send a full packet?
-        // Also add a semaphore to send_bytes() - ensure only one packet can be sent at a time?
     memcpy(packet + WENDIGO_OFFSET_STA_TERM, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
     wendigo_get_tx_lock(true);
