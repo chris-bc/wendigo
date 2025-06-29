@@ -626,7 +626,7 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
  * pointers will attempt to use deallocated memory.
  */
 void wendigo_free_device(wendigo_device *dev) {
-    FURI_LOG_T(WENDIGO_T, "Start wendigo_free_device()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_free_device()\n----------");
     if (dev == NULL) {
         return;
     }
