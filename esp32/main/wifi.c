@@ -2,14 +2,14 @@
 
 /* Array of channels that are to be included in channel hopping.
    At startup this is initialised to include all supported channels. */
-uint16_t *channels = NULL;
+uint8_t *channels = NULL;
 uint8_t channels_count = 0;
 uint8_t channel_index = 0;
 // TODO: Refactor to support 5GHz channels if the device supports 5GHz channels
 const uint8_t WENDIGO_SUPPORTED_24_CHANNELS_COUNT = 14;
-const uint16_t WENDIGO_SUPPORTED_24_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+const uint8_t WENDIGO_SUPPORTED_24_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 const uint8_t WENDIGO_SUPPORTED_5_CHANNELS_COUNT = 31;
-const uint16_t WENDIGO_SUPPORTED_5_CHANNELS[] = {32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
+const uint8_t WENDIGO_SUPPORTED_5_CHANNELS[] = {32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
 long hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
 TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
 
@@ -887,19 +887,6 @@ esp_err_t initialise_wifi() {
 
         WIFI_INITIALISED = true;
     }
-
-    /* Initialise channels[] to include all supported channels */
-    if (channels != NULL) {
-        free(channels);
-        channels_count = 0;
-    }
-    channels = malloc(WENDIGO_SUPPORTED_24_CHANNELS_COUNT);
-    if (channels != NULL) {
-        channels_count = WENDIGO_SUPPORTED_24_CHANNELS_COUNT;
-        for (uint8_t i = 0; i < channels_count; ++i) {
-            channels[i] = WENDIGO_SUPPORTED_24_CHANNELS[i];
-        }
-    }
     return ESP_OK;
 }
 
@@ -908,6 +895,10 @@ esp_err_t wendigo_wifi_enable() {
     esp_err_t result = ESP_OK;
     if (!WIFI_INITIALISED) {
         result = initialise_wifi();
+    }
+    /* Set default channels to hop through (all 2.4GHz channels) if not yet configured */
+    if (channels == NULL || channels_count == 0) {
+        wendigo_set_channels(WENDIGO_SUPPORTED_24_CHANNELS, WENDIGO_SUPPORTED_24_CHANNELS_COUNT);
     }
     result |= esp_wifi_set_promiscuous(true);
     create_hop_task_if_needed();

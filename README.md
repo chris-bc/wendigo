@@ -181,10 +181,10 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 ## Roadmap
 Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some further refinement is required to existing functionality, after which Wendigo will be extended to include WiFi scanning, Bluetooth service discovery, and additional features.
 
-* [ ] BUG: ESP32 returns an RSSI of -4 for all devices. Figure out why & fix.
+* [ ] BUG: ESP32 returns an RSSI of -4 or 3854 for many devices. I think this is a particular packet type, resulting in an invalid initial value that is resolved by subsequent packets. Figure out why & fix.
+* [ ] BUG: Around 1% of Wendigo packets for WiFi devices are corrupted, having the first 6 bytes of the packet's preamble where the device's MAC should be. I believe this is a concurrency problem related to how the buffer is managed in Flipper-Wendigo but it's a damn hard one to track down.
 * [ ] Add authMode (from probe response) to AP packet
 * [ ] Add options when starting wendigo_scene_device_list to view specific device types.
-* [ ] When scanning is active device packets and scanning status or poll requests can be interleaved. Currently malformed device packets are simply dropped. Implement packet queueing on ESP32 to ensure sequential transmission.
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [ ] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped
 * [ ] BUG: Implementation of CONFIG_DELAY_AFTER_DEVICE_DISPLAYED is flawed - lastSeen is updated when device isn't displayed, if a device is always seen within that period it will never be displayed again.
