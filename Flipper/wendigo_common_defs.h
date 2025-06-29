@@ -68,6 +68,8 @@ PSK and not recommended to be used. It will be deprecated in future, please use 
     WIFI_AUTH_WPA2_WPA3_ENTERPRISE, /**< Authenticate mode : WPA3-Enterprise Transition Mode */
     WIFI_AUTH_MAX
 } wifi_auth_mode_t;
+
+#define WENDIGO_TAG     "WENDIGO"
  #endif
 
 #define MAX_SSID_LEN    32

@@ -26,7 +26,7 @@ static void wendigo_app_tick_event_callback(void* context) {
     WendigoApp* app = context;
     if (app->is_scanning) {
         /* Is it time to poll ESP32 to ensure it's still scanning? */
-        int32_t now = furi_hal_rtc_get_timestamp();
+        uint32_t now = furi_hal_rtc_get_timestamp();
         if (now - app->last_packet > ESP32_POLL_INTERVAL) {
             wendigo_set_scanning_active(app, true);
         }
