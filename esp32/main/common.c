@@ -45,8 +45,8 @@ void wendigo_release_tx_lock() {
  */
 wendigo_device *retrieve_device(wendigo_device *dev) {
     wendigo_device *result = NULL;
-    int idx = 0;
-    for (; idx < devices_count && memcmp(dev->mac, devices[idx].mac, ESP_BD_ADDR_LEN); ++idx) {}
+    uint16_t idx = 0;
+    for (; idx < devices_count && memcmp(dev->mac, devices[idx].mac, MAC_BYTES); ++idx) {}
     if (idx < devices_count) {
         result = &(devices[idx]);
     }
@@ -60,6 +60,34 @@ wendigo_device *retrieve_by_mac(esp_bd_addr_t mac) {
     wendigo_device dev;
     memcpy(dev.mac, mac, ESP_BD_ADDR_LEN);
     return retrieve_device(&dev);
+}
+
+/** Check whether the provided wendigo_device is present in the specified array of
+ * wendigo_device* objects. Matching is based on the device's MAC (i.e. dev->mac).
+ * Returns the index of the matching device, or array_len if not found.
+ */
+uint16_t wendigo_index_of(wendigo_device *dev, wendigo_device **array, uint16_t array_len) {
+    /* Don't proceed if invalid arguments were provided */
+    if (dev == NULL || array == NULL || array_len == 0) {
+        return array_len;
+    }
+    uint16_t idx = 0;
+    for (; idx < array_len && memcmp(array[idx]->mac, dev->mac, MAC_BYTES); ++idx) { }
+    return idx;
+}
+
+/** Check whether a wendigo_device with the specified MAC is present in the specified array
+ * of wendigo_device* objects.
+ * Returns the index of the matching device, or array_len if not found.
+ */
+uint16_t wendigo_index_of_mac(uint8_t *mac, wendigo_device **array, uint16_t array_len) {
+    /* Don't proceed if invalid arguments were provided */
+    if (mac == NULL || array == NULL || array_len == 0) {
+        return array_len;
+    }
+    wendigo_device dev;
+    memcpy(dev.mac, mac, MAC_BYTES);
+    return wendigo_index_of(&dev, array, array_len);
 }
 
 /** Adds the specified device to devices[] if not already present.
@@ -80,6 +108,7 @@ esp_err_t add_device(wendigo_device *dev) {
         }
         /* Check again whether we have capacity because the malloc might have failed */
         if (devices_count < devices_capacity) {
+            /* Copy the entire block of memory containing `dev` into `devices[devices_count]` */
             memcpy(&(devices[devices_count]), dev, sizeof(wendigo_device));
             gettimeofday(&(devices[devices_count].lastSeen), NULL);
             if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
@@ -106,9 +135,29 @@ esp_err_t add_device(wendigo_device *dev) {
                     }
                 }
             } else if (dev->scanType == SCAN_WIFI_AP) {
-                // No special cases
+                /* Duplicate dev->radio.ap.stations - While its *contents* don't need special
+                   attention because they're pointers to existing devices, the array itself was
+                   declared by - and will be freed by - a separate function. */
+                   devices[devices_count].radio.ap.stations = NULL;
+                   devices[devices_count].radio.ap.stations_count = 0;
+                if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
+                    devices[devices_count].radio.ap.stations = malloc(sizeof(wendigo_device *) *
+                                                                      dev->radio.ap.stations_count);
+                    if (devices[devices_count].radio.ap.stations != NULL) {
+                        /* If allocation fails all we need to do is ensure that stations_count is 0 -
+                           linked stations will still be sent to Flipper, we just don't have capacity
+                           to store them. stations_count was initialised to 0 above, so we're only
+                           looking at the success case.
+
+                           Now we own the region of memory we can just copy the list of pointers in one go
+                        */
+                        memcpy(devices[devices_count].radio.ap.stations, dev->radio.ap.stations,
+                            sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+                        devices[devices_count].radio.ap.stations_count = dev->radio.ap.stations_count;
+                    }
+                }
             } else if (dev->scanType == SCAN_WIFI_STA) {
-                // No special cases
+                // No special cases - dev->radio.sta.ap is a single pointer so doesn't require change
             }
             ++devices_count;
         }
@@ -156,9 +205,45 @@ esp_err_t add_device(wendigo_device *dev) {
             // TODO: Decide how to merge services - Should probably be done with a separate function
         } else if (dev->scanType == SCAN_WIFI_AP) {
             existingDevice->radio.ap.channel = dev->radio.ap.channel;
-            /* Just reuse the stations pointer and free it later */
-            existingDevice->radio.ap.stations = dev->radio.ap.stations;
-            existingDevice->radio.ap.stations_count = dev->radio.ap.stations_count;
+            /* Check whether `dev` contains any stations not in `existingDevice` */
+            if (dev->radio.ap.stations_count > existingDevice->radio.ap.stations_count) {
+                /* Find stations in `dev` that aren't in `existingDevice` */
+                uint8_t newStations = 0;
+                if (existingDevice->radio.ap.stations_count == 0) {
+                    newStations = dev->radio.ap.stations_count;
+                } else {
+                    for (uint16_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+                        if (wendigo_index_of(dev->radio.ap.stations[i],
+                                (wendigo_device **)existingDevice->radio.ap.stations,
+                                existingDevice->radio.ap.stations_count) ==
+                                existingDevice->radio.ap.stations_count) {
+                            ++newStations;
+                        }
+                    }
+                }
+                /* Expand existingDevice's stations[] */
+                wendigo_device **new_stations = realloc(existingDevice->radio.ap.stations,
+                    sizeof(wendigo_device *) * (newStations + existingDevice->radio.ap.stations_count));
+                if (new_stations != NULL) {
+                    /* Successfully resized existingDevice's stations[]. Copy new pointers across */
+                    if (existingDevice->radio.ap.stations_count == 0) {
+                        memcpy(new_stations, dev->radio.ap.stations,
+                            sizeof(wendigo_device *) * newStations);
+                    } else {
+                        uint16_t staIdx = existingDevice->radio.ap.stations_count;
+                        for (uint16_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+                            if (wendigo_index_of(dev->radio.ap.stations[i], new_stations,
+                                    existingDevice->radio.ap.stations_count) ==
+                                    existingDevice->radio.ap.stations_count) {
+                                new_stations[staIdx++] = dev->radio.ap.stations[i];
+                            }
+                        }
+                    }
+                    /* Copy into place (in case stations[] was moved to find enough contiguous space) */
+                    existingDevice->radio.ap.stations = (void **)new_stations;
+                    existingDevice->radio.ap.stations_count += newStations;
+                }
+            }
             strncpy((char *)existingDevice->radio.ap.ssid, (char *)dev->radio.ap.ssid, MAX_SSID_LEN + 1);
             existingDevice->radio.ap.ssid[MAX_SSID_LEN] = '\0';
         } else if (dev->scanType == SCAN_WIFI_STA) {

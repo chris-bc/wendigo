@@ -276,12 +276,11 @@ esp_err_t display_wifi_device(wendigo_device *dev, bool force_display) {
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         /* If device throttling is enabled make sure sufficient time has passed before displaying it */
         if (CONFIG_DELAY_AFTER_DEVICE_DISPLAYED > 0 && !force_display) {
-            wendigo_device *existingDevice = retrieve_device(dev);
-            if (existingDevice != NULL) {
+            if (existing_device != NULL) {
                 /* We've seen the device before, have we seen it too recently? */
                 struct timeval nowTime;
                 gettimeofday(&nowTime, NULL);
-                double elapsed = (nowTime.tv_sec - existingDevice->lastSeen.tv_sec) * 1000;
+                double elapsed = (nowTime.tv_sec - existing_device->lastSeen.tv_sec) * 1000;
                 if (elapsed < CONFIG_DELAY_AFTER_DEVICE_DISPLAYED) {
                     return ESP_OK;
                 }
