@@ -87,6 +87,15 @@ typedef struct {
     ModeMask mode_mask;
 } WendigoItem;
 
+typedef enum msgType {
+    MSG_ERROR = 0,
+    MSG_WARN,
+    MSG_INFO,
+    MSG_DEBUG,
+    MSG_TRACE,
+    MSG_TYPE_COUNT
+} MsgType;
+
 typedef enum {
     WendigoAppViewVarItemList,
     WendigoAppViewDeviceList,

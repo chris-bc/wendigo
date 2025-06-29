@@ -846,11 +846,14 @@ uint16_t parseBufferBluetooth(WendigoApp *app) {
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes, this must be handled by the calling function. */
 uint16_t parseBufferWifiAp(WendigoApp *app) {
-    uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
     /* Check the packet is a reasonable size */
-    if (packetLen < WENDIGO_OFFSET_AP_STA + PREAMBLE_LEN) {
-        // TODO: Display a warning after packet queueing has been implemented to prevent interleaved packets
-        wendigo_display_popup(app, "AP too short", "AP too short, skipping.");
+    uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
+    uint16_t expectedLen = WENDIGO_OFFSET_AP_STA + PREAMBLE_LEN;
+    if (packetLen < expectedLen) {
+        char shortMsg[56];
+        snprintf(shortMsg, sizeof(shortMsg), "AP packet too short, expected %d actual %d. Skipping.", expectedLen, packetLen);
+        wendigo_display_popup(app, "AP too short", shortMsg);
+        wendigo_log_with_packet(MSG_ERROR, shortMsg, buffer, packetLen);
         return packetLen;
     }
     wendigo_device *dev = malloc(sizeof(wendigo_device));
@@ -862,6 +865,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     dev->radio.ap.stations = NULL;
     memset(dev->radio.ap.ssid, '\0', MAX_SSID_LEN + 1);
     /* Temporary variables for elements that need to be transformed */
+    // TODO: Grab stations count and validate packet size before everything else
     uint8_t tagged;
     char rssi[RSSI_LEN + 1];
     memset(rssi, '\0', RSSI_LEN + 1);
@@ -883,12 +887,27 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     memcpy(&(dev->radio.ap.stations_count), buffer + WENDIGO_OFFSET_AP_STA_COUNT, sizeof(uint8_t));
     memcpy(dev->radio.ap.ssid, buffer + WENDIGO_OFFSET_AP_SSID, MAX_SSID_LEN);
     dev->radio.ap.ssid[ssid_len] = '\0';
+    /* Now we have stations_count we know exactly what size the packet should be */
+    expectedLen = WENDIGO_OFFSET_AP_STA + (6 * dev->radio.ap.stations_count) + PREAMBLE_LEN;
+    if (packetLen < expectedLen) {
+        /* Packet is too short - Likely reflects a corrupted packet with the wrong byte in stations_count.
+           Log and display the error and free `dev`.
+        */
+       // Packet's stations_count requires packet of size %d, actual %d. Skipping.
+       char shortMsg[77];
+       snprintf(shortMsg, sizeof(shortMsg), "Packet's stations_count requires packet of size %d, actual %d. Skipping.", expectedLen, packetLen);
+       wendigo_log_with_packet(MSG_ERROR, shortMsg, buffer, packetLen);
+       wendigo_display_popup(app, "AP too short for STAtions", shortMsg);
+       free(dev);
+       return packetLen;
+    }
     /* Retrieve stations_count MAC addresses */
     uint8_t buffIndex = WENDIGO_OFFSET_AP_STA;
     uint8_t **stations = NULL;
     if (dev->radio.ap.stations_count > 0) {
         stations = malloc(sizeof(uint8_t *) * dev->radio.ap.stations_count);
         if (stations == NULL) {
+            free(dev);
             return packetLen;
         }
         for (uint8_t staIdx = 0; staIdx < dev->radio.ap.stations_count; ++staIdx) {
@@ -903,15 +922,17 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
     }
     /* buffIndex should now point to the packet terminator */
     if (memcmp(buffer + buffIndex, PACKET_TERM, PREAMBLE_LEN)) {
-        char bytesFound[6 * PREAMBLE_LEN + 1];
-        char popupMsg[3 * PREAMBLE_LEN + 31];
-        bytes_to_string(buffer + buffIndex, PREAMBLE_LEN*2, bytesFound);
+        char bytesFound[3 * PREAMBLE_LEN];
+        char popupMsg[3 * PREAMBLE_LEN + 30];
+        bytes_to_string(buffer + buffIndex, PREAMBLE_LEN, bytesFound);
         snprintf(popupMsg, sizeof(popupMsg), "Expected end of packet, found %s", bytesFound);
-        popupMsg[3 * PREAMBLE_LEN + 30] = '\0';
+        popupMsg[3 * PREAMBLE_LEN + 29] = '\0';
         wendigo_display_popup(app, "AP Packet Error", popupMsg);
+        wendigo_log_with_packet(MSG_ERROR, popupMsg, buffer, packetLen);
+    } else {
+        wendigo_link_wifi_devices(app, dev, stations, dev->radio.ap.stations_count);
+        wendigo_add_device(app, dev);
     }
-    wendigo_link_wifi_devices(app, dev, stations, dev->radio.ap.stations_count);
-    wendigo_add_device(app, dev);
     wendigo_free_device(dev);
     if (stations != NULL) {
         for (uint8_t staIdx = 0; staIdx < dev->radio.ap.stations_count; ++staIdx) {
@@ -927,9 +948,14 @@ uint16_t parseBufferWifiAp(WendigoApp *app) {
 
 uint16_t parseBufferWifiSta(WendigoApp *app) {
     uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
-    /* Check the packet length is acceptable */
-    if (packetLen < WENDIGO_OFFSET_STA_AP_SSID + PREAMBLE_LEN) {
-        // TODO: Display a warning after packet queueing has been implemented to prevent interleaved packets
+    uint8_t expectedLen = WENDIGO_OFFSET_STA_TERM + PREAMBLE_LEN;
+    if (packetLen < expectedLen) {
+        /* Packet is too short - Log the issue along with the current packet */
+        char shortMsg[60];
+        snprintf(shortMsg, sizeof(shortMsg), "STA packet too short: Expected %d, actual %d. Skipping...", expectedLen, packetLen);
+        wendigo_log_with_packet(MSG_ERROR, shortMsg, buffer, packetLen);
+        /* Also display a popup */
+        wendigo_display_popup(app, "STA packet too short", shortMsg);
         return packetLen;
     }
     wendigo_device *dev = malloc(sizeof(wendigo_device));
@@ -965,12 +991,14 @@ uint16_t parseBufferWifiSta(WendigoApp *app) {
     ap_ssid[ap_ssid_len] = '\0';
     /* Do I want to do anything with ap_ssid? */
     /* We should find the packet terminator after the SSID */
-    uint16_t term_idx = WENDIGO_OFFSET_STA_AP_SSID + MAX_SSID_LEN;
-    if (memcmp(PACKET_TERM, buffer + term_idx, PREAMBLE_LEN)) {
+    if (memcmp(PACKET_TERM, buffer + WENDIGO_OFFSET_STA_TERM, PREAMBLE_LEN)) {
         wendigo_display_popup(app, "STA Packet", "STA Packet terminator not found where expected.");
+        /* Log the packet so the cause can hopefully be found */
+        wendigo_log_with_packet(MSG_ERROR, "STA packet terminator not found where expected, skipping.", buffer, packetLen);
+    } else {
+        //wendigo_link_wifi_devices(app, dev, (uint8_t **)&dev->radio.sta.apMac, 1); // I think this will work?
+        wendigo_add_device(app, dev);
     }
-    //wendigo_link_wifi_devices(app, dev, (uint8_t **)&dev->radio.sta.apMac, 1); // I think this will work?
-    wendigo_add_device(app, dev);
     wendigo_free_device(dev);
     return packetLen;
 }
@@ -1195,4 +1223,46 @@ void wendigo_free_uart_buffer() {
         free(wendigo_popup_text);
         wendigo_popup_text = NULL;
     }
+}
+
+void wendigo_log(MsgType logType, char *message) {
+    switch (logType) {
+        case MSG_ERROR:
+            FURI_LOG_E(WENDIGO_TAG, message);
+            break;
+        case MSG_WARN:
+            FURI_LOG_W(WENDIGO_TAG, message);
+            break;
+        case MSG_INFO:
+            FURI_LOG_I(WENDIGO_TAG, message);
+            break;
+        case MSG_DEBUG:
+            FURI_LOG_D(WENDIGO_TAG, message);
+            break;
+        case MSG_TRACE:
+            FURI_LOG_T(WENDIGO_TAG, message);
+            break;
+        default:
+            break;
+    }
+}
+
+void wendigo_log_with_packet(MsgType logType, char *message, uint8_t *packet, uint16_t packet_size) {
+    if (packet == NULL || packet_size == 0) {
+        return;
+    }
+    uint16_t messageLen = 3 * packet_size;
+    if (message != NULL) {
+        messageLen += strlen(message) + 1;
+    }
+    char *finalMessage = malloc(sizeof(char) * messageLen);
+    if (finalMessage != NULL) {
+        memcpy(finalMessage, message, strlen(message));
+        finalMessage[strlen(message)] = '\n';
+        bytes_to_string(packet, packet_size, finalMessage + strlen(message) + 1);
+    }
+    /* Just in case my counting is out */
+    finalMessage[messageLen - 1] = '\0';
+    wendigo_log(logType, finalMessage);
+    free(finalMessage);
 }

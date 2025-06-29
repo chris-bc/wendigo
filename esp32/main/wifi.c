@@ -196,7 +196,7 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     if (dev->radio.sta.ap == NULL) {
         memset(packet + WENDIGO_OFFSET_STA_AP_SSID, '\0', MAX_SSID_LEN);
     } else {
-        memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, (uint8_t *)ssid, MAX_SSID_LEN); // TODO: Crash here?
+        memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, (uint8_t *)ssid, MAX_SSID_LEN);
     }
         // Big question: Revert to piecemeal sending or refactor everything to send a full packet?
         // Also add a semaphore to send_bytes() - ensure only one packet can be sent at a time?
