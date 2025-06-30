@@ -393,7 +393,7 @@ bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev, uint8_t **m
             dev->radio.sta.ap = devices[apIdx];
         } else {
             /* No device found with that MAC */
-            memcpy(dev->radio.sta.apMac, nullMac, MAC_BYTES);
+            memcpy(dev->radio.sta.apMac, nullMac, MAC_BYTES); // TODO: Consider keeping the MAC and retrying link later on?
             dev->radio.sta.ap = NULL;
         }
     } else if (dev->scanType == SCAN_WIFI_AP) {
@@ -401,10 +401,11 @@ bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev, uint8_t **m
            all stations specified in macs[] */
         // Get existing cache for dev if present
         uint8_t count = 0;
-        uint8_t real_index = device_index(dev);
+        uint16_t real_index = device_index(dev);
         wendigo_device *real_device = NULL;
         wendigo_device temp_device;
-        uint8_t temp_idx;
+        uint16_t temp_idx;
+        uint16_t temp_idx2;
         if (real_index < devices_count) {
             real_device = devices[real_index];
             if (real_device->scanType != SCAN_WIFI_AP) {
@@ -417,8 +418,11 @@ bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev, uint8_t **m
                 if (macs[i] != NULL) {
                     memcpy(temp_device.mac, macs[i], MAC_BYTES);
                     temp_idx = custom_device_index(&temp_device, (wendigo_device **)real_device->radio.ap.stations, real_device->radio.ap.stations_count);
-                    if (temp_idx == real_device->radio.ap.stations_count) {
-                        /* macs[i] is not in real_device->radio.ap.stations - We need to add it */
+                    /* Also confirm that temp_device is a known device */
+                    temp_idx2 = device_index(&temp_device);
+                    if (temp_idx == real_device->radio.ap.stations_count && temp_idx2 < devices_count) {
+                        /* macs[i] is not in real_device->radio.ap.stations and IS in devices[]
+                           => We need to add it to stations[] */
                         ++count;
                     }
                 }
@@ -438,8 +442,7 @@ bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev, uint8_t **m
             }
             // Copy devices across
             uint8_t dev_idx = 0;
-            uint8_t temp_idx2;
-            if (real_device != NULL && real_device->radio.ap.stations_count > 0) {
+            if (real_device != NULL && real_device->radio.ap.stations_count > 0 && real_device->radio.ap.stations != NULL) {
                 memcpy(dev->radio.ap.stations, real_device->radio.ap.stations, sizeof(wendigo_device *) * real_device->radio.ap.stations_count);
                 dev_idx = real_device->radio.ap.stations_count;
             }
@@ -450,6 +453,7 @@ bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev, uint8_t **m
                     if (real_device != NULL) {
                         temp_idx2 = custom_device_index(&temp_device, (wendigo_device **)real_device->radio.ap.stations, real_device->radio.ap.stations_count);
                     }
+                    /* Append the current station if it's in devices[] and not in real_device->radio.ap.stations[] */
                     if (temp_idx < devices_count && (real_device == NULL || temp_idx2 == real_device->radio.ap.stations_count)) {
                         dev->radio.ap.stations[dev_idx++] = devices[temp_idx];
                     }
@@ -517,14 +521,19 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
         */
         new_device->radio.ap.stations_count = dev->radio.ap.stations_count;
         if (dev->radio.ap.stations_count > 0) {
-            new_device->radio.ap.stations = dev->radio.ap.stations;
-            /* Remove stations[] from dev so it isn't free()d when dev is */
-            dev->radio.ap.stations = NULL;
-            dev->radio.ap.stations_count = 0;
+            /* Copy stations[] */
+            new_device->radio.ap.stations = malloc(sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+            if (new_device->radio.ap.stations == NULL) {
+                new_device->radio.ap.stations_count = 0;
+            } else {
+                memcpy(new_device->radio.ap.stations, dev->radio.ap.stations,
+                    sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+            }
         } else {
             new_device->radio.ap.stations = NULL;
         }
         memcpy(new_device->radio.ap.ssid, dev->radio.ap.ssid, MAX_SSID_LEN);
+        new_device->radio.ap.ssid[MAX_SSID_LEN] = '\0';
     } else if (dev->scanType == SCAN_WIFI_STA) {
         new_device->radio.sta.channel = dev->radio.sta.channel;
         memcpy(new_device->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
@@ -589,9 +598,7 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
                 if (target->radio.ap.stations == NULL) {
                     target->radio.ap.stations_count = 0;
                 } else {
-                    for (idx = 0; idx < dev->radio.ap.stations_count; ++idx) {
-                        target->radio.ap.stations[idx] = dev->radio.ap.stations[idx];
-                    }
+                    memcpy(target->radio.ap.stations, dev->radio.ap.stations, sizeof(wendigo_device *) * dev->radio.ap.stations_count);
                     target->radio.ap.stations_count = dev->radio.ap.stations_count;
                 }
             }
