@@ -12,6 +12,7 @@ static const WendigoItem items[SETUP_MENU_ITEMS] = {
 #define CH_SELECTED (1)
 
 static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t index) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_var_list_enter_callback()\n----------");
     furi_assert(context);
     WendigoApp* app = context;
 
@@ -49,9 +50,11 @@ static void wendigo_scene_setup_var_list_enter_callback(void* context, uint32_t 
             }
             break;
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_setup_var_list_enter_callback()");
 }
 
 static void wendigo_scene_setup_var_list_change_callback(VariableItem* item) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_var_list_change_callback()\n----------");
     furi_assert(item);
 
     WendigoApp* app = variable_item_get_context(item);
@@ -101,9 +104,11 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem* item) {
             /* Do nothing */
             break;
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_setup_var_list_change_callback()");
 }
 
 void wendigo_scene_setup_on_enter(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_on_enter()\n----------");
     WendigoApp* app = context;
     app->current_view = WendigoAppViewSetup;
 
@@ -142,9 +147,11 @@ void wendigo_scene_setup_on_enter(void* context) {
     variable_item_list_set_selected_item(
         app->var_item_list, scene_manager_get_scene_state(app->scene_manager, WendigoSceneSetup));
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_setup_on_enter()");
 }
 
 bool wendigo_scene_setup_on_event(void* context, SceneManagerEvent event) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_on_event()\n----------");
     WendigoApp* app = context;
     bool consumed = false;
 
@@ -165,10 +172,13 @@ bool wendigo_scene_setup_on_event(void* context, SceneManagerEvent event) {
             variable_item_list_get_selected_item_index(app->var_item_list);
         consumed = true;
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_setup_on_event()");
     return consumed;
 }
 
 void wendigo_scene_setup_on_exit(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_on_exit()\n----------");
     WendigoApp* app = context;
     variable_item_list_reset(app->var_item_list);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_setup_on_exit()");
 }

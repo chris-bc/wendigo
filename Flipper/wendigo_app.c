@@ -10,14 +10,18 @@
 extern void wendigo_console_output_handle_rx_data_cb(uint8_t* buf, size_t len, void* context);
 
 static bool wendigo_app_custom_event_callback(void* context, uint32_t event) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_custom_event_callback()\n----------");
     furi_assert(context);
     WendigoApp* app = context;
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app_custom_event_callback()");
     return scene_manager_handle_custom_event(app->scene_manager, event);
 }
 
 static bool wendigo_app_back_event_callback(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_back_event_callback()\n----------");
     furi_assert(context);
     WendigoApp* app = context;
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app_back_event_callback()");
     return scene_manager_handle_back_event(app->scene_manager);
 }
 
@@ -247,17 +251,22 @@ int32_t wendigo_app(void* p) {
 }
 
 void wendigo_uart_set_binary_cb(Wendigo_Uart *uart) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_uart_set_binary_cb()\n----------");
     wendigo_uart_set_handle_rx_data_cb(uart, wendigo_scan_handle_rx_data_cb);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_uart_set_binary_cb()");
 }
 
 void wendigo_uart_set_console_cb(Wendigo_Uart *uart) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_uart_set_console_cb()\n----------");
     wendigo_uart_set_handle_rx_data_cb(uart, wendigo_console_output_handle_rx_data_cb);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_uart_set_console_cb()");
 }
 
 /* Convert an array of bytesCount uint8_ts into a colon-separated string of bytes.
    strBytes must be initialised with sufficient space to hold the output string.
    For a MAC this is 18 bytes. In general it is 3 * byteCount */
 void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes) {
+    FURI_LOG_T(WENDIGO_TAG, "Start bytes_to_string()\n----------");
     uint8_t *p_in = bytes;
     const char *hex = "0123456789ABCDEF";
     char *p_out = strBytes;
@@ -267,4 +276,5 @@ void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes) {
         p_out[2] = ':';
     }
     p_out[-1] = 0;
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd bytes_to_string()");
 }

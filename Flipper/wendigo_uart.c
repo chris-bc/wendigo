@@ -16,10 +16,12 @@ typedef enum {
 } WorkerEvtFlags;
 
 void wendigo_uart_set_handle_rx_data_cb(
-    Wendigo_Uart* uart,
-    void (*handle_rx_data_cb)(uint8_t* buf, size_t len, void* context)) {
+        Wendigo_Uart* uart,
+        void (*handle_rx_data_cb)(uint8_t* buf, size_t len, void* context)) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_uart_set_handle_rx_data_cb()\n----------");
     furi_assert(uart);
     uart->handle_rx_data_cb = handle_rx_data_cb;
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_uart_set_handle_rx_data_cb()");
 }
 
 #define WORKER_ALL_RX_EVENTS (WorkerEvtStop | WorkerEvtRxDone)
