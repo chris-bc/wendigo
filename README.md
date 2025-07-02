@@ -181,8 +181,6 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 ## Roadmap
 Wendigo is currently a capable Bluetooth Classic and Low Energy scanner. Some further refinement is required to existing functionality, after which Wendigo will be extended to include WiFi scanning, Bluetooth service discovery, and additional features.
 
-* [ ] NULL pointer dereference after about 5min of scanning :'(
-  * [ ] Buffer management?
 * [ ] BUG: ESP32 returns an RSSI of -4 or 3854 for many devices. I think this is a particular packet type, resulting in an invalid initial value that is resolved by subsequent packets. Figure out why & fix.
   * [ ] If I'm right about it being characteristic of a particular packet type the "fix" might just be detecting invalid RSSI and replacing with 0 or -127 (that's the minimum, right?)
 * [ ] BUG: Around 1% of Wendigo packets for WiFi devices are corrupted, having the first 6 bytes of the packet's preamble where the device's MAC should be. I believe this is a concurrency problem related to how the buffer is managed in Flipper-Wendigo but it's a damn hard one to track down.
