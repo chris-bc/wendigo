@@ -173,7 +173,7 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
 }
 
 /** Update the current display to reflect a new Bluetooth discovery result for `dev`.
- * This function is called by the functions wendigo_add_bt_device() and wendigo_update_bt_device()
+ * This function is called by the functions wendigo_add_device() and wendigo_update_device()
  * in wendigo_scan.c. When this scene and scanning are active at the same time all devices
  * identified, whether newly-identified devices or subsequent packets describing a known device,
  * are passed as an argument to this function to allow the UI to be dynamically updated and to display
@@ -393,6 +393,7 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
             free(item_str);
         }
         /* Default to displaying RSSI in options menu */
+        // TODO: Consider using scanType as default option instead?
         if (current_devices[i] != NULL && current_devices[i]->view != NULL) {
             char tempStr[10];
             snprintf(tempStr, sizeof(tempStr), "%d dB", current_devices[i]->rssi);
@@ -428,7 +429,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void* context, uin
         /* If the device is now untagged and we're viewing tagged devices only, remove the device from view */
         if (((current_devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY) && !item->tagged) {
             /* Bugger - There's no method to remove an item from a variable_item_list */
-            item->view = NULL;
+            item->view = NULL; // TODO: Is this leaking memory? Can I free a VariableItem?
             wendigo_scene_device_list_redraw(app);
         }
     } else {
@@ -483,14 +484,19 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
             snprintf(tempStr, sizeof(tempStr), "Ch. %d", menu_item->radio.sta.channel);
             variable_item_set_current_value_text(item, tempStr);
         } else if (menu_item->scanType == SCAN_WIFI_AP && option_index == WendigoOptionAPAuthMode) {
-            snprintf(tempStr, sizeof(tempStr), "%s", authModeStrings[menu_item->radio.ap.authmode]);
+            // TODO: This isn't implemented, these changes are just to guard against stack overflow
+            if (menu_item->radio.ap.authMode < WIFI_AUTH_MAX) {
+                snprintf(tempStr, sizeof(tempStr), "%s", authModeStrings[menu_item->radio.ap.authmode]);
+            } else {
+                snprintf(tempStr, sizeof(tempStr), "");
+            }
             variable_item_set_current_value_text(item, tempStr);
         } else if (menu_item->scanType == SCAN_WIFI_STA && option_index == WendigoOptionSTAAP) {
             /* Use SSID if available, otherwise MAC */
             if (menu_item->radio.sta.ap == NULL || ((wendigo_device *)menu_item->radio.sta.ap)->radio.ap.ssid[0] == '\0') {
                 if (menu_item->radio.sta.apMac[0] == '\0') {
                     /* No MAC - Empty string */
-                    tempStr[0] = '\0';
+                    tempStr[0] = '\0'; // TODO: I can delete this leg of the branch, can't I?
                 } else {
                     /* We have a MAC */
                     bytes_to_string(menu_item->radio.sta.apMac, MAC_BYTES, tempStr);
