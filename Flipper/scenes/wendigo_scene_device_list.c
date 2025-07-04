@@ -485,10 +485,10 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem* ite
             variable_item_set_current_value_text(item, tempStr);
         } else if (menu_item->scanType == SCAN_WIFI_AP && option_index == WendigoOptionAPAuthMode) {
             // TODO: This isn't implemented, these changes are just to guard against stack overflow
-            if (menu_item->radio.ap.authMode < WIFI_AUTH_MAX) {
+            if (menu_item->radio.ap.authmode < WIFI_AUTH_MAX) {
                 snprintf(tempStr, sizeof(tempStr), "%s", authModeStrings[menu_item->radio.ap.authmode]);
             } else {
-                snprintf(tempStr, sizeof(tempStr), "");
+                tempStr[0] = '\0';
             }
             variable_item_set_current_value_text(item, tempStr);
         } else if (menu_item->scanType == SCAN_WIFI_STA && option_index == WendigoOptionSTAAP) {
