@@ -80,6 +80,8 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
             if ((current_devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY) {
                 current_devices_mask -= DEVICE_SELECTED_ONLY;
             }
+            // TODO: Temporarily disable scanning when opening device list
+            //wendigo_set_scanning_active(app, false);
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
             FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
             return;

@@ -207,7 +207,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
         }
         optionsCount = WendigoOptionsBTCount;
         if (dev->view == NULL) {
-            optionIndex = WendigoOptionBTRSSI;
+            optionIndex = WendigoOptionBTScanType;
         } else {
             optionIndex = variable_item_get_current_value_index(dev->view);
         }
@@ -217,6 +217,13 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
                 break;
             case WendigoOptionBTLastSeen:
                 elapsedTime(dev, optionValue, sizeof(optionValue));
+                break;
+            case WendigoOptionBTScanType:
+                snprintf(optionValue, sizeof(optionValue), "%s",
+                    (dev->scanType == SCAN_HCI) ? "BT Classic" :
+                    (dev->scanType == SCAN_BLE) ? "BLE" :
+                    (dev->scanType == SCAN_WIFI_AP) ? "WiFi AP" :
+                    (dev->scanType == SCAN_WIFI_STA) ? "WiFi STA" : "Unknown");
                 break;
             default:
                 /* I'm pretty sure I don't need to worry about static variables */
@@ -235,7 +242,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
         }
         optionsCount = WendigoOptionsAPCount;
         if (dev->view == NULL) {
-            optionIndex = WendigoOptionAPRSSI;
+            optionIndex = WendigoOptionAPScanType;
         } else {
             optionIndex = variable_item_get_current_value_index(dev->view);
         }
@@ -252,6 +259,13 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
             case WendigoOptionAPAuthMode:
                 snprintf(optionValue, sizeof(optionValue), "%s", authModeStrings[dev->radio.ap.authmode]);
                 break;
+            case WendigoOptionAPScanType:
+                snprintf(optionValue, sizeof(optionValue), "%s",
+                    (dev->scanType == SCAN_HCI) ? "BT Classic" :
+                    (dev->scanType == SCAN_BLE) ? "BLE" :
+                    (dev->scanType == SCAN_WIFI_AP) ? "WiFi AP" :
+                    (dev->scanType == SCAN_WIFI_STA) ? "WiFi STA" : "Unknown");
+                break;
             default:
                 // Nothing
                 break;
@@ -264,7 +278,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
         }
         optionsCount = WendigoOptionsSTACount;
         if (dev->view == NULL) {
-            optionIndex = WendigoOptionSTARSSI;
+            optionIndex = WendigoOptionSTAScanType;
         } else {
             optionIndex = variable_item_get_current_value_index(dev->view);
         }
@@ -290,6 +304,13 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
                         snprintf(optionValue, sizeof(optionValue), "%s", ((wendigo_device *)dev->radio.sta.ap)->radio.ap.ssid);
                     }
                 }
+                break;
+            case WendigoOptionSTAScanType:
+                snprintf(optionValue, sizeof(optionValue), "%s",
+                    (dev->scanType == SCAN_HCI) ? "BT Classic" :
+                    (dev->scanType == SCAN_BLE) ? "BLE" :
+                    (dev->scanType == SCAN_WIFI_AP) ? "WiFi AP" :
+                    (dev->scanType == SCAN_WIFI_STA) ? "WiFi STA" : "Unknown");
                 break;
             default:
                 /* Nothing to do, I think */
@@ -355,7 +376,7 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
                 free_item_str = true;
             }
             options_count = WendigoOptionsBTCount;
-            options_index = WendigoOptionBTRSSI;
+            options_index = WendigoOptionBTScanType;
         /* Label with SSID if it's an AP and we have an SSID */
         } else if (current_devices[i] != NULL && current_devices[i]->scanType == SCAN_WIFI_AP) {
             if (current_devices[i]->radio.ap.ssid[0] != '\0') {
@@ -369,7 +390,7 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
                 free_item_str = true;
             }
             options_count = WendigoOptionsAPCount;
-            options_index = WendigoOptionAPRSSI;
+            options_index = WendigoOptionAPScanType;
         /* Otherwise use the MAC/BDA */
         } else if (current_devices[i] != NULL) {
             item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
@@ -378,7 +399,7 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
             }
             free_item_str = true;
             options_count = WendigoOptionsSTACount;
-            options_index = WendigoOptionSTARSSI;
+            options_index = WendigoOptionSTAScanType;
         }
         if (current_devices[i] != NULL && item_str != NULL && options_count > 0) {
             current_devices[i]->view = variable_item_list_add(
@@ -392,13 +413,14 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
         if (free_item_str) {
             free(item_str);
         }
-        /* Default to displaying RSSI in options menu */
-        // TODO: Consider using scanType as default option instead?
+        /* Default to displaying scanType in options menu */
         if (current_devices[i] != NULL && current_devices[i]->view != NULL) {
-            char tempStr[10];
-            snprintf(tempStr, sizeof(tempStr), "%d dB", current_devices[i]->rssi);
             variable_item_set_current_value_index(current_devices[i]->view, options_index);
-            variable_item_set_current_value_text(current_devices[i]->view, tempStr);
+            variable_item_set_current_value_text(current_devices[i]->view,
+                (current_devices[i]->scanType == SCAN_HCI) ? "BT Classic" :
+                (current_devices[i]->scanType == SCAN_BLE) ? "BLE" :
+                (current_devices[i]->scanType == SCAN_WIFI_AP) ? "WiFi AP" :
+                (current_devices[i]->scanType == SCAN_WIFI_STA) ? "WiFi STA" : "Unknown");
         }
     }
     variable_item_list_set_selected_item(app->devices_var_item_list, 0);

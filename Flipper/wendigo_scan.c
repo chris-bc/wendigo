@@ -219,7 +219,8 @@ uint16_t custom_device_index(wendigo_device* dev, wendigo_device** array, uint16
         FURI_LOG_T(WENDIGO_TAG, "End custom_device_index() ABNORMAL");
         return array_count;
     }
-    for(result = 0; result < array_count && memcmp(dev->mac, array[result]->mac, MAC_BYTES);
+    for(result = 0; result < array_count &&
+                    (array[result] == NULL || memcmp(dev->mac, array[result]->mac, MAC_BYTES));
         ++result) {
     }
     FURI_LOG_T(WENDIGO_TAG, "End custom_device_index()");
@@ -640,7 +641,7 @@ bool wendigo_add_device(WendigoApp* app, wendigo_device* dev) {
     /* If the device list scene is currently displayed, add the device to the UI
    */
     if(app->current_view == WendigoAppViewDeviceList) {
-        wendigo_scene_device_list_update(app, new_device);
+        // TODO debugging wendigo_scene_device_list_update(app, new_device);
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_add_device()");
     return true;
@@ -718,7 +719,7 @@ bool wendigo_update_device(WendigoApp* app, wendigo_device* dev) {
     }
     /* Update the device list if it's currently displayed */
     if(app->current_view == WendigoAppViewDeviceList) {
-        wendigo_scene_device_list_update(app, target);
+        // TODO debugging wendigo_scene_device_list_update(app, target);
     } else if(app->current_view == WendigoAppViewDeviceDetail) { // && selectedDevice ==
         // bt_devices[idx]
         // TODO: Update existing view
@@ -1035,7 +1036,7 @@ uint16_t parseBufferWifiAp(WendigoApp* app) {
             "AP packet too short, expected %d actual %d. Skipping.",
             expectedLen,
             packetLen);
-        wendigo_display_popup(app, "AP too short", shortMsg);
+        // Popup disabled while debugging device list        wendigo_display_popup(app, "AP too short", shortMsg);
         wendigo_log_with_packet(MSG_ERROR, shortMsg, buffer, packetLen);
         FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp()");
         return packetLen;
@@ -1043,6 +1044,8 @@ uint16_t parseBufferWifiAp(WendigoApp* app) {
     /* Retrieve stations_count from the packet for further validation */
     uint8_t sta_count;
     memcpy(&sta_count, buffer + WENDIGO_OFFSET_AP_STA_COUNT, sizeof(uint8_t));
+// TODO
+//sta_count = 0;
     /* Now we have stations_count we know exactly how big the packet should be */
     expectedLen = WENDIGO_OFFSET_AP_STA + (MAC_BYTES * sta_count) + PREAMBLE_LEN;
     if(packetLen < expectedLen) {
@@ -1058,7 +1061,7 @@ uint16_t parseBufferWifiAp(WendigoApp* app) {
             expectedLen,
             packetLen);
         wendigo_log_with_packet(MSG_ERROR, shortMsg, buffer, packetLen);
-        wendigo_display_popup(app, "AP too short for STAtions", shortMsg);
+        // Popup disabled while debugging device list        wendigo_display_popup(app, "AP too short for STAtions", shortMsg);
         FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp()");
         return packetLen;
     }
@@ -1140,7 +1143,7 @@ uint16_t parseBufferWifiAp(WendigoApp* app) {
         bytes_to_string(buffer + buffIndex, PREAMBLE_LEN, bytesFound);
         snprintf(popupMsg, sizeof(popupMsg), "Expected end of packet, found %s", bytesFound);
         popupMsg[3 * PREAMBLE_LEN + 29] = '\0';
-        wendigo_display_popup(app, "AP Packet Error", popupMsg);
+        // Popup disabled while debugging device list        wendigo_display_popup(app, "AP Packet Error", popupMsg);
         wendigo_log_with_packet(MSG_ERROR, popupMsg, buffer, packetLen);
     } else {
         if(dev->radio.ap.stations_count > 0) {
@@ -1177,7 +1180,7 @@ uint16_t parseBufferWifiSta(WendigoApp* app) {
             packetLen);
         wendigo_log_with_packet(MSG_ERROR, shortMsg, buffer, packetLen);
         /* Also display a popup */
-        wendigo_display_popup(app, "STA packet too short", shortMsg);
+        // Popup disabled while debugging device list        wendigo_display_popup(app, "STA packet too short", shortMsg);
         FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiSta()");
         return packetLen;
     }
@@ -1234,8 +1237,8 @@ uint16_t parseBufferWifiSta(WendigoApp* app) {
     /* Do I want to do anything with ap_ssid? */
     /* We should find the packet terminator after the SSID */
     if(memcmp(PACKET_TERM, buffer + WENDIGO_OFFSET_STA_TERM, PREAMBLE_LEN)) {
-        wendigo_display_popup(
-            app, "STA Packet", "STA Packet terminator not found where expected.");
+        // Popup disabled while debugging device list        wendigo_display_popup(
+        //            app, "STA Packet", "STA Packet terminator not found where expected.");
         /* Log the packet so the cause can hopefully be found */
         wendigo_log_with_packet(
             MSG_ERROR,
@@ -1260,6 +1263,7 @@ uint16_t parseBufferWifiSta(WendigoApp* app) {
 /* Returns the number of bytes consumed from the buffer - DOES NOT
    remove consumed bytes, this must be handled by the calling function. */
 uint16_t parseBufferVersion(WendigoApp* app) {
+    UNUSED(app);
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferVersion()");
     /* Find the end-of-packet sequence to determine version string length */
     uint16_t endSeq = end_of_packet(buffer, bufferLen);
@@ -1289,6 +1293,7 @@ uint16_t parseBufferVersion(WendigoApp* app) {
 }
 
 uint16_t parseBufferChannels(WendigoApp* app) {
+    UNUSED(app);
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferChannels()");
     uint16_t packetLen = end_of_packet(buffer, bufferLen) + 1;
     uint8_t channels_count;
@@ -1304,7 +1309,7 @@ uint16_t parseBufferChannels(WendigoApp* app) {
         }
     }
     if(memcmp(PACKET_TERM, buffer + offset, PREAMBLE_LEN)) {
-        wendigo_display_popup(app, "Channel Packet", "Channel packet is unexpected length");
+        //        wendigo_display_popup(app, "Channel Packet", "Channel packet is unexpected length");
     }
     // TODO: Do something with channels
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferChannels()");
