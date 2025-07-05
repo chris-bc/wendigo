@@ -28,19 +28,19 @@ uint16_t selected_devices_capacity = 0;
 /* How much will we increase buffer[] by when additional space is needed? */
 #define BUFFER_INC_CAPACITY_BY 128
 
-/** Search for the start-of-packet marker in the specified byte array
+/** Search for a start-of-packet marker in the specified byte array
  *  This function is used during parsing to skip past any extraneous bytes
  *  that are sent prior to the start-of-packet sequence.
  *  Returns `size` if not found, otherwise returns the index of the first byte
  * of the sequence.
  */
-uint16_t start_of_packet(uint8_t* bytes, uint16_t size) {
+uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
     FURI_LOG_T(WENDIGO_TAG, "Start start_of_packet()");
     uint16_t result = 0;
-    if(bytes == NULL) {
+    if (bytes == NULL) {
         return size;
     }
-    for(; result + PREAMBLE_LEN <= size && memcmp(bytes + result, PREAMBLE_BT_BLE, PREAMBLE_LEN) &&
+    for (; result + PREAMBLE_LEN <= size && memcmp(bytes + result, PREAMBLE_BT_BLE, PREAMBLE_LEN) &&
           memcmp(bytes + result, PREAMBLE_WIFI_AP, PREAMBLE_LEN) &&
           memcmp(bytes + result, PREAMBLE_WIFI_STA, PREAMBLE_LEN) &&
           memcmp(bytes + result, PREAMBLE_STATUS, PREAMBLE_LEN) &&
@@ -48,13 +48,17 @@ uint16_t start_of_packet(uint8_t* bytes, uint16_t size) {
           memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN);
         ++result) {
     }
+    /* If not found, set result to size */
+    if (result + PREAMBLE_LEN > size) {
+        result = size;
+    }
     FURI_LOG_T(WENDIGO_TAG, "End start_of_packet()");
     return result;
 }
 
 /** Search for the end-of-packet marker in the specified byte array
- *  A packet is terminated by a sequence of 4 0xAA and 4 0xFF,
- *  returns the index of the last byte in this sequence, or the
+ *  A packet is terminated by a sequence of 4*0xAA and 4*0xFF.
+ *  Returns the index of the last byte in this sequence, or the
  *  specified `size` if not found.
  */
 uint16_t end_of_packet(uint8_t* theBytes, uint16_t size) {
@@ -63,9 +67,7 @@ uint16_t end_of_packet(uint8_t* theBytes, uint16_t size) {
     if(theBytes == NULL) {
         return size;
     }
-    for(; result < size && memcmp(theBytes + result - PREAMBLE_LEN + 1, PACKET_TERM, PREAMBLE_LEN);
-        ++result) {
-    }
+    for(; result < size && memcmp(theBytes + result - PREAMBLE_LEN + 1, PACKET_TERM, PREAMBLE_LEN); ++result) { }
     FURI_LOG_T(WENDIGO_TAG, "End end_of_packet()");
     return result;
 }
@@ -1437,6 +1439,17 @@ void parseBuffer(WendigoApp* app) {
     FURI_LOG_T(WENDIGO_TAG, "End parseBuffer()");
 }
 
+void parsePacket(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
+    FURI_LOG_T(WENDIGO_TAG, "Begin parsePacket(len: %d)", packetLen);
+    /* Update buffer last received time */
+    app->last_packet = furi_hal_rtc_get_timestamp();
+
+    // Development: Dump packet for inspection
+    wendigo_log_with_packet(MSG_DEBUG, "parsePacket() received packet", packet, packetLen);
+
+    FURI_LOG_T(WENDIGO_TAG, "End parsePacket()");
+}
+
 /* Callback invoked when UART data is received. When an end-of-packet sequence
    is received the buffer is sent to the appropriate handler for display. At the
    time of writing a similar callback exists in wendigo_scene_console_output,
@@ -1454,20 +1467,20 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
 
     /* Extend the buffer if necessary */
     if(bufferLen + len >= bufferCap) {
-        /* Extend it by the larger of len and BUFFER_INC_CAPACITY_BY bytes to avoid
-     * constant realloc()s */
+        /* Extend it by the larger of len and BUFFER_INC_CAPACITY_BY bytes to avoid constant realloc()s */
         uint8_t increase_by = (len > BUFFER_INC_CAPACITY_BY) ? len : BUFFER_INC_CAPACITY_BY;
         uint16_t newCapacity = bufferCap + increase_by;
         /* Will this exceed the maximum capacity? */
         if(newCapacity > BUFFER_MAX_SIZE) {
+            // TODO: Come up with an alternate way to do this
+            return;
             /* Remove increase_by bytes from beginning of buffer[] instead */
             uint8_t* new_start = buffer + increase_by;
             memcpy(buffer, new_start, bufferLen - increase_by);
             memset(buffer + bufferLen - increase_by, '\0', increase_by);
             bufferLen -= increase_by;
         } else {
-            uint8_t* newBuffer = realloc(
-                buffer, sizeof(uint8_t*) * newCapacity); // Behaves like malloc() when buffer==NULL
+            uint8_t* newBuffer = realloc(buffer, sizeof(uint8_t*) * newCapacity); // Behaves like malloc() when buffer==NULL
             if(newBuffer == NULL) {
                 /* Out of memory */
                 // TODO: Panic
@@ -1481,11 +1494,39 @@ void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
     bufferLen += len;
 
     /* Parse any complete packets we have received */
-    uint16_t endFound = end_of_packet(buffer, bufferLen);
-    // TODO: Putting this in a loop results in an infinite loop and I can't figure
-    // out why. Fix this (YAGNI).
-    if(endFound < bufferLen) {
-        parseBuffer(app);
+    uint8_t *packet;
+    uint16_t packetLen;
+    uint16_t startIdx = start_of_packet(buffer, bufferLen);
+    uint16_t endIdx = end_of_packet(buffer, bufferLen);
+    while (startIdx < endIdx && endIdx < bufferLen) {
+        /* We have a complete packet - extract it for parsing */
+        packetLen = endIdx - startIdx + 1;
+        packet = buffer + startIdx;
+
+        parsePacket(app, packet, packetLen);
+        
+        /* Remove this packet from the buffer and look for another */
+        memset(buffer + startIdx, 0, packetLen);
+        /* If startIdx > 0 all non-NULL bytes before startIdx are spurious - remove them */
+        if (startIdx > 0) {
+            memset(buffer, 0, startIdx);
+        }
+        startIdx = start_of_packet(buffer, bufferLen);
+        endIdx = end_of_packet(buffer, bufferLen);
+    }
+    /* Have we been able to empty the buffer? */
+    if (startIdx == bufferLen && endIdx == bufferLen) {
+        /* Not having a start or end packet sequence is a start - Check for all NULL bytes in buffer */
+        bool bytesFound = false;
+        for (uint16_t i = 0; i < bufferLen && !bytesFound; ++i) {
+            if (buffer[i] != 0) {
+                bytesFound = true;
+            }
+        }
+        if (!bytesFound) {
+            FURI_LOG_D("wendigo_scan_handle_rx_data_cb()", "Buffer is empty, resetting bufferLen");
+            bufferLen = 0;
+        }
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scan_handle_rx_data_cb()");
 }

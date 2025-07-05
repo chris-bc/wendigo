@@ -91,6 +91,7 @@ ln -s ~/wendigo/Flipper ~/Momentum-Firmware/applications_user/wendigo
 
 ```sh
 cd ~/Momentum-Firmware
+source `./fbt -s env`
 ./fbt launch APPSRC=wendigo
 ```
 
@@ -100,6 +101,7 @@ cd ~/Momentum-Firmware
 
 ```sh
 cd ~/Momentum-Firmware
+source `./fbt -s env`
 ./fbt firmware_all flash_usb_full
 ```
 
