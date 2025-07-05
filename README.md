@@ -66,7 +66,7 @@ My hope is that Wendigo will be a quick and easy way to get information about a 
 
 At a high level, these are Wendigo's features - Both implemented and planned:
 
-#### NOTE: Version 0.2.0 is an unstable build. Implementation of WiFi features revealed problems with how the Flipper app was managing the UART buffer and parsing Wendigo packets. I wanted to release basic WiFi features before re-writing this part of the application, so this version attempts to bandaid the issue. Out of memory errors can be avoided by disabling either WiFi or both Bluetooth radios in the setup menu, and scanning either WiFi or Bluetooth. Dynamic updating of the device list has been disabled, so the device list must be closed and reopened to view newly-discovered devices.
+#### NOTE: Version 0.2.0 drops a large number of Wendigo packets when scanning with all radios. Implementation of WiFi features revealed problems with how the Flipper app was managing the UART buffer and parsing Wendigo packets. This release provides WiFi scanning/sniffing, but due to this issue is an interim release before re-writing the Flipper UART receiver and packet parser. Scanning, if active, is also disabled when displaying the device list to prevent these issues from causing the device to crash. Version 0.3.0 will provide completely-rewritten UART buffer management and packet parsing.
 
 * [X] Bluetooth Classic discovery
 * [X] Bluetooth Low Energy discovery
@@ -88,7 +88,7 @@ At a high level, these are Wendigo's features - Both implemented and planned:
   * [X] Time since device was last seen
   * [X] Tag/Untag to select devices of interest
   * [X] List dynamically updates as new devices, or additional information about existing devices, are found
-* [ ] Select which device types are displayed (BT Classic, BLE, WiFi Access Points, WiFi Stations, All Bluetooth, All WiFi, All Devices)
+* [X] Select which device types are displayed (BT Classic, BLE, WiFi Access Points, WiFi Stations, All Bluetooth, All WiFi, All Devices)
 * [ ] Display detailed device information
 * [ ] Bluetooth service discovery
 * [ ] Bluetooth attribute read/write
@@ -278,7 +278,6 @@ This section is a running list of current priorities.
 * [ ] BUG: Around 1% of Wendigo packets for WiFi devices are corrupted, having the first 6 bytes of the packet's preamble where the device's MAC should be, or having the full preamble scattered throughout the packet. I believe this is a concurrency problem related to how the buffer is managed in Flipper-Wendigo but it's a damn hard one to track down.
   * [ ] The issue has been temporarily resolved by detecting and ignoring corrupted packets, but the buffer management and packetisation will need to be significantly rewritten.
 * [ ] Add authMode (from probe response) to AP packet
-* [ ] Add options when starting wendigo_scene_device_list to view specific device types.
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [ ] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped - Use a single menu option that changes its text, similar to Tag/Untag.
 * [ ] BUG: Implementation of CONFIG_DELAY_AFTER_DEVICE_DISPLAYED is flawed - lastSeen is updated when device isn't displayed, if a device is always seen within that period it will never be displayed again.
