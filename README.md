@@ -330,11 +330,11 @@ This section is a running list of current priorities.
       * [X] AP (SSID if present, otherwise MAC)
       * [X] Channel
       * [X] LastSeen
-    * [X] For AP
+    * [ ] For AP
       * [X] RSSI
       * [X] Tag/Untag
       * [X] ScanType
-      * [X] AuthMode
+      * [ ] AuthMode
       * [X] Channel
       * [X] LastSeen
 * [ ] Bluetooth Services
