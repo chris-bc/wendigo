@@ -168,10 +168,6 @@ void wendigo_scene_start_on_enter(void* context) {
     WendigoApp* app = context;
     app->current_view = WendigoAppViewVarItemList;
 
-    for(int i = 0; i < START_MENU_ITEMS; ++i) {
-        app->selected_option_index[i] = 0;
-    }
-
     variable_item_list_set_enter_callback(app->var_item_list,
         wendigo_scene_start_var_list_enter_callback, app);
 
