@@ -6,8 +6,10 @@
 static const WendigoItem items[START_MENU_ITEMS] = {
     {"Setup", {""}, 1, OPEN_SETUP, BOTH_MODES},
     {"Scan", {"Start", "Stop", "Status"}, 3, OPEN_SCAN, TEXT_MODE},
-    {"Devices", {""}, 1, LIST_DEVICES, BOTH_MODES},
-    {"Selected Devices", {""}, 1, LIST_SELECTED_DEVICES, BOTH_MODES},
+    {"Devices", {"All", "Bluetooth", "WiFi", "BT Classic",
+        "BLE", "WiFi AP", "WiFi STA"}, 7, LIST_DEVICES, BOTH_MODES},
+    {"Selected Devices", {"All", "Bluetooth", "WiFi", "BT Classic",
+        "BLE", "WiFi AP", "WiFi STA"}, 7, LIST_SELECTED_DEVICES, BOTH_MODES},
     {"Track Selected", {""}, 1, TRACK_DEVICES, TEXT_MODE},
     {"Help", {"About", "Version"}, 2, OPEN_HELP, TEXT_MODE},
 };
@@ -20,9 +22,37 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 #define ABOUT_IDX       (0)
 #define ESP_VER_IDX     (1)
 #define LOCKED_MSG      "Stop\nScanning\nFirst!"
+#define DEVICE_ALL_IDX  (0)
+#define DEVICE_BT_IDX   (1)
+#define DEVICE_WIFI_IDX (2)
+#define DEVICE_HCI_IDX  (3)
+#define DEVICE_BLE_IDX  (4)
+#define DEVICE_AP_IDX   (5)
+#define DEVICE_STA_IDX  (6)
 
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
+
+uint8_t wendigo_device_mask(uint8_t selected_option) {
+    switch (selected_option) {
+        case DEVICE_ALL_IDX:
+            return DEVICE_ALL;
+        case DEVICE_BT_IDX:
+            return DEVICE_BT_CLASSIC | DEVICE_BT_LE;
+        case DEVICE_WIFI_IDX:
+            return DEVICE_WIFI_AP | DEVICE_WIFI_STA;
+        case DEVICE_HCI_IDX:
+            return DEVICE_BT_CLASSIC;
+        case DEVICE_BLE_IDX:
+            return DEVICE_BT_LE;
+        case DEVICE_AP_IDX:
+            return DEVICE_WIFI_AP;
+        case DEVICE_STA_IDX:
+            return DEVICE_WIFI_STA;
+        default:
+            return 0;
+    }
+}
 
 /* Callback invoked when a menu item is selected */
 static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t index) {
@@ -77,16 +107,13 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
             }
             break;
         case LIST_DEVICES:
-            if ((current_devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY) {
-                current_devices_mask -= DEVICE_SELECTED_ONLY;
-            }
-            // TODO: Temporarily disable scanning when opening device list
-            //wendigo_set_scanning_active(app, false);
+            /* Find selected option to determine device mask */
+            wendigo_set_current_devices(wendigo_device_mask(selected_option_index));
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
             FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
             return;
         case LIST_SELECTED_DEVICES:
-            current_devices_mask |= DEVICE_SELECTED_ONLY;
+            wendigo_set_current_devices(wendigo_device_mask(selected_option_index) | DEVICE_SELECTED_ONLY);
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
             FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
             return;

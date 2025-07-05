@@ -641,7 +641,7 @@ bool wendigo_add_device(WendigoApp* app, wendigo_device* dev) {
     /* If the device list scene is currently displayed, add the device to the UI
    */
     if(app->current_view == WendigoAppViewDeviceList) {
-        // TODO debugging wendigo_scene_device_list_update(app, new_device);
+        wendigo_scene_device_list_update(app, new_device);
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_add_device()");
     return true;
@@ -719,7 +719,7 @@ bool wendigo_update_device(WendigoApp* app, wendigo_device* dev) {
     }
     /* Update the device list if it's currently displayed */
     if(app->current_view == WendigoAppViewDeviceList) {
-        // TODO debugging wendigo_scene_device_list_update(app, target);
+        wendigo_scene_device_list_update(app, target);
     } else if(app->current_view == WendigoAppViewDeviceDetail) { // && selectedDevice ==
         // bt_devices[idx]
         // TODO: Update existing view

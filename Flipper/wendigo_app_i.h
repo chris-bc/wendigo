@@ -41,7 +41,7 @@
 
 #define CH_MASK_ALL (16384)
 
-#define MAX_OPTIONS (3)
+#define MAX_OPTIONS (7)
 
 #define WENDIGO_TEXT_BOX_STORE_SIZE   (4096)
 #define WENDIGO_TEXT_INPUT_STORE_SIZE (512)
