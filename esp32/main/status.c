@@ -73,22 +73,16 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
     wifiSTACount = 0;
     wifiAPCount = 0;
     for (uint16_t i = 0; i < devices_count; ++i) {
-        switch (devices[i].scanType) {
-            case SCAN_HCI:
-                ++classicDeviceCount;
-                break;
-            case SCAN_BLE:
-                ++leDeviceCount;
-                break;
-            case SCAN_WIFI_AP:
-                ++wifiAPCount;
-                break;
-            case SCAN_WIFI_STA:
-                ++wifiSTACount;
-                break;
-            default:
-                /* No action required */
-                break;
+        if (devices[i].scanType == SCAN_HCI) {
+            ++classicDeviceCount;
+        } else if (devices[i].scanType == SCAN_BLE) {
+            ++leDeviceCount;
+        } else if (devices[i].scanType == SCAN_WIFI_AP) {
+            ++wifiAPCount;
+        } else if (devices[i].scanType == SCAN_WIFI_STA) {
+            ++wifiSTACount;
+        } else {
+            /* No action required */
         }
     }
 
@@ -177,8 +171,8 @@ void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
                                 bool btBLESupported, bool wifiSupported) {
     initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
 
-    repeat_bytes(0xEE, 4);
-    repeat_bytes(0xBB, 4);
+    wendigo_get_tx_lock(true); /* Wait for the talking stick */
+    send_bytes(PREAMBLE_STATUS, PREAMBLE_LEN);
 
     uint8_t attr_count = ATTR_COUNT_MAX;
     send_bytes(&attr_count, 1);
@@ -193,6 +187,6 @@ void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
         send_bytes(&len, 1);
         send_bytes((uint8_t *)(attribute_values[i]), len);
     }
-    repeat_bytes(0xAA, 4);
-    repeat_bytes(0xFF, 4);
+    send_end_of_packet();
+    wendigo_release_tx_lock();
 }

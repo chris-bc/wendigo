@@ -194,8 +194,11 @@ void wendigo_set_logging(esp_log_level_t level) {
    host throughout. If a command requires `radio` to be enabled or disabled the function pointer `enableFunction()`
    or `disableFunction` is executed. These functions must take no arguments and return esp_err_t (or int).
 */
-esp_err_t enableDisableRadios(int argc, char **argv, ScanType radio, esp_err_t (*enableFunction)(), esp_err_t (*disableFunction)()) {
+esp_err_t enableDisableRadios(int argc, char **argv, uint8_t radio, esp_err_t (*enableFunction)(), esp_err_t (*disableFunction)()) {
     esp_err_t result = ESP_OK;
+    if (radio >= SCAN_COUNT) {
+        return ESP_ERR_INVALID_ARG;
+    }
     ActionType action = parseCommand(argc, argv);
     if (action == ACTION_INVALID) {
         invalid_command(argv[0], argv[1], syntaxTip[radio]);
@@ -260,6 +263,33 @@ esp_err_t cmd_wifi(int argc, char **argv) {
     return ESP_OK;
 }
 
+esp_err_t cmd_channel(int argc, char **argv) {
+    if (argc == 1) {
+        return wendigo_get_channels();
+    } else {
+        /* Convert argv[] to a uint8_t[] (excluding argv[0]) */
+        uint8_t *channel_list = malloc(argc - 1);
+        uint8_t channel_count = 0;
+        uint8_t this_channel;
+        if (channel_list == NULL) {
+            return ESP_ERR_NO_MEM;
+        }
+        for (uint8_t i = 1; i < argc; ++i) {
+            // TODO: Is this cast always safe?
+            this_channel = (uint8_t)strtol(argv[i], NULL, 10);
+            if (wendigo_is_valid_channel(this_channel)) {
+                channel_list[channel_count++] = this_channel;
+            }
+        }
+        esp_err_t result = wendigo_set_channels(channel_list, channel_count);
+        free(channel_list);
+        if (result == ESP_ERR_NO_MEM) {
+            outOfMemory();
+        }
+        return result;
+    }
+}
+
 /* The `status` command is intended to provide an overall picture of ESP32-Wendigo's current state:
    * Support for each radio
    * Scanning status for each radio
@@ -302,9 +332,10 @@ esp_err_t cmd_version(int argc, char **argv) {
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         ESP_LOGI(TAG, "%s", msg);
     } else {
+        wendigo_get_tx_lock(true); /* Wait for the talking stick */
         send_bytes((uint8_t *)msg, strlen(msg) + 1);
         send_end_of_packet();
-        fflush(stdout);
+        wendigo_release_tx_lock();
     }
     send_response(argv[0], NULL, MSG_OK);
     return ESP_OK;
@@ -508,6 +539,7 @@ void app_main(void)
     register_nvs();
 
     register_wendigo_commands();
+    wendigo_release_tx_lock(); // Ensure the semaphore is cleared on startup
 
     #if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
         esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();

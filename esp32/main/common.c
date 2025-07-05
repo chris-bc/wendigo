@@ -1,5 +1,280 @@
 #include "common.h"
 
+/* Storage to maintain a cache of recently-displayed devices */
+uint16_t devices_count = 0;
+uint16_t devices_capacity = 0;
+wendigo_device *devices;
+
+static bool uart_tx_lock = false;
+/** Obtain exclusive rights to transmit UART data.
+ * When the version and status commands were implemented we began seeing interleaved packets,
+ * as Bluetooth packets were sent at the same time as version/status packets. With the
+ * addition of WiFi packets this has become more problematic, particularly because WiFi
+ * packets reference other WiFi devices (Stations reference their AP and APs reference their
+ * stations).
+ * This is an imperfect semaphore implementation - Before transmitting a function should
+ * obtain a transmit lock to ensure it will be the only function transmitting.
+ * The `wait` argument specifies whether the caller will wait until the lock can be obtained
+ * or wants an immediate response.
+ * Returns true if the lock was successfully obtained, false otherwise.
+ */
+bool wendigo_get_tx_lock(bool wait) {
+    if (wait) {
+        while (uart_tx_lock) {
+            vTaskDelay(1 / portTICK_PERIOD_MS); // Delay 1ms
+        }
+    }
+    if (!uart_tx_lock) {
+        uart_tx_lock = true;
+        return true;
+    }
+    if (wait) {
+        /* We nearly got a lock, but someone else beat us to it */
+        return wendigo_get_tx_lock(true);
+    }
+    return false;
+}
+
+/** Release the transmission semaphore */
+void wendigo_release_tx_lock() {
+    uart_tx_lock = false;
+}
+
+/** Locates a device with the MAC of the specified device in devices[] cache.
+ * Returns a pointer to the object in devices[] if found, NULL otherwise.
+ */
+wendigo_device *retrieve_device(wendigo_device *dev) {
+    wendigo_device *result = NULL;
+    uint16_t idx = 0;
+    for (; idx < devices_count && memcmp(dev->mac, devices[idx].mac, MAC_BYTES); ++idx) {}
+    if (idx < devices_count) {
+        result = &(devices[idx]);
+    }
+    return result;
+}
+
+/** Finds the wendigo_device associated with the specified MAC
+ *  Returns NULL if not found.
+ */
+wendigo_device *retrieve_by_mac(esp_bd_addr_t mac) {
+    wendigo_device dev;
+    memcpy(dev.mac, mac, ESP_BD_ADDR_LEN);
+    return retrieve_device(&dev);
+}
+
+/** Check whether the provided wendigo_device is present in the specified array of
+ * wendigo_device* objects. Matching is based on the device's MAC (i.e. dev->mac).
+ * Returns the index of the matching device, or array_len if not found.
+ */
+uint16_t wendigo_index_of(wendigo_device *dev, wendigo_device **array, uint16_t array_len) {
+    /* Don't proceed if invalid arguments were provided */
+    if (dev == NULL || array == NULL || array_len == 0) {
+        return array_len;
+    }
+    uint16_t idx = 0;
+    for (; idx < array_len && memcmp(array[idx]->mac, dev->mac, MAC_BYTES); ++idx) { }
+    return idx;
+}
+
+/** Check whether a wendigo_device with the specified MAC is present in the specified array
+ * of wendigo_device* objects.
+ * Returns the index of the matching device, or array_len if not found.
+ */
+uint16_t wendigo_index_of_mac(uint8_t *mac, wendigo_device **array, uint16_t array_len) {
+    /* Don't proceed if invalid arguments were provided */
+    if (mac == NULL || array == NULL || array_len == 0) {
+        return array_len;
+    }
+    wendigo_device dev;
+    memcpy(dev.mac, mac, MAC_BYTES);
+    return wendigo_index_of(&dev, array, array_len);
+}
+
+/** Adds the specified device to devices[] if not already present.
+ *  Updates the attributes of the specified device in devices[]
+ *  if it already exists. */
+esp_err_t add_device(wendigo_device *dev) {
+    esp_err_t result = ESP_OK;
+    wendigo_device *existingDevice = retrieve_device(dev);
+    if (existingDevice == NULL) {
+        /* Device not found - add it to devices[] */
+        if (devices_count == devices_capacity) {
+            /* No spare array capacity - malloc more */
+            wendigo_device *new_devices = realloc(devices, sizeof(wendigo_device) * (devices_capacity + 10));
+            if (new_devices != NULL) {
+                devices_capacity += 10;
+                devices = new_devices;
+            } // Ignoring realloc() failure because we can still transmit `dev` to FZ
+        }
+        /* Check again whether we have capacity because the malloc might have failed */
+        if (devices_count < devices_capacity) {
+            /* Copy the entire block of memory containing `dev` into `devices[devices_count]` */
+            memcpy(&(devices[devices_count]), dev, sizeof(wendigo_device));
+            gettimeofday(&(devices[devices_count].lastSeen), NULL);
+            if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
+                /* Duplicate bdname and eir if they exist so the caller can call free() */
+                if (dev->radio.bluetooth.bdname_len > 0) {
+                    devices[devices_count].radio.bluetooth.bdname = malloc(dev->radio.bluetooth.bdname_len + 1);
+                    if (devices[devices_count].radio.bluetooth.bdname == NULL) {
+                        result = outOfMemory();
+                    } else {
+                        memcpy(devices[devices_count].radio.bluetooth.bdname,
+                               dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
+                        devices[devices_count].radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
+                        devices[devices_count].radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
+                    }
+                }
+                if (dev->radio.bluetooth.eir_len > 0) {
+                    devices[devices_count].radio.bluetooth.eir = malloc(dev->radio.bluetooth.eir_len);
+                    if (devices[devices_count].radio.bluetooth.eir == NULL) {
+                        result = outOfMemory();
+                    } else {
+                        memcpy(devices[devices_count].radio.bluetooth.eir,
+                               dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
+                        devices[devices_count].radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
+                    }
+                }
+            } else if (dev->scanType == SCAN_WIFI_AP) {
+                /* Duplicate dev->radio.ap.stations - While its *contents* don't need special
+                   attention because they're pointers to existing devices, the array itself was
+                   declared by - and will be freed by - a separate function. */
+                   devices[devices_count].radio.ap.stations = NULL;
+                   devices[devices_count].radio.ap.stations_count = 0;
+                if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
+                    devices[devices_count].radio.ap.stations = malloc(sizeof(wendigo_device *) *
+                                                                      dev->radio.ap.stations_count);
+                    if (devices[devices_count].radio.ap.stations != NULL) {
+                        /* If allocation fails all we need to do is ensure that stations_count is 0 -
+                           linked stations will still be sent to Flipper, we just don't have capacity
+                           to store them. stations_count was initialised to 0 above, so we're only
+                           looking at the success case.
+
+                           Now we own the region of memory we can just copy the list of pointers in one go
+                        */
+                        memcpy(devices[devices_count].radio.ap.stations, dev->radio.ap.stations,
+                            sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+                        devices[devices_count].radio.ap.stations_count = dev->radio.ap.stations_count;
+                    }
+                }
+            } else if (dev->scanType == SCAN_WIFI_STA) {
+                // No special cases - dev->radio.sta.ap is a single pointer so doesn't require change
+            }
+            ++devices_count;
+        }
+    } else {
+        /* Device exists. Update RSSI, lastSeen, and anything else that has changed */
+        existingDevice->rssi = dev->rssi;
+        gettimeofday(&(existingDevice->lastSeen), NULL);
+        existingDevice->scanType = dev->scanType;
+        if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
+            if (dev->radio.bluetooth.bdname_len > 0) {
+                if (existingDevice->radio.bluetooth.bdname_len > 0 &&
+                        existingDevice->radio.bluetooth.bdname != NULL) {
+                    free(existingDevice->radio.bluetooth.bdname);
+                    existingDevice->radio.bluetooth.bdname_len = 0;
+                }
+                existingDevice->radio.bluetooth.bdname = malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
+                if (existingDevice->radio.bluetooth.bdname == NULL) {
+                    result = outOfMemory();
+                } else {
+                    memcpy(existingDevice->radio.bluetooth.bdname,
+                           dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
+                    existingDevice->radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
+                    existingDevice->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
+                }
+            }
+            if (dev->radio.bluetooth.eir_len > 0) {
+                if (existingDevice->radio.bluetooth.eir_len > 0 &&
+                        existingDevice->radio.bluetooth.eir != NULL) {
+                    free(existingDevice->radio.bluetooth.eir);
+                }
+                existingDevice->radio.bluetooth.eir = malloc(dev->radio.bluetooth.eir_len);
+                if (existingDevice->radio.bluetooth.eir == NULL) {
+                    result = outOfMemory();
+                } else {
+                    memcpy(existingDevice->radio.bluetooth.eir,
+                           dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
+                    existingDevice->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
+                }
+            }
+            if (dev->radio.bluetooth.cod != 0) {
+                existingDevice->radio.bluetooth.cod = dev->radio.bluetooth.cod;
+            }
+            // TODO: Think about whether I should malloc memory for services or use previously-allocated memory
+            //       bt_uuid **known_services will make malloc'ing more difficult
+            // TODO: Decide how to merge services - Should probably be done with a separate function
+        } else if (dev->scanType == SCAN_WIFI_AP) {
+            existingDevice->radio.ap.channel = dev->radio.ap.channel;
+            /* Check whether `dev` contains any stations not in `existingDevice` */
+            if (dev->radio.ap.stations_count > existingDevice->radio.ap.stations_count) {
+                /* Find stations in `dev` that aren't in `existingDevice` */
+                uint8_t newStations = 0;
+                if (existingDevice->radio.ap.stations_count == 0) {
+                    newStations = dev->radio.ap.stations_count;
+                } else {
+                    for (uint16_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+                        if (wendigo_index_of(dev->radio.ap.stations[i],
+                                (wendigo_device **)existingDevice->radio.ap.stations,
+                                existingDevice->radio.ap.stations_count) ==
+                                existingDevice->radio.ap.stations_count) {
+                            ++newStations;
+                        }
+                    }
+                }
+                /* Expand existingDevice's stations[] */
+                wendigo_device **new_stations = realloc(existingDevice->radio.ap.stations,
+                    sizeof(wendigo_device *) * (newStations + existingDevice->radio.ap.stations_count));
+                if (new_stations != NULL) {
+                    /* Successfully resized existingDevice's stations[]. Copy new pointers across */
+                    if (existingDevice->radio.ap.stations_count == 0) {
+                        memcpy(new_stations, dev->radio.ap.stations,
+                            sizeof(wendigo_device *) * newStations);
+                    } else {
+                        uint16_t staIdx = existingDevice->radio.ap.stations_count;
+                        for (uint16_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+                            if (wendigo_index_of(dev->radio.ap.stations[i], new_stations,
+                                    existingDevice->radio.ap.stations_count) ==
+                                    existingDevice->radio.ap.stations_count) {
+                                new_stations[staIdx++] = dev->radio.ap.stations[i];
+                            }
+                        }
+                    }
+                    /* Copy into place (in case stations[] was moved to find enough contiguous space) */
+                    existingDevice->radio.ap.stations = (void **)new_stations;
+                    existingDevice->radio.ap.stations_count += newStations;
+                }
+            }
+            strncpy((char *)existingDevice->radio.ap.ssid, (char *)dev->radio.ap.ssid, MAX_SSID_LEN + 1);
+            existingDevice->radio.ap.ssid[MAX_SSID_LEN] = '\0';
+        } else if (dev->scanType == SCAN_WIFI_STA) {
+            existingDevice->radio.sta.channel = dev->radio.sta.channel;
+            existingDevice->radio.sta.ap = dev->radio.sta.ap;
+            memcpy(existingDevice->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
+        }
+    }
+    return result;
+}
+
+esp_err_t free_device(wendigo_device *dev) {
+    if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
+        if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
+            free(dev->radio.bluetooth.bdname);
+        }
+        if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
+            free(dev->radio.bluetooth.eir);
+        }
+    } else if (dev->scanType == SCAN_WIFI_AP) {
+        if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
+            free(dev->radio.ap.stations);
+            dev->radio.ap.stations = NULL;
+            dev->radio.ap.stations_count = 0;
+        }
+    } else if (dev->scanType == SCAN_WIFI_STA) {
+        dev->radio.sta.ap = NULL;
+    }
+    return ESP_OK;
+}
+
 /* Helper functions to simplify, and minimise memory use of, banners */
 void print_star(int size, bool newline) {
     for (int i = 0; i < size; ++i) {
@@ -50,11 +325,11 @@ esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
 /* Convert the specified byte array to a string representing
    a MAC address. strMac must be a pointer initialised to
    contain at least 18 bytes (MAC + '\0') */
-// TODO: Refactor to use bytes_to_string()
    esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac) {
-    sprintf(strMac, "%02X:%02X:%02X:%02X:%02X:%02X", bMac[0],
-            bMac[1], bMac[2], bMac[3], bMac[4], bMac[5]);
-    return ESP_OK;
+    if (bMac == NULL || strMac == NULL ) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return wendigo_bytes_to_string(bMac, strMac, MAC_BYTES);
 }
 
 /* Convert the specified string to a byte array
@@ -81,9 +356,10 @@ void send_bytes(uint8_t *bytes, uint8_t size) {
     for (int i = 0; i < size; ++i) {
         putc(bytes[i], stdout);
     }
+    fflush(stdout);
 }
 
 void send_end_of_packet() {
-    repeat_bytes(0xAA, 4);
-    repeat_bytes(0xFF, 4);
+    send_bytes(PACKET_TERM, PREAMBLE_LEN);
+    fflush(stdout);
 }

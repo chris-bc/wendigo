@@ -20,15 +20,17 @@
 #include "wendigo_hex_input.h"
 
 #define IS_FLIPPER_APP           (1)
+/* TODO: Find a way to extract fap_version from application.fam */
+#define WENDIGO_VERSION         "0.2.0a"
 
-#include "../wendigo_common_defs.h"
+#include "wendigo_common_defs.h"
 
 /* How frequently should Flipper poll ESP32 when scanning to restart
    scanning in the event the device restarts (seconds)? */
 #define ESP32_POLL_INTERVAL      (3)
 #define START_MENU_ITEMS         (6)
 #define SETUP_MENU_ITEMS         (4)
-#define SETUP_CHANNEL_MENU_ITEMS (13)
+#define SETUP_CHANNEL_MENU_ITEMS (14)
 
 #define SETUP_RADIO_WIFI_IDX (2)
 #define SETUP_RADIO_BT_IDX   (1)
@@ -37,20 +39,12 @@
 #define RADIO_OFF            (1)
 #define RADIO_MAC            (2)
 
-#define CH_MASK_ALL (8192)
+#define CH_MASK_ALL (16384)
 
 #define MAX_OPTIONS (3)
 
 #define WENDIGO_TEXT_BOX_STORE_SIZE   (4096)
 #define WENDIGO_TEXT_INPUT_STORE_SIZE (512)
-
-typedef enum DeviceMask {
-    DEVICE_BT_CLASSIC   = 1,
-    DEVICE_BT_LE        = 2,
-    DEVICE_WIFI_AP      = 4,
-    DEVICE_WIFI_STA     = 8,
-    DEVICE_ALL          = 15
-} DeviceMask;
 
 // Command action type
 typedef enum {
@@ -63,6 +57,7 @@ typedef enum {
     OPEN_MAC,
     OPEN_HELP
 } ActionType;
+
 // Command availability in different modes
 typedef enum {
     OFF = 0,
@@ -93,6 +88,15 @@ typedef struct {
     ActionType action;
     ModeMask mode_mask;
 } WendigoItem;
+
+typedef enum msgType {
+    MSG_ERROR = 0,
+    MSG_WARN,
+    MSG_INFO,
+    MSG_DEBUG,
+    MSG_TRACE,
+    MSG_TYPE_COUNT
+} MsgType;
 
 typedef enum {
     WendigoAppViewVarItemList,
@@ -125,7 +129,7 @@ struct WendigoApp {
     Popup* popup; // Avoid continual allocation and freeing of Popup by initialising at launch
     WendigoRadio interfaces[IF_COUNT];
     InterfaceType active_interface;
-    int32_t last_packet;
+    uint32_t last_packet;
 
     uint8_t setup_selected_menu_index;
     uint16_t device_list_selected_menu_index;
@@ -160,3 +164,8 @@ void wendigo_display_popup(WendigoApp *app, char *header, char*body);
 void wendigo_uart_set_binary_cb(Wendigo_Uart *uart);
 void wendigo_uart_set_console_cb(Wendigo_Uart *uart);
 void bytes_to_string(uint8_t* bytes, uint16_t bytesCount, char* strBytes);
+
+/* Devices currently being displayed */
+extern wendigo_device **current_devices;
+extern uint16_t current_devices_count;
+extern uint8_t current_devices_mask;

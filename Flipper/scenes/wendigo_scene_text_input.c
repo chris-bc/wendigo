@@ -1,12 +1,15 @@
 #include "../wendigo_app_i.h"
 
 void wendigo_scene_text_input_callback(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_text_input_callback()\n----------");
     WendigoApp* app = context;
 
     view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_text_input_callback()");
 }
 
 void wendigo_scene_text_input_on_enter(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_text_input_on_enter()\n----------");
     WendigoApp* app = context;
     app->current_view = WendigoAppViewTextInput;
 
@@ -49,9 +52,11 @@ void wendigo_scene_text_input_on_enter(void* context) {
     text_input_show_illegal_symbols(text_input, true);
 
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewTextInput);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_text_input_on_enter()");
 }
 
 bool wendigo_scene_text_input_on_event(void* context, SceneManagerEvent event) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_text_input_on_event()\n----------");
     WendigoApp* app = context;
     bool consumed = false;
 
@@ -63,12 +68,14 @@ bool wendigo_scene_text_input_on_event(void* context, SceneManagerEvent event) {
             consumed = true;
         }
     }
-
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_text_input_on_event()");
     return consumed;
 }
 
 void wendigo_scene_text_input_on_exit(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_text_input_on_exit()\n----------");
     WendigoApp* app = context;
 
     text_input_reset(app->text_input);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_text_input_on_exit()");
 }

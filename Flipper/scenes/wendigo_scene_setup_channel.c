@@ -14,7 +14,8 @@ static const WendigoItem items[SETUP_CHANNEL_MENU_ITEMS] = {
     {"11", {"On", "Off"}, 2, NO_ACTION, OFF},
     {"12", {"On", "Off"}, 2, NO_ACTION, OFF},
     {"13", {"On", "Off"}, 2, NO_ACTION, OFF},
-};
+    {"14", {"On", "Off"}, 2, NO_ACTION, OFF},
+}; // TODO: Determine whether 5GHz channels are available, add them if so
 
 static const uint8_t CH_ON = 0;
 static const uint8_t CH_OFF = 1;
@@ -25,7 +26,16 @@ static const uint8_t CH_OFF = 1;
    use a static variable here */
 static uint8_t selected_menu_index = 0;
 
+static void wendigo_scene_setup_channel_var_list_enter_callback(void* context, uint32_t index) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_channel_var_list_enter_callback()\n----------");
+    UNUSED(context);
+    UNUSED(index);
+
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_setup_channel_var_list_enter_callback()");
+}
+
 static void wendigo_scene_setup_channel_var_list_change_callback(VariableItem* item) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_channel_var_list_change_callback()\n----------");
     furi_assert(item);
 
     WendigoApp* app = variable_item_get_context(item);
@@ -50,14 +60,17 @@ static void wendigo_scene_setup_channel_var_list_change_callback(VariableItem* i
             app->channel_mask -= app->CH_MASK[selected_menu_index + 1];
         }
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_setup_channel_var_list_change_callback()");
 }
 
 void wendigo_scene_setup_channel_on_enter(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_channel_on_enter()\n----------");
     WendigoApp* app = context;
     VariableItemList* var_item_list = app->var_item_list;
     app->current_view = WendigoAppViewSetupChannel;
-
-    variable_item_list_set_enter_callback(var_item_list, NULL, app);
+    variable_item_list_reset(var_item_list);
+    variable_item_list_set_enter_callback(var_item_list,
+        wendigo_scene_setup_channel_var_list_enter_callback, app);
 
     VariableItem* item;
     for(int i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
@@ -82,9 +95,11 @@ void wendigo_scene_setup_channel_on_enter(void* context) {
     }
     variable_item_list_set_selected_item(var_item_list, 0);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_setup_channel_on_enter()");
 }
 
 bool wendigo_scene_setup_channel_on_event(void* context, SceneManagerEvent event) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_channel_on_event()\n----------");
     UNUSED(context);
     WendigoApp* app = context;
     bool consumed = false;
@@ -96,10 +111,33 @@ bool wendigo_scene_setup_channel_on_event(void* context, SceneManagerEvent event
             variable_item_list_get_selected_item_index(app->var_item_list);
         consumed = true;
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_setup_channel_on_event()");
     return consumed;
 }
 
 void wendigo_scene_setup_channel_on_exit(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_channel_on_exit()\n----------");
     WendigoApp* app = context;
     variable_item_list_reset(app->var_item_list);
+    /* Update ESP32-Wendigo's channels when the scene is exited */
+    char channel_cmd[149];
+    char temp_ch[4];
+    bzero(channel_cmd, 149);
+    uint8_t cmd_idx = 0;
+    channel_cmd[cmd_idx++] = 'c';
+    for (uint8_t i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
+        /* Add this channel to channel_cmd if it's selected (or if all channels selected) */
+        if (((app->channel_mask & app->CH_MASK[i + 1]) == app->CH_MASK[i + 1]) ||
+                ((app->channel_mask & CH_MASK_ALL) == CH_MASK_ALL)) {
+            // TODO: This only works for 2.4GHz channels
+            snprintf(temp_ch, sizeof(temp_ch), " %d", i + 1);
+            for (uint8_t j = 0; j < strlen(temp_ch); ++j) {
+                channel_cmd[cmd_idx++] = temp_ch[j];
+            }
+        }
+    }
+    channel_cmd[cmd_idx++] = '\n';
+    wendigo_uart_set_binary_cb(app->uart);
+    wendigo_uart_tx(app->uart, (uint8_t *)channel_cmd, strlen(channel_cmd) + 1);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_setup_channel_on_exit()");
 }

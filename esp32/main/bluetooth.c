@@ -72,11 +72,6 @@ static esp_gattc_descr_elem_t *descr_elem_result    = NULL;
 bool BT_INITIALISED = false;
 bool BLE_INITIALISED = false;
 
-/* Storage to maintain a cache of recently-displayed devices */
-uint16_t devices_count = 0;
-uint16_t devices_capacity = 0;
-wendigo_device *devices;
-
 esp_err_t display_gap_interactive(wendigo_device *dev) {
     esp_err_t result = ESP_OK;
     /* Before doing anything else check if we have seen this device
@@ -100,7 +95,7 @@ esp_err_t display_gap_interactive(wendigo_device *dev) {
     char *dev_type = (dev->scanType == SCAN_HCI) ? radioShortNames[SCAN_HCI] :
                       (dev->scanType == SCAN_BLE) ? radioShortNames[SCAN_BLE] : "UNK";
     char mac_str[MAC_STRLEN + 1];
-    bda2str(dev->mac, mac_str, MAC_STRLEN + 1);
+    mac_bytes_to_string(dev->mac, mac_str);
     char cod_str[COD_MAX_LEN];
     uint8_t cod_str_len = 0;
     cod2deviceStr(dev->radio.bluetooth.cod, cod_str, &cod_str_len);
@@ -149,10 +144,7 @@ esp_err_t display_gap_interactive(wendigo_device *dev) {
 
 /* Send device info to stdout to transmit over UART
    * Sends 4 bytes of 0xFF followed by 4 bytes of 0xAA to begin the transmission
-   * Sends the device structure (sizeof(wendigo_bt_device))
-   * Sends bdname if present (wendigo_bt_device.bdname_len + 1 bytes)
-   * Sends eir if present (wendigo_bt_device.eir_len bytes)
-   * Sends strlen(cod_short) (1 byte) followed by cod_short
+   * Sends device attributes
    * Ends the transmission with the reverse of the start: 4*0xAA 4*0xFF
 */
 esp_err_t display_gap_uart(wendigo_device *dev) {
@@ -162,151 +154,60 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     cod2shortStr(dev->radio.bluetooth.cod, cod_short, &cod_len);
     /* Account for NULL terminator on cod_short */
     ++cod_len;
+    /* Send RSSI as a char[4] to avoid casting between uint8_t and int16_t */
+    char rssi[RSSI_LEN + 3];    /* +3 rather than 1 to avoid compiler errors - int16_t can be up to 6 chars */
+    memset(rssi, '\0', RSSI_LEN + 3);
+    snprintf(rssi, RSSI_LEN + 3, "%d", dev->rssi);
+    /* Send tagged as 1 for true, 0 for false */
+    uint8_t tagged = (dev->tagged) ? 1 : 0;
 
-    /* Send a stream of bytes to mark beginning of transmission */
-    repeat_bytes(0xFF, 4);
-    repeat_bytes(0xAA, 4);
-    /* Send fix-byte members */
-    send_bytes(&(dev->radio.bluetooth.bdname_len), sizeof(dev->radio.bluetooth.bdname_len));
-    send_bytes(&(dev->radio.bluetooth.eir_len), sizeof(dev->radio.bluetooth.eir_len));
-    send_bytes((uint8_t *)&(dev->rssi), sizeof(dev->rssi));
-    send_bytes((uint8_t *)&(dev->radio.bluetooth.cod), sizeof(dev->radio.bluetooth.cod));
-    send_bytes(dev->mac, sizeof(dev->mac));
-    send_bytes((uint8_t *)&(dev->scanType), sizeof(dev->scanType));
-    send_bytes((uint8_t *)&(dev->tagged), sizeof(dev->tagged));
-    send_bytes((uint8_t *)&(dev->lastSeen), sizeof(dev->lastSeen));
-    send_bytes(&(dev->radio.bluetooth.bt_services.num_services),
-               sizeof(dev->radio.bluetooth.bt_services.num_services));
-    send_bytes(&(dev->radio.bluetooth.bt_services.known_services_len),
-               sizeof(dev->radio.bluetooth.bt_services.known_services_len));
-    send_bytes(&cod_len, sizeof(cod_len));
+    /* Assemble the packet and send it in one go - I can't figure out why AP packet length
+       is a byte too long, this will at least cover up the issue :/ */
+    uint8_t packet_len = WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
+        dev->radio.bluetooth.eir_len + cod_len + PREAMBLE_LEN;
+    uint8_t *packet = malloc(sizeof(uint8_t *) * packet_len);
+    if (packet == NULL) {
+        return outOfMemory();
+    }
+    memcpy(packet, PREAMBLE_BT_BLE, PREAMBLE_LEN);
+    memcpy(packet + WENDIGO_OFFSET_BT_BDNAME_LEN, &(dev->radio.bluetooth.bdname_len), sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_EIR_LEN, &(dev->radio.bluetooth.eir_len), sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_RSSI, (uint8_t *)rssi, RSSI_LEN);
+    memcpy(packet + WENDIGO_OFFSET_BT_COD, (uint8_t *)&(dev->radio.bluetooth.cod), sizeof(uint32_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_BDA, dev->mac, MAC_BYTES);
+    memcpy(packet + WENDIGO_OFFSET_BT_SCANTYPE, &(dev->scanType), sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_TAGGED, &tagged, sizeof(uint8_t));
+    /* Don't bother sending lastSeen */
+    //memcpy(packet + WENDIGO_OFFSET_BT_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_NUM_SERVICES,
+        &(dev->radio.bluetooth.bt_services.num_services),
+        sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN,
+        &(dev->radio.bluetooth.bt_services.known_services_len),
+        sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_COD_LEN, &cod_len, sizeof(uint8_t));
 
     /* bdname */
     if (dev->radio.bluetooth.bdname_len > 0) {
-        send_bytes((uint8_t *)(dev->radio.bluetooth.bdname), dev->radio.bluetooth.bdname_len + 1); // Don't forget the NULL terminator!
+        memcpy(packet + WENDIGO_OFFSET_BT_BDNAME, (uint8_t *)(dev->radio.bluetooth.bdname),
+            dev->radio.bluetooth.bdname_len); /* NOTE: No longer null-terminated */
     }
     /* EIR */
     if (dev->radio.bluetooth.eir_len > 0) {
-        send_bytes(dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
+        memcpy(packet + WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len,
+            dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
     }
     if (cod_len > 0) {
-        send_bytes((uint8_t *)cod_short, cod_len + 1);
+        memcpy(packet + WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
+            dev->radio.bluetooth.eir_len, (uint8_t *)cod_short, cod_len); /* NOTE: No longer null-terminated */
     }
-    /* Mark the end of transmission */
-    send_end_of_packet();
-    fflush(stdout);
-
-    return result;
-}
-
-/* Determines whether the BDA of the specified device exists in all_gap_devices[].
-   Returns a pointer to the object in all_gap_devices[] if found, NULL otherwise */
-wendigo_device *retrieve_device(wendigo_device *dev) {
-    wendigo_device *result = NULL;
-    int idx = 0;
-    for (; idx < devices_count && memcmp(dev->mac, devices[idx].mac, ESP_BD_ADDR_LEN); ++idx) {}
-    if (idx < devices_count) {
-        result = &(devices[idx]);
-    }
-    return result;
-}
-
-wendigo_device *retrieve_by_mac(esp_bd_addr_t mac) {
-    wendigo_device dev;
-    memcpy(dev.mac, mac, ESP_BD_ADDR_LEN);
-    return retrieve_device(&dev);
-}
-
-/* Adds the specified device to devices[] if not already present.
-   Updates the attributes of the specified device in devices[]
-   if it already exists. */
-esp_err_t add_device(wendigo_device *dev) {
-    esp_err_t result = ESP_OK;
-    wendigo_device *existingDevice = retrieve_device(dev);
-    if (existingDevice == NULL) {
-        /* Device not found - add it to devices[] */
-        if (devices_count == devices_capacity) {
-            /* No spare array capacity - malloc more */
-            wendigo_device *new_devices = realloc(devices, sizeof(wendigo_device) * (devices_capacity + 10));
-            if (new_devices != NULL) {
-                devices_capacity += 10;
-                devices = new_devices;
-            } // Ignoring realloc() failure because we can still transmit `dev` to FZ
-        }
-        /* Check again whether we have capacity because the malloc might have failed */
-        if (devices_count < devices_capacity) {
-            memcpy(&(devices[devices_count]), dev, sizeof(wendigo_device));
-            gettimeofday(&(devices[devices_count].lastSeen), NULL);
-            if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-                /* Duplicate bdname and eir if they exist so the caller can call free() */
-                if (dev->radio.bluetooth.bdname_len > 0) {
-                    devices[devices_count].radio.bluetooth.bdname = malloc(dev->radio.bluetooth.bdname_len + 1);
-                    if (devices[devices_count].radio.bluetooth.bdname == NULL) {
-                        result = outOfMemory();
-                    } else {
-                        memcpy(devices[devices_count].radio.bluetooth.bdname,
-                               dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
-                        devices[devices_count].radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
-                        devices[devices_count].radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
-                    }
-                }
-                if (dev->radio.bluetooth.eir_len > 0) {
-                    devices[devices_count].radio.bluetooth.eir = malloc(dev->radio.bluetooth.eir_len);
-                    if (devices[devices_count].radio.bluetooth.eir == NULL) {
-                        result = outOfMemory();
-                    } else {
-                        memcpy(devices[devices_count].radio.bluetooth.eir,
-                               dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
-                        devices[devices_count].radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
-                    }
-                }
-            }
-            ++devices_count;
-        }
-    } else {
-        /* Device exists. Update RSSI, lastSeen, and anything else that has changed */
-        existingDevice->rssi = dev->rssi;
-        gettimeofday(&(existingDevice->lastSeen), NULL);
-        existingDevice->scanType = dev->scanType;
-        if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-            if (dev->radio.bluetooth.bdname_len > 0) {
-                if (existingDevice->radio.bluetooth.bdname_len > 0 &&
-                        existingDevice->radio.bluetooth.bdname != NULL) {
-                    free(existingDevice->radio.bluetooth.bdname);
-                    existingDevice->radio.bluetooth.bdname_len = 0;
-                }
-                existingDevice->radio.bluetooth.bdname = malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
-                if (existingDevice->radio.bluetooth.bdname == NULL) {
-                    result = outOfMemory();
-                } else {
-                    memcpy(existingDevice->radio.bluetooth.bdname,
-                           dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
-                    existingDevice->radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
-                    existingDevice->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
-                }
-            }
-            if (dev->radio.bluetooth.eir_len > 0) {
-                if (existingDevice->radio.bluetooth.eir_len > 0 &&
-                        existingDevice->radio.bluetooth.eir != NULL) {
-                    free(existingDevice->radio.bluetooth.eir);
-                }
-                existingDevice->radio.bluetooth.eir = malloc(dev->radio.bluetooth.eir_len);
-                if (existingDevice->radio.bluetooth.eir == NULL) {
-                    result = outOfMemory();
-                } else {
-                    memcpy(existingDevice->radio.bluetooth.eir,
-                           dev->radio.bluetooth.eir, dev->radio.bluetooth.eir_len);
-                    existingDevice->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
-                }
-            }
-            if (dev->radio.bluetooth.cod != 0) {
-                existingDevice->radio.bluetooth.cod = dev->radio.bluetooth.cod;
-            }
-        }
-        // TODO: Think about whether I should malloc memory for services or use previously-allocated memory
-        //       bt_uuid **known_services will make malloc'ing more difficult
-        // TODO: Decide how to merge services - Should probably be done with a separate function
-    }
+    memcpy(packet + WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
+        dev->radio.bluetooth.eir_len + cod_len, PACKET_TERM, PREAMBLE_LEN);
+    /* Send the packet */
+    wendigo_get_tx_lock(true);
+    send_bytes(packet, packet_len);
+    wendigo_release_tx_lock();
+    free(packet);
     return result;
 }
 
@@ -323,18 +224,6 @@ esp_err_t display_gap_device(wendigo_device *dev) {
     } else {
         return display_gap_uart(dev);
     }
-}
-
-esp_err_t free_device(wendigo_device *dev) {
-    if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-        if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
-            free(dev->radio.bluetooth.bdname);
-        }
-        if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
-            free(dev->radio.bluetooth.eir);
-        }
-    }
-    return ESP_OK;
 }
 
 esp_err_t wendigo_bt_initialise() {
@@ -447,7 +336,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
             }
             break;
         case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
-            bda2str(param->update_conn_params.bda, bdaStr, MAC_STRLEN + 1);
+            mac_bytes_to_string(param->update_conn_params.bda, bdaStr);
             ESP_LOGI(BLE_TAG, "BLE updated connection params for %s. Status: %d, min_int: %d, max_int: %d, conn_int: %d, latency: %d, timeout: %d",
                     bdaStr, param->update_conn_params.status,
                     param->update_conn_params.min_int, param->update_conn_params.max_int,
@@ -455,7 +344,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     param->update_conn_params.timeout);
             break;
         case ESP_GAP_BLE_GET_DEV_NAME_COMPLETE_EVT:
-                bda2str(param->scan_rst.bda, bdaStr, MAC_STRLEN + 1); //TODO: Confirm param->scan_rst.bda exists
+                mac_bytes_to_string(param->scan_rst.bda, bdaStr); //TODO: Confirm param->scan_rst.bda exists
                 ESP_LOGI(BLE_TAG, "Got a complete BLE device name for %s: %s. Status %d",
                          bdaStr, param->get_dev_name_cmpl.name, param->get_dev_name_cmpl.status);
                 memcpy(dev.mac, param->scan_rst.bda, sizeof(esp_bd_addr_t));
@@ -490,7 +379,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 case ESP_GAP_SEARCH_INQ_RES_EVT:
                     /* Get device info */
                     memcpy(dev.mac, scan_result->scan_rst.bda, sizeof(esp_bd_addr_t));
-                    dev.rssi = scan_result->scan_rst.rssi;
+                    dev.rssi = (int16_t)scan_result->scan_rst.rssi;
                     dev.scanType = SCAN_BLE;
                     /* Name */
                     adv_name = esp_ble_resolve_adv_data(scan_result->scan_rst.ble_adv,
@@ -514,7 +403,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                         dev.radio.bluetooth.eir_len = scan_result->scan_rst.adv_data_len;
                     }
                     // TODO: Can I find the COD (Class Of Device) anywhere?
-                    bda2str(dev.mac, bdaStr, MAC_STRLEN + 1);
+                    mac_bytes_to_string(dev.mac, bdaStr);
                     display_gap_device(&dev);
                     /* Add to or update all_gap_devices[] */
                     add_device(&dev);
@@ -799,7 +688,7 @@ wendigo_device *device_from_gap_cb(esp_bt_gap_cb_param_t *param) {
                 cod2deviceStr(dev->radio.bluetooth.cod, codDevType, &codDevTypeLen);
                 break;
             case ESP_BT_GAP_DEV_PROP_RSSI:
-                dev->rssi = *(int8_t *)(p->val);
+                dev->rssi = *(int16_t *)(p->val);
                 break;
             case ESP_BT_GAP_DEV_PROP_BDNAME:
                 dev->radio.bluetooth.bdname_len = (p->len > ESP_BT_GAP_MAX_BDNAME_LEN) ?
@@ -845,7 +734,7 @@ static void bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
     switch (event) {
         case ESP_BT_GAP_DISC_RES_EVT:
             char bdaStr[MAC_STRLEN + 1];
-            bda2str(param->disc_res.bda, bdaStr, MAC_STRLEN + 1);
+            mac_bytes_to_string(param->disc_res.bda, bdaStr);
             wendigo_device *dev = device_from_gap_cb(param);
             if (dev == NULL) {
                 ESP_LOGE(BT_TAG, "Failed to obtain device from event parameters :(");
@@ -1048,18 +937,6 @@ esp_err_t cod2shortStr(uint32_t cod, char *string, uint8_t *stringLen) {
     *stringLen = strlen(string);
 
     return err;
-}
-
-// TODO: Replace with bytes_to_string?
-/* Convert Bluetooth Device Address (equivalent to MAC) to a printable hex string */
-char *bda2str(esp_bd_addr_t bda, char *str, size_t size) {
-    if (bda == NULL || str == NULL || size < (MAC_STRLEN + 1)) {
-        return NULL;
-    }
-
-    uint8_t *p = bda;
-    sprintf(str, "%02x:%02x:%02x:%02x:%02x:%02x", p[0], p[1], p[2], p[3], p[4], p[5]);
-    return str;
 }
 
 /* Convert a UUID (service or attribute descriptor) to a printable hex string */

@@ -10,33 +10,39 @@
 extern void wendigo_console_output_handle_rx_data_cb(uint8_t* buf, size_t len, void* context);
 
 static bool wendigo_app_custom_event_callback(void* context, uint32_t event) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_custom_event_callback()\n----------");
     furi_assert(context);
     WendigoApp* app = context;
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app_custom_event_callback()");
     return scene_manager_handle_custom_event(app->scene_manager, event);
 }
 
 static bool wendigo_app_back_event_callback(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_back_event_callback()\n----------");
     furi_assert(context);
     WendigoApp* app = context;
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app_back_event_callback()");
     return scene_manager_handle_back_event(app->scene_manager);
 }
 
 static void wendigo_app_tick_event_callback(void* context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_tick_event_callback()\n----------");
     furi_assert(context);
     WendigoApp* app = context;
     if (app->is_scanning) {
         /* Is it time to poll ESP32 to ensure it's still scanning? */
-        int32_t now = furi_hal_rtc_get_timestamp();
+        uint32_t now = furi_hal_rtc_get_timestamp();
         if (now - app->last_packet > ESP32_POLL_INTERVAL) {
             wendigo_set_scanning_active(app, true);
         }
     }
-
     scene_manager_handle_tick_event(app->scene_manager);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app_tick_event_callback()");
 }
 
 /* Generic handler for app->popup that restores the previous view */
 void wendigo_popup_callback(void *context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_popup_callback()\n----------");
     WendigoApp *app = (WendigoApp *)context;
     bool done = scene_manager_previous_scene(app->scene_manager);
     if (!done) {
@@ -44,23 +50,30 @@ void wendigo_popup_callback(void *context) {
         // TODO: Alongside wendigo_display_popup() (below), restore the scene that was actually running prior to the popup
         scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
     }
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_popup_callback()");
 }
 
-void wendigo_display_popup(WendigoApp *app, char *header, char*body) {
+void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_display_popup()\n----------");
+    // TODO: Review and kill this
+    char * newBody = malloc(sizeof(char*) * (strlen(body) + 1));
+    strncpy(newBody, body, strlen(body) + 1);
     popup_set_header(app->popup, header, 64, 3, AlignCenter, AlignTop);
-    popup_set_text(app->popup, body, 64, 22, AlignCenter, AlignTop);
+    popup_set_text(app->popup, newBody, 64, 22, AlignCenter, AlignTop);
     popup_set_icon(app->popup, -1, -1, NULL); // TODO: Find a fun icon to use
-    popup_set_timeout(app->popup, 2000);
+    popup_set_timeout(app->popup, 5000); // was 2000
     popup_enable_timeout(app->popup);
     popup_set_callback(app->popup, wendigo_popup_callback);
     popup_set_context(app->popup, app);
     // TODO: Check which scene is active so we can restore it later. For now assuming we're on the main menu.
     scene_manager_set_scene_state(app->scene_manager, WendigoSceneStart, app->selected_menu_index);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_display_popup()");
 }
 
 /* Initialise app->interfaces - Default all radios to on */
 void wendigo_interface_init(WendigoApp* app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_interface_init()\n----------");
     for(int i = 0; i < IF_COUNT; ++i) {
         app->interfaces[i].active = true;
         app->interfaces[i].mutable = true;
@@ -71,9 +84,11 @@ void wendigo_interface_init(WendigoApp* app) {
     memcpy(app->interfaces[IF_WIFI].mac_bytes, mac_wifi, MAC_BYTES);
     memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, mac_bt, MAC_BYTES);
     memcpy(app->interfaces[IF_BLE].mac_bytes, mac_bt, MAC_BYTES);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_interface_init()");
 }
 
 WendigoApp* wendigo_app_alloc() {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_alloc()\n----------");
     WendigoApp* app = malloc(sizeof(WendigoApp));
 
     app->gui = furi_record_open(RECORD_GUI);
@@ -164,10 +179,12 @@ WendigoApp* wendigo_app_alloc() {
 
     scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
 
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app_alloc()");
     return app;
 }
 
 void wendigo_app_free(WendigoApp* app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_free()\n----------");
     furi_assert(app);
 
     // Views
@@ -199,16 +216,17 @@ void wendigo_app_free(WendigoApp* app) {
     wendigo_free_devices();
     // TODO: WiFi device cache
 
-
     wendigo_uart_free(app->uart);
 
     // Close records
     furi_record_close(RECORD_GUI);
 
     free(app);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app_free()");
 }
 
 int32_t wendigo_app(void* p) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app()\n----------");
     UNUSED(p);
     // Disable expansion protocol to avoid interference with UART Handle
     Expansion* expansion = furi_record_open(RECORD_EXPANSION);
@@ -228,21 +246,27 @@ int32_t wendigo_app(void* p) {
     expansion_enable(expansion);
     furi_record_close(RECORD_EXPANSION);
 
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_app()");
     return 0;
 }
 
 void wendigo_uart_set_binary_cb(Wendigo_Uart *uart) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_uart_set_binary_cb()\n----------");
     wendigo_uart_set_handle_rx_data_cb(uart, wendigo_scan_handle_rx_data_cb);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_uart_set_binary_cb()");
 }
 
 void wendigo_uart_set_console_cb(Wendigo_Uart *uart) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_uart_set_console_cb()\n----------");
     wendigo_uart_set_handle_rx_data_cb(uart, wendigo_console_output_handle_rx_data_cb);
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_uart_set_console_cb()");
 }
 
 /* Convert an array of bytesCount uint8_ts into a colon-separated string of bytes.
    strBytes must be initialised with sufficient space to hold the output string.
    For a MAC this is 18 bytes. In general it is 3 * byteCount */
 void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes) {
+    FURI_LOG_T(WENDIGO_TAG, "Start bytes_to_string()\n----------");
     uint8_t *p_in = bytes;
     const char *hex = "0123456789ABCDEF";
     char *p_out = strBytes;
@@ -252,4 +276,5 @@ void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes) {
         p_out[2] = ':';
     }
     p_out[-1] = 0;
+    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd bytes_to_string()");
 }
