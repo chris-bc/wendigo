@@ -201,6 +201,7 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
         memcpy(packet + WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
             dev->radio.bluetooth.eir_len, (uint8_t *)cod_short, cod_len); /* NOTE: No longer null-terminated */
     }
+    /* Add packet terminator */
     memcpy(packet + WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
         dev->radio.bluetooth.eir_len + cod_len, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
