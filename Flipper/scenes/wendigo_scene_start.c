@@ -9,7 +9,7 @@ static const WendigoItem items[START_MENU_ITEMS] = {
     {"Devices", {""}, 1, LIST_DEVICES, BOTH_MODES},
     {"Selected Devices", {""}, 1, LIST_SELECTED_DEVICES, BOTH_MODES},
     {"Track Selected", {""}, 1, TRACK_DEVICES, TEXT_MODE},
-    {"Help", {"About", "ESP Version"}, 2, OPEN_HELP, TEXT_MODE},
+    {"Help", {"About", "Version"}, 2, OPEN_HELP, TEXT_MODE},
 };
 
 #define SETUP_IDX       (0)
@@ -103,7 +103,7 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
                     /* Ensure wendigo_scan.c receives transmitted data */
                     // TODO: The UART callback is only modified by wendigo_app.c and wendigo_scene_console_output.c - If ConsoleOutput is removed then this can be
                     wendigo_uart_set_binary_cb(app->uart);
-                    wendigo_esp_version(app);
+                    wendigo_version(app);
                     break;
                 default:
                     // TODO: Panic

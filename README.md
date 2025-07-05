@@ -65,6 +65,9 @@ Why write Wendigo when there are already great apps like [Marauder](https://gith
 My hope is that Wendigo will be a quick and easy way to get information about a wireless device, making it easier to troubleshoot and diagnose issues (and satisfy your curiousity :)). I think of Marauder as the tool you use to carry out an attack, and Wendigo as the tool to help you find the right target.
 
 At a high level, these are Wendigo's features - Both implemented and planned:
+
+#### NOTE: Version 0.2.0 is an unstable build. Implementation of WiFi features revealed problems with how the Flipper app was managing the UART buffer and parsing Wendigo packets. I wanted to release basic WiFi features before re-writing this part of the application, so this version attempts to bandaid the issue. Out of memory errors can be avoided by disabling either WiFi or both Bluetooth radios in the setup menu, and scanning either WiFi or Bluetooth. Dynamic updating of the device list has been disabled, so the device list must be closed and reopened to view newly-discovered devices.
+
 * [X] Bluetooth Classic discovery
 * [X] Bluetooth Low Energy discovery
 * [X] WiFi Access Point discovery (2.4GHz)

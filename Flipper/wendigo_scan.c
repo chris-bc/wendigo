@@ -137,7 +137,7 @@ void wendigo_esp_status(WendigoApp* app) {
 }
 
 /* Send the version command to ESP32 */
-void wendigo_esp_version(WendigoApp* app) {
+void wendigo_version(WendigoApp* app) {
     char cmd[] = "v\n";
     wendigo_uart_tx(app->uart, (uint8_t*)cmd, strlen(cmd) + 1);
 }
@@ -1260,8 +1260,10 @@ uint16_t parseBufferWifiSta(WendigoApp* app) {
     return packetLen;
 }
 
-/* Returns the number of bytes consumed from the buffer - DOES NOT
-   remove consumed bytes, this must be handled by the calling function. */
+/** Parse a version packet and display both Flipper- and ESP32-Wendigo versions.
+ * Returns the number of bytes consumed from the buffer - DOES NOT remove
+ * consumed bytes, this must be handled by the calling function.
+ */
 uint16_t parseBufferVersion(WendigoApp* app) {
     UNUSED(app);
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferVersion()");
@@ -1272,22 +1274,19 @@ uint16_t parseBufferVersion(WendigoApp* app) {
                  tested for twice, don't bother taking any action */
     }
     endSeq = endSeq - PREAMBLE_LEN + 1; /* Sub 7 to reach first byte in seq */
-    char* versionStr = realloc(wendigo_popup_text, sizeof(char) * endSeq);
+    /* Add space for Flipper-Wendigo version information. */
+    uint16_t messageLen = endSeq + 26 + strlen(FLIPPER_WENDIGO_VERSION);
+    char* versionStr = realloc(wendigo_popup_text, sizeof(char) * messageLen);
     if(versionStr == NULL) {
         // TODO: Panic
         // For now just consume this message
         return endSeq + PREAMBLE_LEN;
     }
     wendigo_popup_text = versionStr;
-    // TODO: I don't know why I implemented this as a loop. Replace loop with the
-    // following (I didn't want to make this change at the same time as other bulk
-    // changes in case of an off-by-one error) memcpy(wendigo_popup_text, buffer,
-    // endSeq);
-    for(int i = 0; i < endSeq; ++i) {
-        wendigo_popup_text[i] = buffer[i];
-    }
-    wendigo_popup_text[endSeq - 1] = '\0'; /* Just in case */
-    wendigo_display_popup(app, "ESP32 Version", wendigo_popup_text);
+    snprintf(wendigo_popup_text, messageLen, "Flipper-Wendigo v%s\n ESP32-", FLIPPER_WENDIGO_VERSION);
+    memcpy(wendigo_popup_text + 25 + strlen(FLIPPER_WENDIGO_VERSION), buffer, endSeq);
+    wendigo_popup_text[messageLen - 1] = '\0'; /* Just in case */
+    wendigo_display_popup(app, "Wendigo Version", wendigo_popup_text);
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferVersion()");
     return endSeq + PREAMBLE_LEN;
 }

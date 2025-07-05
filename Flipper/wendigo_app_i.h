@@ -21,7 +21,7 @@
 
 #define IS_FLIPPER_APP           (1)
 /* TODO: Find a way to extract fap_version from application.fam */
-#define WENDIGO_VERSION         "0.2.0a"
+#define FLIPPER_WENDIGO_VERSION  "0.2.0"
 
 #include "wendigo_common_defs.h"
 

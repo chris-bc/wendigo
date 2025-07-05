@@ -19,7 +19,7 @@ extern uint16_t selected_devices_capacity;
 void wendigo_set_scanning_active(WendigoApp *app, bool starting);
 void wendigo_scan_handle_rx_data_cb(uint8_t* buf, size_t len, void* context);
 void wendigo_free_uart_buffer();
-void wendigo_esp_version(WendigoApp *app);
+void wendigo_version(WendigoApp *app);
 void wendigo_esp_status(WendigoApp *app);
 void wendigo_free_devices();
 bool wendigo_set_device_selected(wendigo_device *device, bool selected);
