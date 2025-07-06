@@ -66,7 +66,7 @@ wendigo_device *retrieve_by_mac(esp_bd_addr_t mac) {
  * wendigo_device* objects. Matching is based on the device's MAC (i.e. dev->mac).
  * Returns the index of the matching device, or array_len if not found.
  */
-uint16_t wendigo_index_of(wendigo_device *dev, wendigo_device **array, uint16_t array_len) {
+uint16_t wendigo_device_index_of(wendigo_device *dev, wendigo_device **array, uint16_t array_len) {
     /* Don't proceed if invalid arguments were provided */
     if (dev == NULL || array == NULL || array_len == 0) {
         return array_len;
@@ -80,14 +80,26 @@ uint16_t wendigo_index_of(wendigo_device *dev, wendigo_device **array, uint16_t 
  * of wendigo_device* objects.
  * Returns the index of the matching device, or array_len if not found.
  */
-uint16_t wendigo_index_of_mac(uint8_t *mac, wendigo_device **array, uint16_t array_len) {
+uint16_t wendigo_device_index_of_mac(uint8_t *mac, wendigo_device **array, uint16_t array_len) {
     /* Don't proceed if invalid arguments were provided */
     if (mac == NULL || array == NULL || array_len == 0) {
         return array_len;
     }
     wendigo_device dev;
     memcpy(dev.mac, mac, MAC_BYTES);
-    return wendigo_index_of(&dev, array, array_len);
+    return wendigo_device_index_of(&dev, array, array_len);
+}
+
+/** Check whether the provided MAC is present in the specified array of MACs.
+ * Returns the index of the matching array element, or array_len if not found.
+ */
+uint16_t wendigo_index_of(uint8_t mac[MAC_BYTES], uint8_t **array, uint16_t array_len) {
+    if (mac == NULL || !memcmp(mac, nullMac, MAC_BYTES) || array == NULL || array_len == 0) {
+        return array_len;
+    }
+    uint16_t idx = 0;
+    for (; idx < array_len && memcmp(array[idx], mac, MAC_BYTES); ++idx) { }
+    return idx;
 }
 
 /** Adds the specified device to devices[] if not already present.
@@ -157,7 +169,7 @@ esp_err_t add_device(wendigo_device *dev) {
                     }
                 }
             } else if (dev->scanType == SCAN_WIFI_STA) {
-                // No special cases - dev->radio.sta.ap is a single pointer so doesn't require change
+                // No special cases
             }
             ++devices_count;
         }
@@ -206,7 +218,7 @@ esp_err_t add_device(wendigo_device *dev) {
         } else if (dev->scanType == SCAN_WIFI_AP) {
             existingDevice->radio.ap.channel = dev->radio.ap.channel;
             /* Check whether `dev` contains any stations not in `existingDevice` */
-            if (dev->radio.ap.stations_count > existingDevice->radio.ap.stations_count) {
+            if (dev->radio.ap.stations_count > 0) {
                 /* Find stations in `dev` that aren't in `existingDevice` */
                 uint8_t newStations = 0;
                 if (existingDevice->radio.ap.stations_count == 0) {
@@ -214,41 +226,41 @@ esp_err_t add_device(wendigo_device *dev) {
                 } else {
                     for (uint16_t i = 0; i < dev->radio.ap.stations_count; ++i) {
                         if (wendigo_index_of(dev->radio.ap.stations[i],
-                                (wendigo_device **)existingDevice->radio.ap.stations,
+                                existingDevice->radio.ap.stations,
                                 existingDevice->radio.ap.stations_count) ==
                                 existingDevice->radio.ap.stations_count) {
                             ++newStations;
                         }
                     }
                 }
-                /* Expand existingDevice's stations[] */
-                wendigo_device **new_stations = realloc(existingDevice->radio.ap.stations,
-                    sizeof(wendigo_device *) * (newStations + existingDevice->radio.ap.stations_count));
-                if (new_stations != NULL) {
-                    /* Successfully resized existingDevice's stations[]. Copy new pointers across */
-                    if (existingDevice->radio.ap.stations_count == 0) {
-                        memcpy(new_stations, dev->radio.ap.stations,
-                            sizeof(wendigo_device *) * newStations);
-                    } else {
+                if (newStations > 0) {
+                    /* Expand existingDevice's stations[] */
+                    uint8_t **new_stations = realloc(existingDevice->radio.ap.stations,
+                        sizeof(uint8_t *) * (newStations + existingDevice->radio.ap.stations_count));
+                    if (new_stations != NULL) {
+                        /* Successfully resized existingDevice's stations[]. Copy new MACs across */
                         uint16_t staIdx = existingDevice->radio.ap.stations_count;
                         for (uint16_t i = 0; i < dev->radio.ap.stations_count; ++i) {
                             if (wendigo_index_of(dev->radio.ap.stations[i], new_stations,
                                     existingDevice->radio.ap.stations_count) ==
                                     existingDevice->radio.ap.stations_count) {
-                                new_stations[staIdx++] = dev->radio.ap.stations[i];
+                                new_stations[staIdx] = malloc(MAC_BYTES);
+                                if (new_stations[staIdx] != NULL) {
+                                    memcpy(new_stations[staIdx], dev->radio.ap.stations[i], MAC_BYTES);
+                                }
+                                ++staIdx;
                             }
                         }
+                        /* Copy into place (in case stations[] was moved to find enough contiguous space) */
+                        existingDevice->radio.ap.stations = new_stations;
+                        existingDevice->radio.ap.stations_count += newStations;
                     }
-                    /* Copy into place (in case stations[] was moved to find enough contiguous space) */
-                    existingDevice->radio.ap.stations = (void **)new_stations;
-                    existingDevice->radio.ap.stations_count += newStations;
                 }
             }
-            strncpy((char *)existingDevice->radio.ap.ssid, (char *)dev->radio.ap.ssid, MAX_SSID_LEN + 1);
+            strncpy(existingDevice->radio.ap.ssid, dev->radio.ap.ssid, MAX_SSID_LEN + 1);
             existingDevice->radio.ap.ssid[MAX_SSID_LEN] = '\0';
         } else if (dev->scanType == SCAN_WIFI_STA) {
             existingDevice->radio.sta.channel = dev->radio.sta.channel;
-            existingDevice->radio.sta.ap = dev->radio.sta.ap;
             memcpy(existingDevice->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
         }
     }
@@ -270,7 +282,7 @@ esp_err_t free_device(wendigo_device *dev) {
             dev->radio.ap.stations_count = 0;
         }
     } else if (dev->scanType == SCAN_WIFI_STA) {
-        dev->radio.sta.ap = NULL;
+        /* Nothing to do */
     }
     return ESP_OK;
 }

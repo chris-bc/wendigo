@@ -1,8 +1,6 @@
 #ifndef WENDIGO_COMMON_DEFS
 #define WENDIGO_COMMON_DEFS
 
-#include "wendigo_app_i.h"
-
 /**
  * Structs have just blown my mind - based on its members wendigo_bt_device
  * (excluding wendigo_bt_svc) should be 45 bytes but it's 56. Wendigo_bt_svc
@@ -39,13 +37,11 @@
  #define WENDIGO_OFFSET_STA_AP_MAC              (38)
  #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (44)
  #define WENDIGO_OFFSET_STA_AP_SSID             (45)
- #define WENDIGO_OFFSET_STA_TERM                (77)
- /* Packet terminator is PREAMBLE_LEN == 8 bytes */
+ /* SSID is SSID_Len bytes, followed by the packet terminator which is PREAMBLE_LEN == 4 bytes */
  #define WENDIGO_OFFSET_AP_SSID_LEN             (38)
  #define WENDIGO_OFFSET_AP_STA_COUNT            (39)
  #define WENDIGO_OFFSET_AP_SSID                 (40)
- #define WENDIGO_OFFSET_AP_STA                  (72)
- /* Each station is a 6-byte MAC. There are STA_COUNT stations. */
+ /* SSID is SSID_Len bytes. Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
  #ifdef IS_FLIPPER_APP
  typedef enum {
@@ -77,9 +73,6 @@ PSK and not recommended to be used. It will be deprecated in future, please use 
 #define MAX_SSID_LEN    32
 #define MAC_STRLEN      17
 #define MAC_BYTES       6
-#define RSSI_LEN        4       /** Length of RSSI string representation, e.g. "-127" */
-#define CHANNEL_LEN     3
-#define LASTSEEN_LEN    19
 
  /* enum ScanType being replaced with uint8_t */
 extern const uint8_t SCAN_HCI;
@@ -131,7 +124,7 @@ typedef struct {
 typedef struct wendigo_wifi_ap {
     uint8_t **stations;                   /** array of MACs */
     uint8_t stations_count;               /** Count of devices in stations */
-    uint8_t ssid[MAX_SSID_LEN + 1];       /** SSID of AP */
+    char ssid[MAX_SSID_LEN + 1];          /** SSID of AP */
     uint8_t channel;
     wifi_auth_mode_t authmode;
     uint32_t phy_11b: 1;                  /**< Bit: 0 flag to identify if 11b mode is enabled or not */

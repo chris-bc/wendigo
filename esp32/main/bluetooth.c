@@ -167,7 +167,7 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     memcpy(packet, PREAMBLE_BT_BLE, PREAMBLE_LEN);
     memcpy(packet + WENDIGO_OFFSET_BT_BDNAME_LEN, &(dev->radio.bluetooth.bdname_len), sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_BT_EIR_LEN, &(dev->radio.bluetooth.eir_len), sizeof(uint8_t));
-    memcpy(packet + WENDIGO_OFFSET_BT_RSSI, (uint8_t *)&(dev->radio.bluetooth.rssi), sizeof(int16_t));
+    memcpy(packet + WENDIGO_OFFSET_BT_RSSI, (uint8_t *)&(dev->rssi), sizeof(int16_t));
     memcpy(packet + WENDIGO_OFFSET_BT_COD, (uint8_t *)&(dev->radio.bluetooth.cod), sizeof(uint32_t));
     memcpy(packet + WENDIGO_OFFSET_BT_BDA, dev->mac, MAC_BYTES);
     memcpy(packet + WENDIGO_OFFSET_BT_SCANTYPE, &(dev->scanType), sizeof(uint8_t));
