@@ -454,26 +454,37 @@ bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev,
   FURI_LOG_T(WENDIGO_TAG, "Start link_wifi_devices()");
   if (dev == NULL || macs == NULL || mac_count == 0 ||
       !memcmp(macs[0], nullMac, MAC_BYTES)) {
+    FURI_LOG_T("link_wifi_devices()", "Checkpoint 1");
     return true;
   }
   UNUSED(app);
   /* A station must have 0 or 1 MACs */
   if (dev->scanType == SCAN_WIFI_STA && mac_count != 1) {
+    FURI_LOG_T("link_wifi_devices()", "Checkpoint 2");
     return false;
   }
+  FURI_LOG_T("link_wifi_devices()", "Checkpoint 3");
   if (dev->scanType == SCAN_WIFI_STA) {
     /* We already know mac_count == 1 */
-    uint16_t apIdx = device_index_from_mac(macs[0]);
+    FURI_LOG_T("link_wifi_devices()", "Checkpoint 4");
+    uint16_t apIdx = device_index_from_mac(dev->radio.sta.apMac);
+    FURI_LOG_T("link_wifi_devices()", "Checkpoint 5");
     if (apIdx < devices_count) {
+        FURI_LOG_T("link_wifi_devices()", "Checkpoint 6");
       dev->radio.sta.ap = devices[apIdx];
+      FURI_LOG_T("link_wifi_devices()", "Checkpoint 7");
     } else {
+        FURI_LOG_T("link_wifi_devices()", "Checkpoint 8");
       /* No device found with that MAC */
       memcpy(dev->radio.sta.apMac, nullMac,
              MAC_BYTES); // TODO: Consider keeping the MAC and retrying link
       // later on?
+      FURI_LOG_T("link_wifi_devices()", "Checkpoint 9");
       dev->radio.sta.ap = NULL;
+      FURI_LOG_T("link_wifi_devices()", "Checkpoint 10");
     }
   } else if (dev->scanType == SCAN_WIFI_AP) {
+    FURI_LOG_T("link_wifi_devices()", "Checkpoint 11");
     /* We need to update dev to include any existing stations for the device as
    well as all stations specified in macs[] */
     // Get existing cache for dev if present
@@ -555,7 +566,9 @@ bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev,
       }
     }
     dev->radio.ap.stations_count = count;
+    FURI_LOG_T("link_wifi_devices()", "Checkpoint 12");
   } else {
+    FURI_LOG_T("link_wifi_devices()", "Checkpoint 13");
     return false;
   }
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_link_wifi_devices()");
@@ -1124,8 +1137,9 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     wendigo_log_with_packet(MSG_ERROR, popupMsg, packet, packetLen);
   } else {
     if (dev->radio.ap.stations_count > 0) {
-      wendigo_link_wifi_devices(app, dev, stations,
-                                dev->radio.ap.stations_count);
+      //wendigo_link_wifi_devices(app, dev, stations, dev->radio.ap.stations_count);
+      // TODO: Fix linking
+      dev->radio.ap.stations_count = 0;
     }
     wendigo_add_device(app, dev);
   }
@@ -1206,8 +1220,7 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
         packet, packetLen);
   } else {
     if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
-      wendigo_link_wifi_devices(app, dev, (uint8_t **)&dev->radio.sta.apMac,
-                                1); // I think this will work?
+      //wendigo_link_wifi_devices(app, dev, (uint8_t **)&dev->radio.sta.apMac, 1); // I think this will work?
     } // TODO: Is this needed?
     wendigo_add_device(app, dev);
   }
