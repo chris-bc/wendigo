@@ -1,6 +1,8 @@
 #ifndef WENDIGO_COMMON_DEFS
 #define WENDIGO_COMMON_DEFS
 
+#include "wendigo_app_i.h"
+
 /**
  * Structs have just blown my mind - based on its members wendigo_bt_device
  * (excluding wendigo_bt_svc) should be 45 bytes but it's 56. Wendigo_bt_svc
@@ -127,7 +129,7 @@ typedef struct {
 } wendigo_bt_device;
 
 typedef struct wendigo_wifi_ap {
-    void **stations;                      /** wendigo_device** */
+    uint8_t **stations;                   /** array of MACs */
     uint8_t stations_count;               /** Count of devices in stations */
     uint8_t ssid[MAX_SSID_LEN + 1];       /** SSID of AP */
     uint8_t channel;
@@ -146,7 +148,6 @@ typedef struct wendigo_wifi_ap {
 } wendigo_wifi_ap;
 
 typedef struct wendigo_wifi_sta {
-    void *ap;                   /* wendigo_device* */
     uint8_t apMac[MAC_BYTES];
     uint8_t channel;
 } wendigo_wifi_sta;
