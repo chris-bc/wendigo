@@ -353,9 +353,7 @@ void repeat_bytes(uint8_t byte, uint8_t count) {
 }
 
 void send_bytes(uint8_t *bytes, uint8_t size) {
-    for (int i = 0; i < size; ++i) {
-        putc(bytes[i], stdout);
-    }
+    printf("%.*s", size, bytes);
     fflush(stdout);
 }
 

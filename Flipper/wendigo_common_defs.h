@@ -12,37 +12,37 @@
  * offset 0 representing the first byte of the packet preamble.
  * 
  */
- #define WENDIGO_OFFSET_BT_BDNAME_LEN           (8)
- #define WENDIGO_OFFSET_BT_EIR_LEN              (9)
- #define WENDIGO_OFFSET_BT_RSSI                 (10)
- #define WENDIGO_OFFSET_BT_COD                  (14)
- #define WENDIGO_OFFSET_BT_BDA                  (18)
- #define WENDIGO_OFFSET_BT_SCANTYPE             (24)
- #define WENDIGO_OFFSET_BT_TAGGED               (25)
- #define WENDIGO_OFFSET_BT_LASTSEEN             (26)
- #define WENDIGO_OFFSET_BT_NUM_SERVICES         (45)
- #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (46)
- #define WENDIGO_OFFSET_BT_COD_LEN              (47)
- #define WENDIGO_OFFSET_BT_BDNAME               (48)
+ #define WENDIGO_OFFSET_BT_BDNAME_LEN           (4)
+ #define WENDIGO_OFFSET_BT_EIR_LEN              (5)
+ #define WENDIGO_OFFSET_BT_RSSI                 (6)
+ #define WENDIGO_OFFSET_BT_COD                  (10)
+ #define WENDIGO_OFFSET_BT_BDA                  (14)
+ #define WENDIGO_OFFSET_BT_SCANTYPE             (20)
+ #define WENDIGO_OFFSET_BT_TAGGED               (21)
+ #define WENDIGO_OFFSET_BT_LASTSEEN             (22)
+ #define WENDIGO_OFFSET_BT_NUM_SERVICES         (41)
+ #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (42)
+ #define WENDIGO_OFFSET_BT_COD_LEN              (43)
+ #define WENDIGO_OFFSET_BT_BDNAME               (44)
  /* bdname is bdname_len bytes, followed by eir_len bytes of EIR and cod_len bytes of CoD */
 
  /* Initial elements of AP and STA packets are common so are just defined once */
- #define WENDIGO_OFFSET_WIFI_SCANTYPE           (8)
- #define WENDIGO_OFFSET_WIFI_MAC                (9)
- #define WENDIGO_OFFSET_WIFI_CHANNEL            (15)
- #define WENDIGO_OFFSET_WIFI_RSSI               (18)
- #define WENDIGO_OFFSET_WIFI_LASTSEEN           (22)
- #define WENDIGO_OFFSET_WIFI_TAGGED             (41)
+ #define WENDIGO_OFFSET_WIFI_SCANTYPE           (4)
+ #define WENDIGO_OFFSET_WIFI_MAC                (5)
+ #define WENDIGO_OFFSET_WIFI_CHANNEL            (11)
+ #define WENDIGO_OFFSET_WIFI_RSSI               (14)
+ #define WENDIGO_OFFSET_WIFI_LASTSEEN           (18)
+ #define WENDIGO_OFFSET_WIFI_TAGGED             (37)
  /* Unique elements */
- #define WENDIGO_OFFSET_STA_AP_MAC              (42)
- #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (48)
- #define WENDIGO_OFFSET_STA_AP_SSID             (49)
- #define WENDIGO_OFFSET_STA_TERM                (81)
+ #define WENDIGO_OFFSET_STA_AP_MAC              (38)
+ #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (44)
+ #define WENDIGO_OFFSET_STA_AP_SSID             (45)
+ #define WENDIGO_OFFSET_STA_TERM                (77)
  /* Packet terminator is PREAMBLE_LEN == 8 bytes */
- #define WENDIGO_OFFSET_AP_SSID_LEN             (42)
- #define WENDIGO_OFFSET_AP_STA_COUNT            (43)
- #define WENDIGO_OFFSET_AP_SSID                 (44)
- #define WENDIGO_OFFSET_AP_STA                  (76)
+ #define WENDIGO_OFFSET_AP_SSID_LEN             (38)
+ #define WENDIGO_OFFSET_AP_STA_COUNT            (39)
+ #define WENDIGO_OFFSET_AP_SSID                 (40)
+ #define WENDIGO_OFFSET_AP_STA                  (72)
  /* Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
  #ifdef IS_FLIPPER_APP
