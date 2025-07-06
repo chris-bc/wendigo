@@ -606,11 +606,11 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
     devices_capacity += INC_DEVICE_CAPACITY_BY;
   }
   devices[devices_count] = malloc(sizeof(wendigo_device));
-  wendigo_device *new_device = devices[devices_count++];
-  if (new_device == NULL) {
+  if (devices[devices_count] == NULL) {
     /* That's unfortunate */
     return false;
   }
+  wendigo_device *new_device = devices[devices_count++];
   /* Copy common attributes */
   new_device->rssi = dev->rssi;
   new_device->scanType = dev->scanType;
