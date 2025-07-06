@@ -153,18 +153,19 @@ esp_err_t add_device(wendigo_device *dev) {
                    devices[devices_count].radio.ap.stations = NULL;
                    devices[devices_count].radio.ap.stations_count = 0;
                 if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
-                    devices[devices_count].radio.ap.stations = malloc(sizeof(wendigo_device *) *
-                                                                      dev->radio.ap.stations_count);
+                    devices[devices_count].radio.ap.stations = malloc(sizeof(uint8_t *) * dev->radio.ap.stations_count);
                     if (devices[devices_count].radio.ap.stations != NULL) {
                         /* If allocation fails all we need to do is ensure that stations_count is 0 -
                            linked stations will still be sent to Flipper, we just don't have capacity
                            to store them. stations_count was initialised to 0 above, so we're only
                            looking at the success case.
-
-                           Now we own the region of memory we can just copy the list of pointers in one go
                         */
-                        memcpy(devices[devices_count].radio.ap.stations, dev->radio.ap.stations,
-                            sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+                        for (uint16_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+                            devices[devices_count].radio.ap.stations[i] = malloc(MAC_BYTES);
+                            if (devices[devices_count].radio.ap.stations[i] != NULL) {
+                                memcpy(devices[devices_count].radio.ap.stations[i], dev->radio.ap.stations[i], MAC_BYTES);
+                            }
+                        }
                         devices[devices_count].radio.ap.stations_count = dev->radio.ap.stations_count;
                     }
                 }
@@ -277,6 +278,11 @@ esp_err_t free_device(wendigo_device *dev) {
         }
     } else if (dev->scanType == SCAN_WIFI_AP) {
         if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
+            for (uint16_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+                if (dev->radio.ap.stations[i] != NULL) {
+                    free(dev->radio.ap.stations[i]);
+                }
+            }
             free(dev->radio.ap.stations);
             dev->radio.ap.stations = NULL;
             dev->radio.ap.stations_count = 0;
