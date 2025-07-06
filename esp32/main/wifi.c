@@ -55,6 +55,9 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     memcpy(packet, PREAMBLE_WIFI_AP, PREAMBLE_LEN);
     memcpy(packet + WENDIGO_OFFSET_WIFI_SCANTYPE, &(dev->scanType), sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_WIFI_MAC, dev->mac, MAC_BYTES);
+    if (!memcmp(dev->mac, PREAMBLE_WIFI_AP, PREAMBLE_LEN)) {
+        printf("\n\nPreamble in device MAC\n\n");
+    }
     memcpy(packet + WENDIGO_OFFSET_WIFI_CHANNEL, (uint8_t *)channel, CHANNEL_LEN);
     memcpy(packet + WENDIGO_OFFSET_WIFI_RSSI, (uint8_t *)rssi, RSSI_LEN);
     /* Don't bother sending lastSeen */
@@ -354,15 +357,16 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(dev->radio.ap.ssid, payload + BEACON_SSID_OFFSET, ssid_len);
         dev->radio.ap.ssid[ssid_len] = '\0';
     }
-
     esp_err_t result = ESP_OK;
     if (creating) {
         result = add_device(dev);
-        free(dev);
     } else {
         gettimeofday(&(dev->lastSeen), NULL);
     }
     display_wifi_device(dev, creating);
+    if (creating) {
+        free(dev);
+    }
     return result;
 }
 
@@ -392,11 +396,13 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     esp_err_t result = ESP_OK;
     if (creating) {
         result = add_device(dev);
-        free(dev);
     } else {
         gettimeofday(&(dev->lastSeen), NULL);
     }
     display_wifi_device(dev, creating);
+    if (creating) {
+        free(dev);
+    }
     return result;
 }
 
