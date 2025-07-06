@@ -43,6 +43,9 @@
  #define WENDIGO_OFFSET_AP_SSID                 (36)
  /* SSID is SSID_Len bytes. Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
+ #define WENDIGO_OFFSET_CHANNEL_COUNT           (4)
+ #define WENDIGO_OFFSET_CHANNELS                (5)
+
  #ifdef IS_FLIPPER_APP
     typedef enum {
         WIFI_AUTH_OPEN = 0,         /**< Authenticate mode : open */

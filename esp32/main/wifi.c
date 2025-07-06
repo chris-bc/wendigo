@@ -21,7 +21,7 @@ static const char *WIFI_TAG = "WiFi@Wendigo";
 void create_hop_task_if_needed();
 void channelHopCallback(void *pvParameter);
 
-/* Override the default implementation so we can send arbitrary 802.11 packets */
+/** Override the default implementation so we can send arbitrary 802.11 packets */
 esp_err_t ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
     return ESP_OK;
 }
@@ -299,20 +299,20 @@ esp_err_t set_associated(wendigo_device *sta, wendigo_device *ap) {
     memcpy(sta->radio.sta.apMac, ap->mac, MAC_BYTES);
     /* See if sta's MAC is present in ap->radio.ap.stations */
     uint8_t i;
-    for (i = 0; i < ap->radio.ap.stations_count && memcmp(sta->mac, ap->radio.ap.stations[i], MAC_BYTES); ++i) { }
+    for (i = 0; i < ap->radio.ap.stations_count && (ap->radio.ap.stations[i] == NULL || memcmp(sta->mac, ap->radio.ap.stations[i], MAC_BYTES)); ++i) { }
     if (i == ap->radio.ap.stations_count) {
         /* Station not found in ap->radio.ap.stations - Add it */
         uint8_t **new_stations = realloc(ap->radio.ap.stations, sizeof(uint8_t *) * (ap->radio.ap.stations_count + 1));
         if (new_stations == NULL) {
             return outOfMemory();
         }
+        ap->radio.ap.stations = new_stations;
         new_stations[ap->radio.ap.stations_count] = malloc(MAC_BYTES);
-        if (new_stations[ap->radio.ap.stations_count] == NULL) {
+        /* Make sure we still increment stations_count if we can't malloc the MAC */
+        if (new_stations[ap->radio.ap.stations_count++] == NULL) {
             return outOfMemory();
         }
-        memcpy(new_stations[ap->radio.ap.stations_count], sta->mac, MAC_BYTES);
-        ap->radio.ap.stations = new_stations;
-        ++(ap->radio.ap.stations_count);
+        memcpy(new_stations[ap->radio.ap.stations_count - 1], sta->mac, MAC_BYTES);
     }
     return ESP_OK;
 }
@@ -335,7 +335,7 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         dev->radio.ap.stations = NULL;
         dev->radio.ap.stations_count = 0;
         /* Null out SSID */
-        memset(dev->radio.ap.ssid, '\0', sizeof(dev->radio.ap.ssid));
+        explicit_bzero(dev->radio.ap.ssid, MAX_SSID_LEN + 1);
     }
     dev->scanType = SCAN_WIFI_AP;
     dev->rssi = rx_ctrl.rssi;
@@ -343,7 +343,6 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     uint8_t ssid_len = payload[BEACON_SSID_OFFSET - 1];
     if (ssid_len > 0) {
         memcpy(dev->radio.ap.ssid, payload + BEACON_SSID_OFFSET, ssid_len);
-        dev->radio.ap.ssid[ssid_len] = '\0';
     }
     esp_err_t result = ESP_OK;
     if (creating) {
@@ -395,6 +394,7 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
 
 /** Parse a probe response packet, creating or updating a wendigo_device
  * for both the source (AP) and destination (STA).
+ // TODO: Extract authMode and populate ap->radio.ap.authmode
  */
 esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     wendigo_device *ap = retrieve_by_mac(payload + PROBE_RESPONSE_BSSID_OFFSET);
@@ -441,7 +441,7 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         ap->radio.ap.stations = NULL;   /* We'll update these later */
         ap->radio.ap.stations_count = 0;
         /* Null out SSID */
-        memset(ap->radio.ap.ssid, '\0', sizeof(ap->radio.ap.ssid));
+        explicit_bzero(ap->radio.ap.ssid, MAX_SSID_LEN + 1);
     }
     ap->scanType = SCAN_WIFI_AP;
     ap->rssi = rx_ctrl.rssi;
@@ -449,7 +449,6 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     uint8_t ssid_len = payload[PROBE_RESPONSE_SSID_OFFSET - 1];
     if (ssid_len > 0) {
         memcpy(ap->radio.ap.ssid, payload + PROBE_RESPONSE_SSID_OFFSET, ssid_len);
-        ap->radio.ap.ssid[ssid_len] = '\0';
     }
     if (creatingAp) {
         result |= add_device(ap);
@@ -511,7 +510,7 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
            memcpy(ap->mac, payload + RTS_CTS_DESTADDR, MAC_BYTES);
            ap->tagged = false;
            /* Null out SSID */
-           memset(ap->radio.ap.ssid, 0x00, sizeof(ap->radio.ap.ssid));
+           explicit_bzero(ap->radio.ap.ssid, MAX_SSID_LEN + 1);
            ap->radio.ap.stations = NULL;
            ap->radio.ap.stations_count = 0;
     }
@@ -553,7 +552,7 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->mac, payload + RTS_CTS_SRCADDR, MAC_BYTES);
         ap->tagged = false;
         /* Null out SSID */
-        memset(ap->radio.ap.ssid, '\0', sizeof(ap->radio.ap.ssid));
+        explicit_bzero(ap->radio.ap.ssid, MAX_SSID_LEN + 1);
         ap->radio.ap.stations_count = 0;
         ap->radio.ap.stations = NULL;
     }
@@ -613,12 +612,12 @@ esp_err_t parse_data(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         if (src->scanType == SCAN_WIFI_AP) {
             src->radio.ap.channel = rx_ctrl.channel;
             if (dest != NULL && dest->scanType == SCAN_WIFI_STA) {
-                set_associated(dest, src);
+                set_associated(dest, src); // TODO: Call this nyway so that associated MACs are recorded even if we don't have their objects
             }
         } else if (src->scanType == SCAN_WIFI_STA) {
             src->radio.sta.channel = rx_ctrl.channel;
             if (dest != NULL && dest->scanType == SCAN_WIFI_AP) {
-                set_associated(src, dest);
+                set_associated(src, dest); // TODO: Call anyway as above
             }
         }
     }
@@ -656,7 +655,7 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->mac, payload + DEAUTH_BSSID_OFFSET, MAC_BYTES);
         ap->tagged = false;
         /* Null out SSID */
-        memset(ap->radio.ap.ssid, '\0', sizeof(ap->radio.ap.ssid));
+        explicit_bzero(ap->radio.ap.ssid, MAX_SSID_LEN + 1);
         ap->radio.ap.stations = NULL;
         ap->radio.ap.stations_count = 0;
     }
@@ -683,7 +682,6 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(sta->mac, payload + DEAUTH_DESTADDR_OFFSET, MAC_BYTES);
         sta->tagged = false;
-        memcpy(sta->radio.sta.apMac, nullMac, MAC_BYTES);
     }
     sta->scanType = SCAN_WIFI_STA;
     sta->radio.sta.channel = rx_ctrl.channel;
@@ -749,7 +747,7 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->mac, payload + DEAUTH_DESTADDR_OFFSET, MAC_BYTES);
         ap->tagged = false;
         /* Null out SSID */
-        memset(ap->radio.ap.ssid, '\0', sizeof(ap->radio.ap.ssid));
+        explicit_bzero(ap->radio.ap.ssid, MAX_SSID_LEN + 1);
         ap->radio.ap.stations = NULL;
         ap->radio.ap.stations_count = 0;
     }
@@ -771,9 +769,9 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     return result;
 }
 
-/* Monitor mode callback
-   This is the callback function invoked when the wireless interface receives any selected packet.
-*/
+/** Monitor mode callback
+ *  This is the callback function invoked when the wireless interface receives any selected packet.
+ */
 void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type) {
     wifi_promiscuous_pkt_t *data = (wifi_promiscuous_pkt_t *)buf;
     uint8_t *payload = data->payload;
@@ -796,25 +794,25 @@ void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type) {
             result = parse_disassoc(payload, data->rx_ctrl);
             break;
         case WIFI_FRAME_ASSOC_REQ:
-            //
+            // TODO
             break;
         case WIFI_FRAME_ASSOC_RESP:
-            //
+            // TODO
             break;
         case WIFI_FRAME_REASSOC_REQ:
-            //
+            // TODO
             break;
         case WIFI_FRAME_REASSOC_RESP:
-            //
+            // TODO
             break;
         case WIFI_FRAME_ATIMS:
-            //
+            // TODO
             break;
         case WIFI_FRAME_AUTH:
-            //
+            // TODO
             break;
         case WIFI_FRAME_ACTION:
-            //
+            // TODO
             break;
         case WIFI_FRAME_RTS:
             result = parse_rts(payload, data->rx_ctrl);
@@ -854,9 +852,9 @@ esp_err_t initialise_wifi() {
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
         wifi_config_t ap_config = {
             .ap = {
-                .ssid = "ManagementAP",
+                .ssid = "Wendigo WiFi",
                 .ssid_len = 12,
-                .password = "management",
+                .password = "mythology",
                 .channel = 1,
                 .authmode = WIFI_AUTH_OPEN,
                 .ssid_hidden = 0,
@@ -872,13 +870,12 @@ esp_err_t initialise_wifi() {
         wifi_promiscuous_filter_t filter = { .filter_mask = WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_CTRL | WIFI_PROMIS_FILTER_MASK_DATA };
         esp_wifi_set_promiscuous_filter(&filter);
         esp_wifi_set_promiscuous_rx_cb(wifi_pkt_rcvd);
-
         WIFI_INITIALISED = true;
     }
     return ESP_OK;
 }
 
-/* Enable wifi scanning */
+/** Enable wifi scanning */
 esp_err_t wendigo_wifi_enable() {
     esp_err_t result = ESP_OK;
     if (!WIFI_INITIALISED) {
@@ -886,14 +883,15 @@ esp_err_t wendigo_wifi_enable() {
     }
     /* Set default channels to hop through (all 2.4GHz channels) if not yet configured */
     if (channels == NULL || channels_count == 0) {
-        wendigo_set_channels(WENDIGO_SUPPORTED_24_CHANNELS, WENDIGO_SUPPORTED_24_CHANNELS_COUNT);
+        /* Cast the values to avoid compiler warnings about discarding const qualifiers */
+        wendigo_set_channels((uint8_t *)WENDIGO_SUPPORTED_24_CHANNELS, (uint8_t)WENDIGO_SUPPORTED_24_CHANNELS_COUNT);
     }
     result |= esp_wifi_set_promiscuous(true);
     create_hop_task_if_needed();
     return result;
 }
 
-/* Disable wifi scanning */
+/** Disable wifi scanning */
 esp_err_t wendigo_wifi_disable() {
     esp_wifi_set_promiscuous(false);
     if (channelHopTask != NULL) {
@@ -916,7 +914,7 @@ bool wendigo_is_valid_channel(uint8_t channel) {
 
 /** Display the channels that are currently included in channel hopping.
  * In Interactive Mode this displays a readable string, in Flipper mode
- * a comma-separated list of active channels.
+ * the packet consists of <Preamble><Channel Count><Channel bytes><Terminator>.
  */
 esp_err_t wendigo_get_channels() {
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
@@ -926,23 +924,37 @@ esp_err_t wendigo_get_channels() {
         }
         putchar('\n');
     } else {
-        repeat_bytes(0x99, 4);
-        repeat_bytes(0xAA, 4);
-        send_bytes(&channels_count, sizeof(uint8_t));
-        if (channels_count > 0) {
-            send_bytes((uint8_t *)channels, sizeof(uint16_t) * channels_count);
+        /* Assemble the packet with comma-separated channels.
+           Packet size is 2*PREAMBLE_LEN + channels_count + 1
+        */
+        uint8_t packetLen = (2 * PREAMBLE_LEN) + channels_count + 1;
+        uint8_t *packet = malloc(packetLen);
+        if (packet == NULL) {
+            return outOfMemory();
         }
-        send_end_of_packet();
+        memcpy(packet, PREAMBLE_CHANNELS, PREAMBLE_LEN);
+        memcpy(packet + WENDIGO_OFFSET_CHANNEL_COUNT, &channels_count, sizeof(uint8_t));
+        uint8_t offset = WENDIGO_OFFSET_CHANNELS;
+        if (channels_count > 0) {
+            memcpy(packet + offset, channels, channels_count);
+            offset += channels_count;
+        }
+        memcpy(packet + offset, PACKET_TERM, PREAMBLE_LEN);
+        /* Transmit the packet */
+        wendigo_get_tx_lock(true);
+        send_bytes(packet, packetLen);
+        wendigo_release_tx_lock();
+        free(packet);
     }
     return ESP_OK;
 }
 
 /** Set the channels that are to be included in channel hopping.
- * channels[] is an array of length channels_count, with each element
- * representing a channel that is to be enabled.
+ * channels[] is an array of length channels_count, with each
+ * uint8_t element representing a channel that is to be enabled.
  */
 esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count) {
-    if (channels != NULL) {
+    if (channels != NULL && channels_count > 0) {
         free(channels);
         channels = NULL;
         channels_count = 0;
@@ -958,6 +970,12 @@ esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count
     return ESP_OK;
 }
 
+/** Creates and starts a background task to periodically change
+ *  WiFi channels if it doesn't already exist.
+ *  Regardless of whether or not the task already exists this will
+ *  "reset" channel hopping, such that the next channel will be the
+ *  first channel in channels[].
+ */
 void create_hop_task_if_needed() {
     if (channelHopTask == NULL) {
         if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
@@ -969,9 +987,22 @@ void create_hop_task_if_needed() {
     channel_index = 0;
 }
 
+/** Callback function executed by the channel hopping task once it
+ *  has been successfully initialised.
+ *  This function enters an infinite loop where it pauses for `hop_millis`
+ *  milliseconds and then sets the WiFi channel to the next channel in
+ *  channels[].
+ */
 void channelHopCallback(void *pvParameter) {
     if (hop_millis == 0) {
-        hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
+        /* If Default dwell time for channel hopping is not configured
+           default to 500ms (half a second).
+           This option is set by running "idf.py menuconfig" from the
+           ESP32 project directory and navigating to 
+           "Wendigo Configuration" -> "Default dwell time for WiFi when
+           channel hopping (milliseconds)".
+        */
+        hop_millis = (CONFIG_DEFAULT_HOP_MILLIS == 0) ? 500 : CONFIG_DEFAULT_HOP_MILLIS;
     }
     while (true) {
         /* Delay hop_millis ms */
@@ -980,7 +1011,7 @@ void channelHopCallback(void *pvParameter) {
         if (channels_count > 0) {
             ++channel_index; /* Move to next supported channel */
             if (channel_index >= channels_count) {
-                /* Current channel is not in active channels or next channel is first channel */
+                /* We've hopped to the end, go back to the start */
                 channel_index = 0;
             }
             if (esp_wifi_set_channel(channels[channel_index], WIFI_SECOND_CHAN_NONE) != ESP_OK &&
