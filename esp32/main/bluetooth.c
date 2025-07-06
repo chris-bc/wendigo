@@ -143,9 +143,9 @@ esp_err_t display_gap_interactive(wendigo_device *dev) {
 }
 
 /* Send device info to stdout to transmit over UART
-   * Sends 4 bytes of 0xFF followed by 4 bytes of 0xAA to begin the transmission
+   * Sends the Bluetooth packet preamble to begin the transmission
    * Sends device attributes
-   * Ends the transmission with the reverse of the start: 4*0xAA 4*0xFF
+   * Ends the transmission with the packet terminator
 */
 esp_err_t display_gap_uart(wendigo_device *dev) {
     esp_err_t result = ESP_OK;
@@ -154,15 +154,10 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     cod2shortStr(dev->radio.bluetooth.cod, cod_short, &cod_len);
     /* Account for NULL terminator on cod_short */
     ++cod_len;
-    /* Send RSSI as a char[4] to avoid casting between uint8_t and int16_t */
-    char rssi[RSSI_LEN + 3];    /* +3 rather than 1 to avoid compiler errors - int16_t can be up to 6 chars */
-    memset(rssi, '\0', RSSI_LEN + 3);
-    snprintf(rssi, RSSI_LEN + 3, "%d", dev->rssi);
     /* Send tagged as 1 for true, 0 for false */
     uint8_t tagged = (dev->tagged) ? 1 : 0;
 
-    /* Assemble the packet and send it in one go - I can't figure out why AP packet length
-       is a byte too long, this will at least cover up the issue :/ */
+    /* Assemble the packet and send it in one go */
     uint8_t packet_len = WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
         dev->radio.bluetooth.eir_len + cod_len + PREAMBLE_LEN;
     uint8_t *packet = malloc(sizeof(uint8_t *) * packet_len);
@@ -172,7 +167,7 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     memcpy(packet, PREAMBLE_BT_BLE, PREAMBLE_LEN);
     memcpy(packet + WENDIGO_OFFSET_BT_BDNAME_LEN, &(dev->radio.bluetooth.bdname_len), sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_BT_EIR_LEN, &(dev->radio.bluetooth.eir_len), sizeof(uint8_t));
-    memcpy(packet + WENDIGO_OFFSET_BT_RSSI, (uint8_t *)rssi, RSSI_LEN);
+    memcpy(packet + WENDIGO_OFFSET_BT_RSSI, (uint8_t *)&(dev->radio.bluetooth.rssi), sizeof(int16_t));
     memcpy(packet + WENDIGO_OFFSET_BT_COD, (uint8_t *)&(dev->radio.bluetooth.cod), sizeof(uint32_t));
     memcpy(packet + WENDIGO_OFFSET_BT_BDA, dev->mac, MAC_BYTES);
     memcpy(packet + WENDIGO_OFFSET_BT_SCANTYPE, &(dev->scanType), sizeof(uint8_t));
