@@ -80,7 +80,7 @@ uint16_t wendigo_device_index_of(wendigo_device *dev, wendigo_device **array, ui
  * of wendigo_device* objects.
  * Returns the index of the matching device, or array_len if not found.
  */
-uint16_t wendigo_device_index_of_mac(uint8_t *mac, wendigo_device **array, uint16_t array_len) {
+uint16_t wendigo_device_index_of_mac(uint8_t mac[MAC_BYTES], wendigo_device **array, uint16_t array_len) {
     /* Don't proceed if invalid arguments were provided */
     if (mac == NULL || array == NULL || array_len == 0) {
         return array_len;
@@ -98,7 +98,7 @@ uint16_t wendigo_index_of(uint8_t mac[MAC_BYTES], uint8_t **array, uint16_t arra
         return array_len;
     }
     uint16_t idx = 0;
-    for (; idx < array_len && memcmp(array[idx], mac, MAC_BYTES); ++idx) { }
+    for (; idx < array_len && (array[idx] == NULL || memcmp(array[idx], mac, MAC_BYTES)); ++idx) { }
     return idx;
 }
 
@@ -293,7 +293,7 @@ esp_err_t free_device(wendigo_device *dev) {
     return ESP_OK;
 }
 
-/* Helper functions to simplify, and minimise memory use of, banners */
+/** Helper functions to simplify, and minimise memory use of, banners */
 void print_star(int size, bool newline) {
     for (int i = 0; i < size; ++i) {
         putc('*', stdout);
@@ -311,20 +311,20 @@ void print_space(int size, bool newline) {
     }
 }
 
-/* Display a simple out of memory message and set error code */
+/** Display a simple out of memory message and set error code */
 esp_err_t outOfMemory() {
     printf("%s\n", STRING_MALLOC_FAIL);
     return ESP_ERR_NO_MEM;
 }
 
-/* General purpose byte to string convertor
-   byteCount specifies the number of bytes to be converted to a string,
-   commencing at bytes.
-   string must be an initialised char[] containing sufficient space
-   for the results.
-   String length (including terminating \0) will be 3 * byteCount
-   (standard formatting - 0F:AA:E5)
-*/
+/** General purpose byte to string convertor
+ *  byteCount specifies the number of bytes to be converted to a string,
+ *  commencing at bytes.
+ *  string must be an initialised char[] containing sufficient space
+ *  for the results.
+ *  String length (including terminating \0) will be 3 * byteCount
+ *  (standard formatting - 0F:AA:E5)
+ */
 esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
     esp_err_t err = ESP_OK;
     char temp[4];
@@ -340,9 +340,10 @@ esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
     return err;
 }
 
-/* Convert the specified byte array to a string representing
-   a MAC address. strMac must be a pointer initialised to
-   contain at least 18 bytes (MAC + '\0') */
+/** Convert the specified byte array to a string representing
+ *  a MAC address. strMac must be a pointer initialised to
+ *  contain at least 18 bytes (MAC + '\0')
+ */
    esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac) {
     if (bMac == NULL || strMac == NULL ) {
         return ESP_ERR_INVALID_ARG;
@@ -350,8 +351,9 @@ esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount) {
     return wendigo_bytes_to_string(bMac, strMac, MAC_BYTES);
 }
 
-/* Convert the specified string to a byte array
-   bMac must be a pointer to 6 bytes of allocated memory */
+/** Convert the specified string to a byte array
+ *  bMac must be a pointer to 6 bytes of allocated memory
+ */
    esp_err_t wendigo_string_to_bytes(char *strMac, uint8_t *bMac) {
     uint8_t nBytes = (strlen(strMac) + 1) / 3; /* Support arbitrary-length string */
         if (nBytes == 0) {
