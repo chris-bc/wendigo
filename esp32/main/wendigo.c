@@ -38,7 +38,7 @@
     #define HISTORY_PATH MOUNT_PATH "/history.txt"
 #endif // CONFIG_STORE_HISTORY
 
-/* Display command syntax when in interactive mode */
+/** Display command syntax when in interactive mode */
 void display_syntax(char *command) {
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         printf("Usage: %s ( %d | %d | %d )\n%d: %s\n%d: %s\n%d: %s\n", command, ACTION_DISABLE,
@@ -47,9 +47,9 @@ void display_syntax(char *command) {
     }
 }
 
-/* Inform the caller of an invalid command
-   Either by displaying the command syntax or sending a MSG_INVALID response
-*/
+/** Inform the caller of an invalid command
+ *  Either by displaying the command syntax or sending a MSG_INVALID response
+ */
 void invalid_command(char *cmd, char *arg, char *syntax) {
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         display_syntax(syntax);
@@ -58,8 +58,9 @@ void invalid_command(char *cmd, char *arg, char *syntax) {
     }
 }
 
-/* Sends a `result` message corresponding to the command `cmd` with optional argument `arg` over UART
-   unless interactive mode is enabled, in which case a more readable result is printed to the console. */
+/** Sends a `result` message corresponding to the command `cmd` with optional argument `arg` over UART
+ *  unless interactive mode is enabled, in which case a more readable result is printed to the console.
+ */
 esp_err_t send_response(char *cmd, char *arg, MsgType result) {
     // TODO: Decide whether or not to keep this and refactor as appropriate
     // As I begin implementing the FZ side of Wendigo I'm reconsidering the
@@ -135,7 +136,7 @@ esp_err_t send_response(char *cmd, char *arg, MsgType result) {
     return ESP_OK;
 }
 
-/* Command syntax is <command> <ActionType>, where ActionType :== 0 | 1 | 2 */
+/** Command syntax is <command> <ActionType>, where ActionType :== 0 | 1 | 2 */
 ActionType parseCommand(int argc, char **argv) {
     /* Validate the argument - Must be between 0 & 2 */
     if (argc != 2) {
@@ -149,7 +150,7 @@ ActionType parseCommand(int argc, char **argv) {
     }
 }
 
-/* Tag syntax is t[ag] ( b[t] | w[ifi] ) <MAC> <ActionType>, where ActionType :== 0 | 1 | 2 (or 3 for ACTION_INVALID) */
+/** Tag syntax is t[ag] ( b[t] | w[ifi] ) <MAC> <ActionType>, where ActionType :== 0 | 1 | 2 (or 3 for ACTION_INVALID) */
 ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr) {
     if (argc != 4) {
         return ACTION_INVALID;
@@ -189,11 +190,11 @@ void wendigo_set_logging(esp_log_level_t level) {
     esp_log_level_set(TAG, level);
 }
 
-/* A generic function that is called by the command handlers for the HCI, BLE, WIFI and INTERACTIVE commands.
-   Parses the command line to determine and perform the requested action, sending appropriate messages to the UART
-   host throughout. If a command requires `radio` to be enabled or disabled the function pointer `enableFunction()`
-   or `disableFunction` is executed. These functions must take no arguments and return esp_err_t (or int).
-*/
+/** A generic function that is called by the command handlers for the HCI, BLE, WIFI and INTERACTIVE commands.
+ *  Parses the command line to determine and perform the requested action, sending appropriate messages to the UART
+ *  host throughout. If a command requires `radio` to be enabled or disabled the function pointer `enableFunction()`
+ *  or `disableFunction` is executed. These functions must take no arguments and return esp_err_t (or int).
+ */
 esp_err_t enableDisableRadios(int argc, char **argv, uint8_t radio, esp_err_t (*enableFunction)(), esp_err_t (*disableFunction)()) {
     esp_err_t result = ESP_OK;
     if (radio >= SCAN_COUNT) {
@@ -275,7 +276,7 @@ esp_err_t cmd_channel(int argc, char **argv) {
             return ESP_ERR_NO_MEM;
         }
         for (uint8_t i = 1; i < argc; ++i) {
-            // TODO: Is this cast always safe?
+            // TODO: Is this cast always safe? Maybe I should check bounds before casting?
             this_channel = (uint8_t)strtol(argv[i], NULL, 10);
             if (wendigo_is_valid_channel(this_channel)) {
                 channel_list[channel_count++] = this_channel;
@@ -290,12 +291,12 @@ esp_err_t cmd_channel(int argc, char **argv) {
     }
 }
 
-/* The `status` command is intended to provide an overall picture of ESP32-Wendigo's current state:
-   * Support for each radio
-   * Scanning status for each radio
-   * Compiled with Bluetooth UUID dictionary (CONFIG_DECODE_UUIDS)
-   * Metrics of device caches
-*/
+/** The `status` command is intended to provide an overall picture of ESP32-Wendigo's current state:
+ *  * Support for each radio
+ *  * Scanning status for each radio
+ *  * Compiled with Bluetooth UUID dictionary (CONFIG_DECODE_UUIDS)
+ *  * Metrics of device caches
+ */
 esp_err_t cmd_status(int argc, char **argv) {
     #if defined(CONFIG_DECODE_UUIDS)
         bool uuidDictionarySupported = true;
@@ -363,7 +364,7 @@ esp_err_t cmd_interactive(int argc, char **argv) {
     return ESP_OK;
 }
 
-/* Usage: t[ag] ( b[t] | w[ifi] ) <MAC> [ 0 | 1 | 2 ] */
+/** Usage: t[ag] ( b[t] | w[ifi] ) <MAC> [ 0 | 1 | 2 ] */
 esp_err_t cmd_tag(int argc, char **argv) {
     esp_err_t result = ESP_OK;
     esp_bd_addr_t addr;
