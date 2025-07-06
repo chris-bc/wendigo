@@ -311,20 +311,22 @@ esp_err_t set_associated(wendigo_device *sta, wendigo_device *ap) {
     if (sta == NULL || ap == NULL || sta->scanType != SCAN_WIFI_STA || ap->scanType != SCAN_WIFI_AP) {
         return ESP_ERR_INVALID_ARG;
     }
-    sta->radio.sta.ap = ap;
     memcpy(sta->radio.sta.apMac, ap->mac, MAC_BYTES);
-    /* See if sta is present in ap->radio.ap.stations */
+    /* See if sta's MAC is present in ap->radio.ap.stations */
     uint8_t i;
-    for (i = 0; i < ap->radio.ap.stations_count && memcmp(sta->mac, ((wendigo_device *)ap->radio.ap.stations[i])->mac, MAC_BYTES); ++i) { }
+    for (i = 0; i < ap->radio.ap.stations_count && memcmp(sta->mac, ap->radio.ap.stations[i], MAC_BYTES); ++i) { }
     if (i == ap->radio.ap.stations_count) {
         /* Station not found in ap->radio.ap.stations - Add it */
-        wendigo_device **new_stations = realloc(ap->radio.ap.stations, sizeof(wendigo_device *) * (ap->radio.ap.stations_count + 1));
+        uint8_t **new_stations = realloc(ap->radio.ap.stations, sizeof(uint8_t *) * (ap->radio.ap.stations_count + 1));
         if (new_stations == NULL) {
             return outOfMemory();
         }
-        new_stations[ap->radio.ap.stations_count++] = sta;
-        ap->radio.ap.stations = (void **)new_stations;
-        //ap->radio.ap.stations[ap->radio.ap.stations_count++] = sta;
+        new_stations[ap->radio.ap.stations_count] = malloc(MAC_BYTES);
+        if (new_stations[ap->radio.ap.stations_count] == NULL) {
+            return outOfMemory();
+        }
+        memcpy(new_stations[ap->return.ap.stations_count], sta->mac, MAC_BYTES);
+        ap->radio.ap.stations = new_stations;
     }
     return ESP_OK;
 }
