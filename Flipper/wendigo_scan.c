@@ -36,26 +36,26 @@ uint16_t selected_devices_capacity = 0;
  * of the sequence.
  */
 uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
-  FURI_LOG_T(WENDIGO_TAG, "Start start_of_packet()");
-  uint16_t result = 0;
-  if (bytes == NULL) {
-    return size;
-  }
-  for (; result + PREAMBLE_LEN <= size &&
-         memcmp(bytes + result, PREAMBLE_BT_BLE, PREAMBLE_LEN) &&
-         memcmp(bytes + result, PREAMBLE_WIFI_AP, PREAMBLE_LEN) &&
-         memcmp(bytes + result, PREAMBLE_WIFI_STA, PREAMBLE_LEN) &&
-         memcmp(bytes + result, PREAMBLE_STATUS, PREAMBLE_LEN) &&
-         memcmp(bytes + result, PREAMBLE_CHANNELS, PREAMBLE_LEN) &&
-         memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN);
-       ++result) {
-  }
-  /* If not found, set result to size */
-  if (result + PREAMBLE_LEN > size) {
-    result = size;
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End start_of_packet()");
-  return result;
+    FURI_LOG_T(WENDIGO_TAG, "Start start_of_packet()");
+    uint16_t result = 0;
+    if (bytes == NULL) {
+        return size;
+    }
+    for (; result + PREAMBLE_LEN <= size &&
+            memcmp(bytes + result, PREAMBLE_BT_BLE, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_WIFI_AP, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_WIFI_STA, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_STATUS, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_CHANNELS, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN);
+        ++result) {
+    }
+    /* If not found, set result to size */
+    if (result + PREAMBLE_LEN > size) {
+        result = size;
+    }
+    FURI_LOG_T(WENDIGO_TAG, "End start_of_packet()");
+    return result;
 }
 
 /** Search for the end-of-packet marker in the specified byte array
@@ -64,18 +64,17 @@ uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
  *  specified `size` if not found.
  */
 uint16_t end_of_packet(uint8_t *theBytes, uint16_t size) {
-  FURI_LOG_T(WENDIGO_TAG, "Start end_of_packet()");
-  uint16_t result =
-      PREAMBLE_LEN - 1; /* Start by checking bytes [0] through [7] */
-  if (theBytes == NULL) {
-    return size;
-  }
-  for (; result < size && memcmp(theBytes + result - PREAMBLE_LEN + 1,
-                                 PACKET_TERM, PREAMBLE_LEN);
-       ++result) {
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End end_of_packet()");
-  return result;
+    FURI_LOG_T(WENDIGO_TAG, "Start end_of_packet()");
+    uint16_t result = PREAMBLE_LEN - 1; /* Start by checking bytes [0] through [7] */
+    if (theBytes == NULL) {
+        return size;
+    }
+    for (; result < size && memcmp(theBytes + result - PREAMBLE_LEN + 1,
+                                    PACKET_TERM, PREAMBLE_LEN);
+        ++result) {
+    }
+    FURI_LOG_T(WENDIGO_TAG, "End end_of_packet()");
+    return result;
 }
 
 /** Consume `bytes` bytes from `buffer`.
@@ -85,359 +84,340 @@ uint16_t end_of_packet(uint8_t *theBytes, uint16_t size) {
  * length then bufferLen bytes are removed from the buffer, emptying it.
  */
 void consumeBufferBytes(uint16_t bytes) {
-  FURI_LOG_T(WENDIGO_TAG, "Start consumeBufferBytes()");
-  if (bytes == 0 || buffer == NULL || bufferLen == 0) {
-    // That was a bit of a waste
-    return;
-  }
-  /* Ensure we stay within buffer's allocated memory */
-  if (bytes > bufferLen) {
-    bytes = bufferLen;
-  }
-  /* Remove bytes from the beginning of the buffer */
-  memset(buffer, '\0', bytes);
-  /* Copy memory into buffer from buffer+bytes to buffer+bufferLen.
-   This should be OK when the buffer is exhausted because it copies 0 bytes */
-  memcpy(buffer, buffer + bytes, bufferLen - bytes);
-  /* Null what remains */
-  memset(buffer + bufferLen - bytes, '\0', bytes);
-  /* Buffer is now bufferLen - bytes */
-  bufferLen -= bytes;
-  FURI_LOG_T(WENDIGO_TAG, "End consumeBufferBytes()");
+    FURI_LOG_T(WENDIGO_TAG, "Start consumeBufferBytes()");
+    if (bytes == 0 || buffer == NULL || bufferLen == 0) {
+        // That was a bit of a waste
+        return;
+    }
+    /* Ensure we stay within buffer's allocated memory */
+    if (bytes > bufferLen) {
+        bytes = bufferLen;
+    }
+    /* Remove bytes from the beginning of the buffer */
+    memset(buffer, '\0', bytes);
+    /* Copy memory into buffer from buffer+bytes to buffer+bufferLen.
+        This should be OK when the buffer is exhausted because it copies 0 bytes */
+    memcpy(buffer, buffer + bytes, bufferLen - bytes);
+    /* Null what remains */
+    memset(buffer + bufferLen - bytes, '\0', bytes);
+    /* Buffer is now bufferLen - bytes */
+    bufferLen -= bytes;
+    FURI_LOG_T(WENDIGO_TAG, "End consumeBufferBytes()");
 }
 
-/* Returns the index of the first occurrence of `\n` in `theString`, searching
-   the first `size` characters. Returns size if not found (which is outside the
-   array bounds).
-   TODO: This function is a candidate for deletion now that packets use an
-   alternate packet terminator */
+/** Returns the index of the first occurrence of `\n` in `theString`, searching
+ *  the first `size` characters. Returns size if not found (which is outside the
+ *  array bounds).
+ *  TODO: This function is a candidate for deletion now that packets use an
+ *  alternate packet terminator
+ */
 uint16_t bytes_contains_newline(uint8_t *theBytes, uint16_t size) {
-  FURI_LOG_T(WENDIGO_TAG, "Start bytes_contains_newline()");
-  if (theBytes == NULL) {
-    return size;
-  }
-  uint16_t result = 0;
-  for (; result < size && theBytes[result] != '\n'; ++result) {
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End bytes_contains_newline()");
-  return result;
+    FURI_LOG_T(WENDIGO_TAG, "Start bytes_contains_newline()");
+    if (theBytes == NULL) {
+        return size;
+    }
+    uint16_t result = 0;
+    for (; result < size && theBytes[result] != '\n'; ++result) { }
+    FURI_LOG_T(WENDIGO_TAG, "End bytes_contains_newline()");
+    return result;
 }
 
-/* Returns the index of the first occurrence of '\n' in `theString`, or
-   strlen(theString) if not found. This function requires `theString` to be null
-   terminated. If theString is NULL or if strlen(theString) > 0xFFFF (65535,
-   MAX_UINT16) the function returns 0xFFFF. If this value is returned and
-   theString is not NULL it's a good indication the string is not
-   NULL-terminated.
-   TODO: This function is a candidate for deletion. */
+/** Returns the index of the first occurrence of '\n' in `theString`, or
+ *  strlen(theString) if not found. This function requires `theString` to be null
+ *  terminated. If theString is NULL or if strlen(theString) > 0xFFFF (65535,
+ *  MAX_UINT16) the function returns 0xFFFF. If this value is returned and
+ *  theString is not NULL it's a good indication the string is not
+ *  NULL-terminated.
+ *  TODO: This function is a candidate for deletion.
+ */
 uint16_t string_contains_newline(char *theString) {
-  if (theString == NULL || strlen(theString) > 0xFFFF) {
-    return 0xFFFF;
-  }
-
-  return bytes_contains_newline((uint8_t *)theString, strlen(theString));
+    if (theString == NULL || strlen(theString) > 0xFFFF) {
+        return 0xFFFF;
+    }
+    return bytes_contains_newline((uint8_t *)theString, strlen(theString));
 }
 
-/* Send the status command to ESP32 */
+/** Send the status command to ESP32 */
 void wendigo_esp_status(WendigoApp *app) {
-  char cmd[] = "s\n";
-  wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
+    char cmd[] = "s\n";
+    wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
 }
 
-/* Send the version command to ESP32 */
+/** Send the version command to ESP32 */
 void wendigo_version(WendigoApp *app) {
-  char cmd[] = "v\n";
-  wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
+    char cmd[] = "v\n";
+    wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
 }
 
-/* Manage the tagged/selected status of the specified flipper_bt_device
-   Maintains bt_selected_devices[] as needed */
+/** Manage the tagged/selected status of the specified flipper_bt_device
+ *  Maintains bt_selected_devices[] as needed
+ */
 bool wendigo_set_device_selected(wendigo_device *device, bool selected) {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_device_selected()");
-  /* NULL device check */
-  if (device == NULL) {
-    return false;
-  }
-  if (selected && !device->tagged) {
-    /* Add device to selected_devices[] */
-    if (selected_devices_capacity == selected_devices_count) {
-      /* Extend selected_devices[] */
-      wendigo_device **new_devices =
-          realloc(selected_devices,
-                  sizeof(wendigo_device *) * (selected_devices_capacity + 1));
-      if (new_devices == NULL) {
-        // TODO: Panic - Display an error popup or something
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_device_selected()");
+    /* NULL device check */
+    if (device == NULL) {
         return false;
-      }
-      selected_devices = new_devices;
-      ++selected_devices_capacity;
     }
-    selected_devices[selected_devices_count++] = device;
-    // TODO: Sort
-  } else if (device->tagged && !selected) {
-    /* Remove device from selected_devices[] - custom_device_index() will safely
-     * handle any NULLs */
-    /* Not using 16 bits because nobody's going to select 255 devices */
-    uint8_t index = (uint8_t)custom_device_index(device, selected_devices,
-                                                 selected_devices_count);
-    if (index < selected_devices_count) {
-      /* Shuffle forward all subsequent devices, replacing device at `index` */
-      for (++index; index < selected_devices_count; ++index) {
-        selected_devices[index - 1] = selected_devices[index];
-      }
-      selected_devices[selected_devices_count--] = NULL;
+    if (selected && !device->tagged) {
+        /* Add device to selected_devices[] */
+        if (selected_devices_capacity == selected_devices_count) {
+            /* Extend selected_devices[] */
+            wendigo_device **new_devices = realloc(selected_devices,
+                sizeof(wendigo_device *) * (selected_devices_capacity + 1));
+            if (new_devices == NULL) {
+                // TODO: Panic - Display an error popup or something
+                return false;
+            }
+            selected_devices = new_devices;
+            ++selected_devices_capacity;
+        }
+        selected_devices[selected_devices_count++] = device;
+        // TODO: Sort
+    } else if (device->tagged && !selected) {
+        /* Remove device from selected_devices[] - custom_device_index() will safely
+         * handle any NULLs */
+        /* Not using 16 bits because nobody's going to select 255 devices */
+        uint8_t index = (uint8_t)custom_device_index(device, selected_devices,
+                                                        selected_devices_count);
+        if (index < selected_devices_count) {
+            /* Shuffle forward all subsequent devices, replacing device at `index` */
+            for (++index; index < selected_devices_count; ++index) {
+                selected_devices[index - 1] = selected_devices[index];
+            }
+            selected_devices[selected_devices_count--] = NULL;
+        }
     }
-  }
-  device->tagged = selected;
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_set_device_selected()");
-  return true;
+    device->tagged = selected;
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_set_device_selected()");
+    return true;
 }
 
-/* Enable or disable Wendigo scanning on all interfaces, using app->interfaces
-   to determine which radios should be enabled/disabled when starting to scan.
-   This function is called by the UI handler (wendigo_scene_start) when scanning
-   is started or stopped. app->interfaces is updated via the Setup menu.
-   Because wendigo_uart_tx returns void there is no way to identify failure,
-   so this function also returns void.
-*/
+/** Enable or disable Wendigo scanning on all interfaces, using app->interfaces
+ *  to determine which radios should be enabled/disabled when starting to scan.
+ *  This function is called by the UI handler (wendigo_scene_start) when scanning
+ *  is started or stopped. app->interfaces is updated via the Setup menu.
+ *  Because wendigo_uart_tx returns void there is no way to identify failure,
+ *  so this function also returns void.
+ */
 void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_scanning_active()");
-  char cmd;
-  uint8_t arg;
-  const uint8_t CMD_LEN = 5; // e.g. "b 1\n\0"
-  char cmdString[CMD_LEN];
-  /* This flag will cause incomplete packets to be ignored */
-  app->is_scanning = starting;
-  for (int i = 0; i < IF_COUNT; ++i) {
-    /* Set command */
-    cmd = (i == IF_BLE) ? 'b' : (i == IF_BT_CLASSIC) ? 'h' : 'w';
-    /* arg */
-    arg = (starting && app->interfaces[i].active) ? 1 : 0;
-    snprintf(cmdString, CMD_LEN, "%c %d\n", cmd, arg);
-    wendigo_uart_tx(app->uart, (uint8_t *)cmdString, CMD_LEN);
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_set_scanning_active()");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_scanning_active()");
+    char cmd;
+    uint8_t arg;
+    const uint8_t CMD_LEN = 5; // e.g. "b 1\n\0"
+    char cmdString[CMD_LEN];
+    /* This flag will cause incomplete packets to be ignored */
+    app->is_scanning = starting;
+    for (int i = 0; i < IF_COUNT; ++i) {
+        /* Set command */
+        cmd = (i == IF_BLE) ? 'b' : (i == IF_BT_CLASSIC) ? 'h' : 'w';
+        /* arg */
+        arg = (starting && app->interfaces[i].active) ? 1 : 0;
+        snprintf(cmdString, CMD_LEN, "%c %d\n", cmd, arg);
+        wendigo_uart_tx(app->uart, (uint8_t *)cmdString, CMD_LEN);
+    }
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_set_scanning_active()");
 }
 
-/* Returns the index into `array` of the device with MAC/BDA matching dev->mac.
-   Returns `array_count` if the device was not found. */
+/** Returns the index into `array` of the device with MAC/BDA matching dev->mac.
+ *  Returns `array_count` if the device was not found.
+ */
 uint16_t custom_device_index(wendigo_device *dev, wendigo_device **array,
-                             uint16_t array_count) {
-  FURI_LOG_T(WENDIGO_TAG, "Start custom_device_index()");
-  uint16_t result;
-  if (dev == NULL || array == NULL) {
-    FURI_LOG_T(WENDIGO_TAG, "End custom_device_index() ABNORMAL");
-    return array_count;
-  }
-  for (result = 0; result < array_count &&
-                   (array[result] == NULL ||
+                            uint16_t array_count) {
+    FURI_LOG_T(WENDIGO_TAG, "Start custom_device_index()");
+    uint16_t result;
+    if (dev == NULL || array == NULL) {
+        FURI_LOG_T(WENDIGO_TAG, "End custom_device_index() ABNORMAL");
+        return array_count;
+    }
+    for (result = 0; result < array_count && (array[result] == NULL ||
                     memcmp(dev->mac, array[result]->mac, MAC_BYTES));
-       ++result) {
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End custom_device_index()");
-  return result;
+                    ++result) { }
+    FURI_LOG_T(WENDIGO_TAG, "End custom_device_index()");
+    return result;
 }
 
-/* Returns the index into devices[] of the device with MAC/BDA matching
-   dev->mac. Returns devices_count if the device was not found. A NULL value for
-   `dev` is handled correctly by custom_device_index() */
+/** Returns the index into devices[] of the device with MAC/BDA matching
+ *  dev->mac. Returns devices_count if the device was not found. A NULL value for
+ *  `dev` is handled correctly by custom_device_index()
+ */
 uint16_t device_index(wendigo_device *dev) {
-  FURI_LOG_T(WENDIGO_TAG, "Start+End device_index()");
-  return custom_device_index(dev, devices, devices_count);
+    FURI_LOG_T(WENDIGO_TAG, "Start+End device_index()");
+    return custom_device_index(dev, devices, devices_count);
 }
 
 /** Returns the index into devices[] of the device with MAC/BDA matching mac.
  *  Returns devices_count if the device was not found.
  */
 uint16_t device_index_from_mac(uint8_t mac[MAC_BYTES]) {
-  FURI_LOG_T(WENDIGO_TAG, "Start device_index_from_mac()");
-  wendigo_device dev;
-  memcpy(dev.mac, mac, MAC_BYTES);
-  FURI_LOG_T(WENDIGO_TAG, "End device_index_from_mac()");
-  return device_index(&dev);
+    FURI_LOG_T(WENDIGO_TAG, "Start device_index_from_mac()");
+    wendigo_device dev;
+    memcpy(dev.mac, mac, MAC_BYTES);
+    FURI_LOG_T(WENDIGO_TAG, "End device_index_from_mac()");
+    return device_index(&dev);
 }
 
-/* Determines whether a device with the MAC/BDA dev->mac exists in devices[].
-   A NULL value for `dev` is handled correctly at the top of the call stack,
-   by custom_device_index(). */
+/** Determines whether a device with the MAC/BDA dev->mac exists in devices[].
+ *  A NULL value for `dev` is handled correctly at the top of the call stack,
+ *  by custom_device_index().
+ */
 bool device_exists(wendigo_device *dev) {
-  return device_index(dev) < devices_count;
+    return device_index(dev) < devices_count;
 }
 
 bool wendigo_add_bt_device(wendigo_device *dev, wendigo_device *new_device) {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_add_bt_device()");
-  new_device->radio.bluetooth.cod = dev->radio.bluetooth.cod;
-  if (dev->radio.bluetooth.cod_str != NULL) {
-    new_device->radio.bluetooth.cod_str =
-        malloc(sizeof(char) * (strlen(dev->radio.bluetooth.cod_str) + 1));
-    if (new_device->radio.bluetooth.cod_str != NULL) {
-      /* No need to handle allocation failure - we simply don't copy cod_str */
-      strncpy(new_device->radio.bluetooth.cod_str, dev->radio.bluetooth.cod_str,
-              strlen(dev->radio.bluetooth.cod_str));
-      new_device->radio.bluetooth
-          .cod_str[strlen(dev->radio.bluetooth.cod_str)] = '\0';
-    }
-  } else {
-    new_device->radio.bluetooth.cod_str = NULL;
-  }
-  /* Device name */
-  new_device->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
-  if (dev->radio.bluetooth.bdname_len > 0 &&
-      dev->radio.bluetooth.bdname != NULL) {
-    new_device->radio.bluetooth.bdname =
-        malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
-    if (new_device->radio.bluetooth.bdname == NULL) {
-      /* Skip the device's bdname and hope we have memory for it next time it's
-       * seen */
-      new_device->radio.bluetooth.bdname_len = 0;
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_add_bt_device()");
+    new_device->radio.bluetooth.cod = dev->radio.bluetooth.cod;
+    if (dev->radio.bluetooth.cod_str != NULL) {
+        new_device->radio.bluetooth.cod_str =
+            malloc(sizeof(char) * (strlen(dev->radio.bluetooth.cod_str) + 1));
+        if (new_device->radio.bluetooth.cod_str != NULL) {
+            /* No need to handle allocation failure - we simply don't copy cod_str */
+            strncpy(new_device->radio.bluetooth.cod_str, dev->radio.bluetooth.cod_str,
+                strlen(dev->radio.bluetooth.cod_str));
+            new_device->radio.bluetooth.cod_str[strlen(dev->radio.bluetooth.cod_str)] = '\0';
+        }
     } else {
-      strncpy(new_device->radio.bluetooth.bdname, dev->radio.bluetooth.bdname,
-              dev->radio.bluetooth.bdname_len);
-      new_device->radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] =
-          '\0';
+        new_device->radio.bluetooth.cod_str = NULL;
     }
-  } else {
-    new_device->radio.bluetooth.bdname = NULL;
-    new_device->radio.bluetooth.bdname_len = 0;
-  }
-  /* EIR */
-  new_device->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
-  if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
-    new_device->radio.bluetooth.eir =
-        malloc(sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
-    if (new_device->radio.bluetooth.eir == NULL) {
-      /* Skip EIR from this packet */
-      new_device->radio.bluetooth.eir_len = 0;
+    /* Device name */
+    new_device->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
+    if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
+        new_device->radio.bluetooth.bdname = malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
+        if (new_device->radio.bluetooth.bdname == NULL) {
+            /* Skip the device's bdname and hope we have memory for it next time it's seen */
+            new_device->radio.bluetooth.bdname_len = 0;
+        } else {
+            strncpy(new_device->radio.bluetooth.bdname, dev->radio.bluetooth.bdname,
+                    dev->radio.bluetooth.bdname_len);
+            new_device->radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
+        }
     } else {
-      memcpy(new_device->radio.bluetooth.eir, dev->radio.bluetooth.eir,
-             dev->radio.bluetooth.eir_len);
+        new_device->radio.bluetooth.bdname = NULL;
+        new_device->radio.bluetooth.bdname_len = 0;
     }
-  } else {
-    new_device->radio.bluetooth.eir = NULL;
-    new_device->radio.bluetooth.eir_len = 0;
-  }
-  /* BT services */
-  new_device->radio.bluetooth.bt_services.num_services =
-      dev->radio.bluetooth.bt_services.num_services;
-  if (dev->radio.bluetooth.bt_services.num_services > 0 &&
-      dev->radio.bluetooth.bt_services.service_uuids != NULL) {
-    new_device->radio.bluetooth.bt_services.service_uuids =
-        malloc(sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
-    if (new_device->radio.bluetooth.bt_services.service_uuids == NULL) {
-      new_device->radio.bluetooth.bt_services.num_services = 0;
+    /* EIR */
+    new_device->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
+    if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
+        new_device->radio.bluetooth.eir = malloc(sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
+        if (new_device->radio.bluetooth.eir == NULL) {
+            /* Skip EIR from this packet */
+            new_device->radio.bluetooth.eir_len = 0;
+        } else {
+            memcpy(new_device->radio.bluetooth.eir, dev->radio.bluetooth.eir,
+                dev->radio.bluetooth.eir_len);
+        }
     } else {
-      memcpy(new_device->radio.bluetooth.bt_services.service_uuids,
-             dev->radio.bluetooth.bt_services.service_uuids,
-             sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
+        new_device->radio.bluetooth.eir = NULL;
+        new_device->radio.bluetooth.eir_len = 0;
     }
-  } else {
-    new_device->radio.bluetooth.bt_services.service_uuids = NULL;
-    new_device->radio.bluetooth.bt_services.num_services = 0;
-  }
-  /* Known services */
-  new_device->radio.bluetooth.bt_services.known_services_len =
-      dev->radio.bluetooth.bt_services.known_services_len;
-  if (dev->radio.bluetooth.bt_services.known_services_len > 0 &&
-      dev->radio.bluetooth.bt_services.known_services != NULL) {
-    /* known_services is an array of pointers - this is where we stop
-   controlling memory allocation so that bt_uuid's can be allocated a single
-   time and reused. This function will copy the *pointers* in
-   known_services[], but not the bt_uuid structs that they point to. */
-    new_device->radio.bluetooth.bt_services.known_services =
-        malloc(sizeof(bt_uuid *) *
-               dev->radio.bluetooth.bt_services.known_services_len);
-    if (new_device->radio.bluetooth.bt_services.known_services == NULL) {
-      new_device->radio.bluetooth.bt_services.known_services_len = 0;
+    /* BT services */
+    new_device->radio.bluetooth.bt_services.num_services = dev->radio.bluetooth.bt_services.num_services;
+    if (dev->radio.bluetooth.bt_services.num_services > 0 &&
+            dev->radio.bluetooth.bt_services.service_uuids != NULL) {
+        new_device->radio.bluetooth.bt_services.service_uuids =
+            malloc(sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
+        if (new_device->radio.bluetooth.bt_services.service_uuids == NULL) {
+            new_device->radio.bluetooth.bt_services.num_services = 0;
+        } else {
+            memcpy(new_device->radio.bluetooth.bt_services.service_uuids,
+                dev->radio.bluetooth.bt_services.service_uuids,
+                sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
+        }
     } else {
-      memcpy(new_device->radio.bluetooth.bt_services.known_services,
-             dev->radio.bluetooth.bt_services.known_services,
-             sizeof(bt_uuid *) *
-                 dev->radio.bluetooth.bt_services.known_services_len);
-      // TODO: Despite the caveat above, it might be nice to validate that the
-      // bt_uuid's we're pointing to actually exist.
+        new_device->radio.bluetooth.bt_services.service_uuids = NULL;
+        new_device->radio.bluetooth.bt_services.num_services = 0;
     }
-  } else {
-    new_device->radio.bluetooth.bt_services.known_services = NULL;
-    new_device->radio.bluetooth.bt_services.known_services_len = 0;
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_add_bt_device()");
-  return true;
+    /* Known services */
+    new_device->radio.bluetooth.bt_services.known_services_len =
+            dev->radio.bluetooth.bt_services.known_services_len;
+    if (dev->radio.bluetooth.bt_services.known_services_len > 0 &&
+            dev->radio.bluetooth.bt_services.known_services != NULL) {
+        /* known_services is an array of pointers - this is where we stop
+            controlling memory allocation so that bt_uuid's can be allocated a single
+            time and reused. This function will copy the *pointers* in
+            known_services[], but not the bt_uuid structs that they point to. */
+        new_device->radio.bluetooth.bt_services.known_services = malloc(sizeof(bt_uuid *) *
+                dev->radio.bluetooth.bt_services.known_services_len);
+        if (new_device->radio.bluetooth.bt_services.known_services == NULL) {
+            new_device->radio.bluetooth.bt_services.known_services_len = 0;
+        } else {
+            memcpy(new_device->radio.bluetooth.bt_services.known_services,
+                dev->radio.bluetooth.bt_services.known_services,
+                sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
+            // TODO: Despite the caveat above, it might be nice to validate that the
+            // bt_uuid's we're pointing to actually exist.
+        }
+    } else {
+        new_device->radio.bluetooth.bt_services.known_services = NULL;
+        new_device->radio.bluetooth.bt_services.known_services_len = 0;
+    }
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_add_bt_device()");
+    return true;
 }
 
 bool wendigo_update_bt_device(wendigo_device *dev, wendigo_device *new_device) {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_update_bt_device()");
-  new_device->radio.bluetooth.cod = dev->radio.bluetooth.cod;
-  /* cod_str present in update? */
-  if (dev->radio.bluetooth.cod_str != NULL &&
-      strlen(dev->radio.bluetooth.cod_str) > 0) {
-    char *new_cod =
-        realloc(new_device->radio.bluetooth.cod_str,
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_update_bt_device()");
+    new_device->radio.bluetooth.cod = dev->radio.bluetooth.cod;
+    /* cod_str present in update? */
+    if (dev->radio.bluetooth.cod_str != NULL && strlen(dev->radio.bluetooth.cod_str) > 0) {
+        char *new_cod = realloc(new_device->radio.bluetooth.cod_str,
                 sizeof(char) * (strlen(dev->radio.bluetooth.cod_str) + 1));
-    if (new_cod != NULL) {
-      strncpy(new_cod, dev->radio.bluetooth.cod_str,
-              strlen(dev->radio.bluetooth.cod_str));
-      new_cod[strlen(dev->radio.bluetooth.cod_str)] = '\0';
-      new_device->radio.bluetooth.cod_str = new_cod;
+        if (new_cod != NULL) {
+            strncpy(new_cod, dev->radio.bluetooth.cod_str, strlen(dev->radio.bluetooth.cod_str));
+            new_cod[strlen(dev->radio.bluetooth.cod_str)] = '\0';
+            new_device->radio.bluetooth.cod_str = new_cod;
+        }
     }
-  }
-  /* Is bdname in update? */
-  if (dev->radio.bluetooth.bdname_len > 0 &&
-      dev->radio.bluetooth.bdname != NULL) {
-    char *new_name =
-        realloc(new_device->radio.bluetooth.bdname,
+    /* Is bdname in update? */
+    if (dev->radio.bluetooth.bdname_len > 0 && dev->radio.bluetooth.bdname != NULL) {
+        char *new_name = realloc(new_device->radio.bluetooth.bdname,
                 sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
-    if (new_name != NULL) { /* If allocation fails target's existing bdname and
-                            bdname_len are unmodified */
-      strncpy(new_name, dev->radio.bluetooth.bdname,
-              dev->radio.bluetooth.bdname_len);
-      new_name[dev->radio.bluetooth.bdname_len] = '\0';
-      new_device->radio.bluetooth.bdname = new_name;
-      new_device->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
+        if (new_name != NULL) { /* If allocation fails target's existing bdname and
+                                    bdname_len are unmodified */
+            strncpy(new_name, dev->radio.bluetooth.bdname, dev->radio.bluetooth.bdname_len);
+            new_name[dev->radio.bluetooth.bdname_len] = '\0';
+            new_device->radio.bluetooth.bdname = new_name;
+            new_device->radio.bluetooth.bdname_len = dev->radio.bluetooth.bdname_len;
+        }
     }
-  }
-  /* How about EIR? */
-  if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
-    uint8_t *new_eir = realloc(new_device->radio.bluetooth.eir,
-                               sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
-    if (new_eir != NULL) {
-      memcpy(new_eir, dev->radio.bluetooth.eir,
-             sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
-      new_device->radio.bluetooth.eir = new_eir;
-      new_device->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
+    /* How about EIR? */
+    if (dev->radio.bluetooth.eir_len > 0 && dev->radio.bluetooth.eir != NULL) {
+        uint8_t *new_eir = realloc(new_device->radio.bluetooth.eir,
+                                   sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
+        if (new_eir != NULL) {
+            memcpy(new_eir, dev->radio.bluetooth.eir, sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
+            new_device->radio.bluetooth.eir = new_eir;
+            new_device->radio.bluetooth.eir_len = dev->radio.bluetooth.eir_len;
+        }
     }
-  }
-  /* Number of services */
-  if (dev->radio.bluetooth.bt_services.num_services > 0 &&
-      dev->radio.bluetooth.bt_services.service_uuids != NULL) {
-    void *new_svcs =
-        realloc(new_device->radio.bluetooth.bt_services.service_uuids,
+    /* Number of services */
+    if (dev->radio.bluetooth.bt_services.num_services > 0 &&
+            dev->radio.bluetooth.bt_services.service_uuids != NULL) {
+        void *new_svcs = realloc(new_device->radio.bluetooth.bt_services.service_uuids,
                 sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
-    if (new_svcs != NULL) {
-      memcpy(new_svcs, dev->radio.bluetooth.bt_services.service_uuids,
-             sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
-      new_device->radio.bluetooth.bt_services.service_uuids = new_svcs;
-      new_device->radio.bluetooth.bt_services.num_services =
-          dev->radio.bluetooth.bt_services.num_services;
+        if (new_svcs != NULL) {
+            memcpy(new_svcs, dev->radio.bluetooth.bt_services.service_uuids,
+                sizeof(void *) * dev->radio.bluetooth.bt_services.num_services);
+            new_device->radio.bluetooth.bt_services.service_uuids = new_svcs;
+            new_device->radio.bluetooth.bt_services.num_services =
+                dev->radio.bluetooth.bt_services.num_services;
+        }
     }
-  }
-  /* Known services */
-  if (dev->radio.bluetooth.bt_services.known_services_len > 0 &&
-      dev->radio.bluetooth.bt_services.known_services != NULL) {
-    bt_uuid **new_known_svcs =
-        realloc(new_device->radio.bluetooth.bt_services.known_services,
-                sizeof(bt_uuid *) *
+    /* Known services */
+    if (dev->radio.bluetooth.bt_services.known_services_len > 0 &&
+            dev->radio.bluetooth.bt_services.known_services != NULL) {
+        bt_uuid **new_known_svcs = realloc(new_device->radio.bluetooth.bt_services.known_services,
+                sizeof(bt_uuid *) * dev->radio.bluetooth.bt_services.known_services_len);
+        if (new_known_svcs != NULL) {
+            memcpy(new_known_svcs, dev->radio.bluetooth.bt_services.known_services, sizeof(bt_uuid *) *
                     dev->radio.bluetooth.bt_services.known_services_len);
-    if (new_known_svcs != NULL) {
-      memcpy(new_known_svcs, dev->radio.bluetooth.bt_services.known_services,
-             sizeof(bt_uuid *) *
-                 dev->radio.bluetooth.bt_services.known_services_len);
-      new_device->radio.bluetooth.bt_services.known_services = new_known_svcs;
-      new_device->radio.bluetooth.bt_services.known_services_len =
-          dev->radio.bluetooth.bt_services.known_services_len;
+            new_device->radio.bluetooth.bt_services.known_services = new_known_svcs;
+            new_device->radio.bluetooth.bt_services.known_services_len =
+                    dev->radio.bluetooth.bt_services.known_services_len;
+        }
     }
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_update_bt_device()");
-  return true;
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_update_bt_device()");
+    return true;
 }
 
 /** Resolve AP and STA references: When `dev` is an AP, `macs` must contain
@@ -451,128 +431,124 @@ bool wendigo_update_bt_device(wendigo_device *dev, wendigo_device *new_device) {
  */
 bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev,
                                uint8_t **macs, uint8_t mac_count) {
-  FURI_LOG_T(WENDIGO_TAG, "Start link_wifi_devices()");
-  if (dev == NULL || macs == NULL || mac_count == 0 ||
-      !memcmp(macs[0], nullMac, MAC_BYTES)) {
-    FURI_LOG_T("link_wifi_devices()", "Checkpoint 1");
+    FURI_LOG_T(WENDIGO_TAG, "Start link_wifi_devices()");
+    if (dev == NULL || macs == NULL || mac_count == 0 || !memcmp(macs[0], nullMac, MAC_BYTES)) {
+        FURI_LOG_T("link_wifi_devices()", "Checkpoint 1");
+        return true;
+    }
+    UNUSED(app);
+    /* A station must have 0 or 1 MACs */
+    if (dev->scanType == SCAN_WIFI_STA && mac_count != 1) {
+        FURI_LOG_T("link_wifi_devices()", "Checkpoint 2");
+        return false;
+    }
+    FURI_LOG_T("link_wifi_devices()", "Checkpoint 3");
+    if (dev->scanType == SCAN_WIFI_STA) {
+        /* We already know mac_count == 1 */
+        FURI_LOG_T("link_wifi_devices()", "Checkpoint 4");
+        uint16_t apIdx = device_index_from_mac(dev->radio.sta.apMac);
+        FURI_LOG_T("link_wifi_devices()", "Checkpoint 5");
+        if (apIdx < devices_count) {
+            FURI_LOG_T("link_wifi_devices()", "Checkpoint 6");
+            dev->radio.sta.ap = devices[apIdx];
+            FURI_LOG_T("link_wifi_devices()", "Checkpoint 7");
+        } else {
+            FURI_LOG_T("link_wifi_devices()", "Checkpoint 8");
+            /* No device found with that MAC */
+            memcpy(dev->radio.sta.apMac, nullMac, MAC_BYTES); // TODO: Consider keeping the MAC and retrying link
+                                                              // later on?
+            FURI_LOG_T("link_wifi_devices()", "Checkpoint 9");
+            dev->radio.sta.ap = NULL;
+            FURI_LOG_T("link_wifi_devices()", "Checkpoint 10");
+        }
+    } else if (dev->scanType == SCAN_WIFI_AP) {
+        FURI_LOG_T("link_wifi_devices()", "Checkpoint 11");
+        /* We need to update dev to include any existing stations for the device as
+            well as all stations specified in macs[] */
+        // Get existing cache for dev if present
+        uint8_t count = 0;
+        uint16_t real_index = device_index(dev);
+        wendigo_device *real_device = NULL;
+        wendigo_device temp_device;
+        uint16_t temp_idx;
+        uint16_t temp_idx2;
+        if (real_index < devices_count) {
+            real_device = devices[real_index];
+            if (real_device->scanType != SCAN_WIFI_AP) {
+                return false;
+            }
+            count = real_device->radio.ap.stations_count;
+            // Count stations in macs[] that aren't in real_device
+            for (uint8_t i = 0; i < mac_count; ++i) {
+                /* Is macs[i] in real_device->radio.ap.stations? */
+                if (macs[i] != NULL) {
+                    memcpy(temp_device.mac, macs[i], MAC_BYTES);
+                    temp_idx = custom_device_index(&temp_device,
+                        (wendigo_device **)real_device->radio.ap.stations,
+                        real_device->radio.ap.stations_count);
+                    /* Also confirm that temp_device is a known device */
+                    temp_idx2 = device_index(&temp_device);
+                    if (temp_idx == real_device->radio.ap.stations_count &&
+                            temp_idx2 < devices_count) {
+                        /* macs[i] is not in real_device->radio.ap.stations and IS in
+                            devices[] => We need to add it to stations[] */
+                        ++count;
+                    }
+                }
+            }
+        } else {
+            /* Count the MACs in macs[] that are in devices[] */
+            for (uint8_t i = 0; i < mac_count; ++i) {
+                temp_idx = device_index_from_mac(macs[i]);
+                if (temp_idx < devices_count) {
+                    ++count;
+                }
+            }
+        }
+        /* This condition should never be met, but better safe than sorry */
+        if (dev->radio.ap.stations != NULL) {
+            free(dev->radio.ap.stations);
+            dev->radio.ap.stations = NULL;
+        }
+        if (count > 0) {
+            dev->radio.ap.stations = malloc(sizeof(wendigo_device *) * count);
+            if (dev->radio.ap.stations == NULL) {
+                return false;
+            }
+            // Copy devices across
+            uint8_t dev_idx = 0;
+            if (real_device != NULL && real_device->radio.ap.stations_count > 0 &&
+                    real_device->radio.ap.stations != NULL) {
+                memcpy(dev->radio.ap.stations, real_device->radio.ap.stations,
+                    sizeof(wendigo_device *) * real_device->radio.ap.stations_count);
+                dev_idx = real_device->radio.ap.stations_count;
+            }
+            for (uint8_t i = 0; i < mac_count; ++i) {
+                if (macs[i] != NULL) {
+                    temp_idx = device_index_from_mac(macs[i]);
+                    memcpy(temp_device.mac, macs[i], MAC_BYTES);
+                    if (real_device != NULL) {
+                        temp_idx2 = custom_device_index(&temp_device,
+                            (wendigo_device **)real_device->radio.ap.stations,
+                            real_device->radio.ap.stations_count);
+                    }
+                    /* Append the current station if it's in devices[] and not in
+                     * real_device->radio.ap.stations[] */
+                    if (temp_idx < devices_count && (real_device == NULL ||
+                            temp_idx2 == real_device->radio.ap.stations_count)) {
+                        dev->radio.ap.stations[dev_idx++] = devices[temp_idx];
+                    }
+                }
+            }
+        }
+        dev->radio.ap.stations_count = count;
+        FURI_LOG_T("link_wifi_devices()", "Checkpoint 12");
+    } else {
+        FURI_LOG_T("link_wifi_devices()", "Checkpoint 13");
+        return false;
+    }
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_link_wifi_devices()");
     return true;
-  }
-  UNUSED(app);
-  /* A station must have 0 or 1 MACs */
-  if (dev->scanType == SCAN_WIFI_STA && mac_count != 1) {
-    FURI_LOG_T("link_wifi_devices()", "Checkpoint 2");
-    return false;
-  }
-  FURI_LOG_T("link_wifi_devices()", "Checkpoint 3");
-  if (dev->scanType == SCAN_WIFI_STA) {
-    /* We already know mac_count == 1 */
-    FURI_LOG_T("link_wifi_devices()", "Checkpoint 4");
-    uint16_t apIdx = device_index_from_mac(dev->radio.sta.apMac);
-    FURI_LOG_T("link_wifi_devices()", "Checkpoint 5");
-    if (apIdx < devices_count) {
-        FURI_LOG_T("link_wifi_devices()", "Checkpoint 6");
-      dev->radio.sta.ap = devices[apIdx];
-      FURI_LOG_T("link_wifi_devices()", "Checkpoint 7");
-    } else {
-        FURI_LOG_T("link_wifi_devices()", "Checkpoint 8");
-      /* No device found with that MAC */
-      memcpy(dev->radio.sta.apMac, nullMac,
-             MAC_BYTES); // TODO: Consider keeping the MAC and retrying link
-      // later on?
-      FURI_LOG_T("link_wifi_devices()", "Checkpoint 9");
-      dev->radio.sta.ap = NULL;
-      FURI_LOG_T("link_wifi_devices()", "Checkpoint 10");
-    }
-  } else if (dev->scanType == SCAN_WIFI_AP) {
-    FURI_LOG_T("link_wifi_devices()", "Checkpoint 11");
-    /* We need to update dev to include any existing stations for the device as
-   well as all stations specified in macs[] */
-    // Get existing cache for dev if present
-    uint8_t count = 0;
-    uint16_t real_index = device_index(dev);
-    wendigo_device *real_device = NULL;
-    wendigo_device temp_device;
-    uint16_t temp_idx;
-    uint16_t temp_idx2;
-    if (real_index < devices_count) {
-      real_device = devices[real_index];
-      if (real_device->scanType != SCAN_WIFI_AP) {
-        return false;
-      }
-      count = real_device->radio.ap.stations_count;
-      // Count stations in macs[] that aren't in real_device
-      for (uint8_t i = 0; i < mac_count; ++i) {
-        /* Is macs[i] in real_device->radio.ap.stations? */
-        if (macs[i] != NULL) {
-          memcpy(temp_device.mac, macs[i], MAC_BYTES);
-          temp_idx = custom_device_index(
-              &temp_device, (wendigo_device **)real_device->radio.ap.stations,
-              real_device->radio.ap.stations_count);
-          /* Also confirm that temp_device is a known device */
-          temp_idx2 = device_index(&temp_device);
-          if (temp_idx == real_device->radio.ap.stations_count &&
-              temp_idx2 < devices_count) {
-            /* macs[i] is not in real_device->radio.ap.stations and IS in
-   devices[]
-   => We need to add it to stations[] */
-            ++count;
-          }
-        }
-      }
-    } else {
-      /* Count the MACs in macs[] that are in devices[] */
-      for (uint8_t i = 0; i < mac_count; ++i) {
-        temp_idx = device_index_from_mac(macs[i]);
-        if (temp_idx < devices_count) {
-          ++count;
-        }
-      }
-    }
-    /* This condition should never be met, but better safe than sorry */
-    if (dev->radio.ap.stations != NULL) {
-      free(dev->radio.ap.stations);
-      dev->radio.ap.stations = NULL;
-    }
-    if (count > 0) {
-      dev->radio.ap.stations = malloc(sizeof(wendigo_device *) * count);
-      if (dev->radio.ap.stations == NULL) {
-        return false;
-      }
-      // Copy devices across
-      uint8_t dev_idx = 0;
-      if (real_device != NULL && real_device->radio.ap.stations_count > 0 &&
-          real_device->radio.ap.stations != NULL) {
-        memcpy(dev->radio.ap.stations, real_device->radio.ap.stations,
-               sizeof(wendigo_device *) * real_device->radio.ap.stations_count);
-        dev_idx = real_device->radio.ap.stations_count;
-      }
-      for (uint8_t i = 0; i < mac_count; ++i) {
-        if (macs[i] != NULL) {
-          temp_idx = device_index_from_mac(macs[i]);
-          memcpy(temp_device.mac, macs[i], MAC_BYTES);
-          if (real_device != NULL) {
-            temp_idx2 = custom_device_index(
-                &temp_device, (wendigo_device **)real_device->radio.ap.stations,
-                real_device->radio.ap.stations_count);
-          }
-          /* Append the current station if it's in devices[] and not in
-           * real_device->radio.ap.stations[] */
-          if (temp_idx < devices_count &&
-              (real_device == NULL ||
-               temp_idx2 == real_device->radio.ap.stations_count)) {
-            dev->radio.ap.stations[dev_idx++] = devices[temp_idx];
-          }
-        }
-      }
-    }
-    dev->radio.ap.stations_count = count;
-    FURI_LOG_T("link_wifi_devices()", "Checkpoint 12");
-  } else {
-    FURI_LOG_T("link_wifi_devices()", "Checkpoint 13");
-    return false;
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_link_wifi_devices()");
-  return true;
 }
 
 /** Add the specified device to devices[], extending the length of devices[] if
@@ -586,81 +562,77 @@ bool wendigo_link_wifi_devices(WendigoApp *app, wendigo_device *dev,
  * attributes.
  */
 bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_add_device()");
-  uint16_t idx = device_index(dev);
-  if (idx < devices_count) {
-    /* A device with the provided BDA already exists - Update that instead */
-    return wendigo_update_device(app, dev);
-  }
-  /* Adding to devices - Increase capacity by an additional
-   * INC_DEVICE_CAPACITY_BY if necessary */
-  if (devices == NULL || devices_capacity == devices_count) {
-    wendigo_device **new_devices =
-        realloc(devices, sizeof(wendigo_device *) *
-                             (devices_capacity + INC_DEVICE_CAPACITY_BY));
-    if (new_devices == NULL) {
-      /* Can't store the device */
-      return false;
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_add_device()");
+    uint16_t idx = device_index(dev);
+    if (idx < devices_count) {
+        /* A device with the provided BDA already exists - Update that instead */
+        return wendigo_update_device(app, dev);
     }
-    devices = new_devices;
-    devices_capacity += INC_DEVICE_CAPACITY_BY;
-  }
-  devices[devices_count] = malloc(sizeof(wendigo_device));
-  if (devices[devices_count] == NULL) {
-    /* That's unfortunate */
-    return false;
-  }
-  wendigo_device *new_device = devices[devices_count++];
-  /* Copy common attributes */
-  new_device->rssi = dev->rssi;
-  new_device->scanType = dev->scanType;
-  /* Don't copy tagged status - A new device is not tagged. */
-  new_device->tagged = false;
-  new_device->view =
-      dev->view; /* Copy the view pointer if we have one, NULL if we don't */
-  /* ESP32 doesn't know the real time/date so overwrite the lastSeen value.
-   time_t is just another way of saying long long int, so casting is OK */
-  new_device->lastSeen = furi_hal_rtc_get_timestamp();
-  /* Copy MAC/BDA */
-  memcpy(new_device->mac, dev->mac, MAC_BYTES);
-  /* Copy protocol-specific attributes */
-  if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-    wendigo_add_bt_device(dev, new_device);
-  } else if (dev->scanType == SCAN_WIFI_AP) {
-    new_device->radio.ap.channel = dev->radio.ap.channel;
-    /* By the time this function's called stations will be in place
-   Note to future developers: wendigo_link_wifi_devices() *MUST*
-   be called prior to this or linked stations may be lost.
-*/
-    new_device->radio.ap.stations_count = dev->radio.ap.stations_count;
-    if (dev->radio.ap.stations_count > 0) {
-      /* Copy stations[] */
-      new_device->radio.ap.stations =
-          malloc(sizeof(wendigo_device *) * dev->radio.ap.stations_count);
-      if (new_device->radio.ap.stations == NULL) {
-        new_device->radio.ap.stations_count = 0;
-      } else {
-        memcpy(new_device->radio.ap.stations, dev->radio.ap.stations,
-               sizeof(wendigo_device *) * dev->radio.ap.stations_count);
-      }
-    } else {
-      new_device->radio.ap.stations = NULL;
+    /* Adding to devices - Increase capacity by an additional
+     * INC_DEVICE_CAPACITY_BY if necessary */
+    if (devices == NULL || devices_capacity == devices_count) {
+        wendigo_device **new_devices = realloc(devices, sizeof(wendigo_device *) *
+                                        (devices_capacity + INC_DEVICE_CAPACITY_BY));
+        if (new_devices == NULL) {
+            /* Can't store the device */
+            return false;
+        }
+        devices = new_devices;
+        devices_capacity += INC_DEVICE_CAPACITY_BY;
     }
-    memcpy(new_device->radio.ap.ssid, dev->radio.ap.ssid, MAX_SSID_LEN);
-    new_device->radio.ap.ssid[MAX_SSID_LEN] = '\0';
-  } else if (dev->scanType == SCAN_WIFI_STA) {
-    new_device->radio.sta.channel = dev->radio.sta.channel;
-    memcpy(new_device->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
-    new_device->radio.sta.ap = dev->radio.sta.ap;
-  }
+    devices[devices_count] = malloc(sizeof(wendigo_device));
+    if (devices[devices_count] == NULL) {
+        /* That's unfortunate */
+        return false;
+    }
+    wendigo_device *new_device = devices[devices_count++];
+    /* Copy common attributes */
+    new_device->rssi = dev->rssi;
+    new_device->scanType = dev->scanType;
+    /* Don't copy tagged status - A new device is not tagged. */
+    new_device->tagged = false;
+    new_device->view = dev->view; /* Copy the view pointer if we have one, NULL if we don't */
+    /* ESP32 doesn't know the real time/date so overwrite the lastSeen value.
+       time_t is just another way of saying long long int, so casting is OK */
+    new_device->lastSeen = furi_hal_rtc_get_timestamp();
+    /* Copy MAC/BDA */
+    memcpy(new_device->mac, dev->mac, MAC_BYTES);
+    /* Copy protocol-specific attributes */
+    if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
+        wendigo_add_bt_device(dev, new_device);
+    } else if (dev->scanType == SCAN_WIFI_AP) {
+        new_device->radio.ap.channel = dev->radio.ap.channel;
+        /* By the time this function's called stations will be in place
+         *  Note to future developers: wendigo_link_wifi_devices() *MUST*
+         *  be called prior to this or linked stations may be lost.
+         */
+        new_device->radio.ap.stations_count = dev->radio.ap.stations_count;
+        if (dev->radio.ap.stations_count > 0) {
+            /* Copy stations[] */
+            new_device->radio.ap.stations = malloc(sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+            if (new_device->radio.ap.stations == NULL) {
+                new_device->radio.ap.stations_count = 0;
+            } else {
+                memcpy(new_device->radio.ap.stations, dev->radio.ap.stations,
+                        sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+            }
+        } else {
+            new_device->radio.ap.stations = NULL;
+        }
+        memcpy(new_device->radio.ap.ssid, dev->radio.ap.ssid, MAX_SSID_LEN);
+        new_device->radio.ap.ssid[MAX_SSID_LEN] = '\0';
+    } else if (dev->scanType == SCAN_WIFI_STA) {
+        new_device->radio.sta.channel = dev->radio.sta.channel;
+        memcpy(new_device->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
+        new_device->radio.sta.ap = dev->radio.sta.ap;
+    }
 
-  /* If the device list scene is currently displayed, add the device to the UI
-   */
-  if (app->current_view == WendigoAppViewDeviceList) {
-    wendigo_scene_device_list_update(app, new_device);
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_add_device()");
-  return true;
+    /* If the device list scene is currently displayed, add the device to the UI */
+    if (app->current_view == WendigoAppViewDeviceList) {
+        wendigo_scene_device_list_update(app, new_device);
+    }
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_add_device()");
+    return true;
 }
 
 /** Locate the device in devices[] with the same MAC/BDA as `dev` and update the
@@ -674,74 +646,70 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
  * service descriptors.
  */
 bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_update_device()");
-  uint16_t idx = device_index(dev);
-  if (idx == devices_count) {
-    /* Device doesn't exist in bt_devices[] - Add it instead */
-    return wendigo_add_device(app, dev);
-  }
-  wendigo_device *target = devices[idx];
-  /* Copy common attributes */
-  target->rssi = dev->rssi;
-  target->scanType = dev->scanType;
-  /* Replace lastSeen - cast to long long int (aka time_t) */
-  target->lastSeen = furi_hal_rtc_get_timestamp();
-  /* Copy protocol-specific attributes */
-  if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-    wendigo_update_bt_device(dev, target);
-  } else if (dev->scanType == SCAN_WIFI_AP) {
-    /* Copy channel, ssid, sta_count, stations */
-    target->radio.ap.channel = dev->radio.ap.channel;
-    uint8_t ssid_len = strnlen((char *)dev->radio.ap.ssid, MAX_SSID_LEN);
-    if (ssid_len > 0) {
-      memcpy(target->radio.ap.ssid, dev->radio.ap.ssid, ssid_len + 1);
-      target->radio.ap.ssid[ssid_len] = '\0';
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_update_device()");
+    uint16_t idx = device_index(dev);
+    if (idx == devices_count) {
+        /* Device doesn't exist in bt_devices[] - Add it instead */
+        return wendigo_add_device(app, dev);
     }
-    /* NOTE: wendigo_link_wifi_devices() *MUST* be called on dev to link in
-         stations[] appropriately. This check should avoid a crash if that
-         isn't done - but you should still do it! */
-    if (dev->radio.ap.stations_count >= target->radio.ap.stations_count) {
-      if (target->radio.ap.stations_count > 0 &&
-          target->radio.ap.stations != NULL) {
-        free(target->radio.ap.stations);
-      }
-      if (dev->radio.ap.stations_count == 0) {
-        target->radio.ap.stations = NULL;
-        target->radio.ap.stations_count = 0;
-      } else {
-        /* Copy stations[] */
-        target->radio.ap.stations =
-            malloc(sizeof(wendigo_device *) * dev->radio.ap.stations_count);
-        if (target->radio.ap.stations == NULL) {
-          target->radio.ap.stations_count = 0;
-        } else {
-          memcpy(target->radio.ap.stations, dev->radio.ap.stations,
-                 sizeof(wendigo_device *) * dev->radio.ap.stations_count);
-          target->radio.ap.stations_count = dev->radio.ap.stations_count;
+    wendigo_device *target = devices[idx];
+    /* Copy common attributes */
+    target->rssi = dev->rssi;
+    target->scanType = dev->scanType;
+    /* Replace lastSeen - cast to long long int (aka time_t) */
+    target->lastSeen = furi_hal_rtc_get_timestamp();
+    /* Copy protocol-specific attributes */
+    if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
+        wendigo_update_bt_device(dev, target);
+    } else if (dev->scanType == SCAN_WIFI_AP) {
+        /* Copy channel, ssid, sta_count, stations */
+        target->radio.ap.channel = dev->radio.ap.channel;
+        uint8_t ssid_len = strnlen((char *)dev->radio.ap.ssid, MAX_SSID_LEN);
+        if (ssid_len > 0) {
+            memcpy(target->radio.ap.ssid, dev->radio.ap.ssid, ssid_len + 1);
+            target->radio.ap.ssid[ssid_len] = '\0';
         }
-      }
+        /* NOTE: wendigo_link_wifi_devices() *MUST* be called on dev to link in
+         *  stations[] appropriately. This check should avoid a crash if that
+         *  isn't done - but you should still do it! */
+        if (dev->radio.ap.stations_count >= target->radio.ap.stations_count) {
+            if (target->radio.ap.stations_count > 0 && target->radio.ap.stations != NULL) {
+                free(target->radio.ap.stations);
+            }
+            if (dev->radio.ap.stations_count == 0) {
+                target->radio.ap.stations = NULL;
+                target->radio.ap.stations_count = 0;
+            } else {
+                /* Copy stations[] */
+                target->radio.ap.stations = malloc(sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+                if (target->radio.ap.stations == NULL) {
+                    target->radio.ap.stations_count = 0;
+                } else {
+                    memcpy(target->radio.ap.stations, dev->radio.ap.stations,
+                            sizeof(wendigo_device *) * dev->radio.ap.stations_count);
+                    target->radio.ap.stations_count = dev->radio.ap.stations_count;
+                }
+            }
+        }
+    } else if (dev->scanType == SCAN_WIFI_STA) {
+        /* Copy channel, AP MAC, AP */
+        target->radio.sta.channel = dev->radio.sta.channel;
+        /* Only replace AP and AP MAC if dev has a "better" AP than target -
+           If dev isn't nullMac. */
+        if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
+            memcpy(target->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
+            /* `ap` property is set by wendigo_link_wifi_devices() */
+            target->radio.sta.ap = dev->radio.sta.ap;
+        }
     }
-  } else if (dev->scanType == SCAN_WIFI_STA) {
-    /* Copy channel, AP MAC, AP */
-    target->radio.sta.channel = dev->radio.sta.channel;
-    /* Only replace AP and AP MAC if dev has a "better" AP than target -
-   If dev isn't nullMac. */
-    if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
-      memcpy(target->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
-      /* `ap` property is set by wendigo_link_wifi_devices() */
-      target->radio.sta.ap = dev->radio.sta.ap;
+    /* Update the device list if it's currently displayed */
+    if (app->current_view == WendigoAppViewDeviceList) {
+        wendigo_scene_device_list_update(app, target);
+    } else if (app->current_view == WendigoAppViewDeviceDetail) { // && selectedDevice == bt_devices[idx]
+        // TODO: Update existing view
     }
-  }
-  /* Update the device list if it's currently displayed */
-  if (app->current_view == WendigoAppViewDeviceList) {
-    wendigo_scene_device_list_update(app, target);
-  } else if (app->current_view ==
-             WendigoAppViewDeviceDetail) { // && selectedDevice ==
-                                           // bt_devices[idx]
-                                           // TODO: Update existing view
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_update_device()");
-  return true;
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_update_device()");
+    return true;
 }
 
 /** Free all memory allocated to the specified device.
@@ -755,55 +723,55 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
  * deallocated memory.
  */
 void wendigo_free_device(wendigo_device *dev) {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_free_device()");
-  if (dev == NULL) {
-    return;
-  }
-  if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-    if (dev->radio.bluetooth.cod_str != NULL) {
-      free(dev->radio.bluetooth.cod_str);
-      dev->radio.bluetooth.cod_str = NULL;
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_free_device()");
+    if (dev == NULL) {
+        return;
     }
-    if (dev->radio.bluetooth.bdname != NULL) {
-      free(dev->radio.bluetooth.bdname);
-      dev->radio.bluetooth.bdname = NULL;
-      dev->radio.bluetooth.bdname_len = 0;
-    }
-    if (dev->radio.bluetooth.eir != NULL) {
-      free(dev->radio.bluetooth.eir);
-      dev->radio.bluetooth.eir = NULL;
-    }
-    if (dev->radio.bluetooth.bt_services.service_uuids != NULL) {
-      free(dev->radio.bluetooth.bt_services.service_uuids);
-      dev->radio.bluetooth.bt_services.service_uuids = NULL;
-      dev->radio.bluetooth.bt_services.num_services = 0;
-    }
-    if (dev->radio.bluetooth.bt_services.known_services != NULL) {
-      // TODO: After implementing BT services, ensure that the bt_uuid's are
-      // freed somewhere
-      free(dev->radio.bluetooth.bt_services.known_services);
-      dev->radio.bluetooth.bt_services.known_services = NULL;
-      dev->radio.bluetooth.bt_services.known_services_len = 0;
-    }
-  } else if (dev->scanType == SCAN_WIFI_AP) {
-    if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
-        for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
-            if (dev->radio.ap.stations[i] != NULL) {
-                free(dev->radio.ap.stations[i]);
-            }
+    if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
+        if (dev->radio.bluetooth.cod_str != NULL) {
+            free(dev->radio.bluetooth.cod_str);
+            dev->radio.bluetooth.cod_str = NULL;
         }
-        free(dev->radio.ap.stations);
-        dev->radio.ap.stations = NULL;
-        dev->radio.ap.stations_count = 0;
+        if (dev->radio.bluetooth.bdname != NULL) {
+            free(dev->radio.bluetooth.bdname);
+            dev->radio.bluetooth.bdname = NULL;
+            dev->radio.bluetooth.bdname_len = 0;
+        }
+        if (dev->radio.bluetooth.eir != NULL) {
+            free(dev->radio.bluetooth.eir);
+            dev->radio.bluetooth.eir = NULL;
+        }
+        if (dev->radio.bluetooth.bt_services.service_uuids != NULL) {
+            free(dev->radio.bluetooth.bt_services.service_uuids);
+            dev->radio.bluetooth.bt_services.service_uuids = NULL;
+            dev->radio.bluetooth.bt_services.num_services = 0;
+        }
+        if (dev->radio.bluetooth.bt_services.known_services != NULL) {
+            // TODO: After implementing BT services, ensure that the bt_uuid's are
+            // freed somewhere
+            free(dev->radio.bluetooth.bt_services.known_services);
+            dev->radio.bluetooth.bt_services.known_services = NULL;
+            dev->radio.bluetooth.bt_services.known_services_len = 0;
+        }
+    } else if (dev->scanType == SCAN_WIFI_AP) {
+        if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
+            for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+                if (dev->radio.ap.stations[i] != NULL) {
+                    free(dev->radio.ap.stations[i]);
+                }
+            }
+            free(dev->radio.ap.stations);
+            dev->radio.ap.stations = NULL;
+            dev->radio.ap.stations_count = 0;
+        }
+    } else if (dev->scanType == SCAN_WIFI_STA) {
+        /* Nothing to do */
+    } else {
+        /* Nothing to do */
     }
-  } else if (dev->scanType == SCAN_WIFI_STA) {
-    /* Nothing to do */
-  } else {
-    /* Nothing to do */
-  }
-  dev->view = NULL;
-  free(dev);
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_free_device()");
+    dev->view = NULL;
+    free(dev);
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_free_device()");
 }
 
 /** Deallocates all memory allocated to the device cache.
@@ -812,28 +780,28 @@ void wendigo_free_device(wendigo_device *dev) {
  * arrays set to NULL and their count & capacity variables set to zero.
  */
 void wendigo_free_devices() {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_free_devices()");
-  /* Start by freeing selected_devices[] */
-  if (selected_devices_capacity > 0 && selected_devices != NULL) {
-    free(selected_devices); /* Elements will be freed when addressing
-                           bt_devices[] */
-    selected_devices = NULL;
-    selected_devices_count = 0;
-    selected_devices_capacity = 0;
-  }
-  /* For devices[] we also want to free device attributes and the devices
-   * themselves */
-  if (devices_capacity > 0 && devices != NULL) {
-    for (uint16_t i = 0; i < devices_count; ++i) {
-      wendigo_free_device(devices[i]);
-      devices[i] = NULL;
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_free_devices()");
+    /* Start by freeing selected_devices[] */
+    if (selected_devices_capacity > 0 && selected_devices != NULL) {
+        free(selected_devices); /* Elements will be freed when addressing
+                                   bt_devices[] */
+        selected_devices = NULL;
+        selected_devices_count = 0;
+        selected_devices_capacity = 0;
     }
-    free(devices);
-    devices = NULL;
-    devices_count = 0;
-    devices_capacity = 0;
-  }
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_free_devices()");
+    /* For devices[] we also want to free device attributes and the devices
+     * themselves */
+    if (devices_capacity > 0 && devices != NULL) {
+        for (uint16_t i = 0; i < devices_count; ++i) {
+            wendigo_free_device(devices[i]);
+            devices[i] = NULL;
+        }
+        free(devices);
+        devices = NULL;
+        devices_count = 0;
+        devices_capacity = 0;
+    }
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_free_devices()");
 }
 
 /** During testing I bumped the ESP32 reset button and was irritated that
@@ -844,68 +812,65 @@ void wendigo_free_devices() {
  */
 void process_and_display_status_attribute(WendigoApp *app, char *attribute_name,
                                           char *attribute_value) {
-  FURI_LOG_T(WENDIGO_TAG, "Start process_and_display_status_attribute()");
-  char *interesting_attributes[] = {
-      "BT Classic Devices:", "BT Low Energy Devices:", "WiFi STA Devices:",
-      "WiFi APs:"};
-  uint8_t interesting_attributes_count = 4;
-  uint8_t interested;
-  uint16_t count = 0;
-  char strVal[6];
-  for (interested = 0;
-       interested < interesting_attributes_count &&
-       strcmp(interesting_attributes[interested], attribute_name);
-       ++interested) {
-  }
-  if (interested < interesting_attributes_count) {
-    /* We're interested in this attribute */
-    switch (interested) {
-    // TODO: Roll these into a single loop, with case just setting some
-    // variables
-    case 0:
-      /* BT Classic device count - Count it ourselves for consistency */
-      for (uint16_t i = 0; i < devices_count; ++i) {
-        if (devices[i]->scanType == SCAN_HCI) {
-          ++count;
+    FURI_LOG_T(WENDIGO_TAG, "Start process_and_display_status_attribute()");
+    char *interesting_attributes[] = {"BT Classic Devices:", "BT Low Energy Devices:",
+        "WiFi STA Devices:", "WiFi APs:"};
+    uint8_t interesting_attributes_count = 4;
+    uint8_t interested;
+    uint16_t count = 0;
+    char strVal[6];
+    for (interested = 0; interested < interesting_attributes_count &&
+        strcmp(interesting_attributes[interested], attribute_name);
+        ++interested) { }
+    if (interested < interesting_attributes_count) {
+        /* We're interested in this attribute */
+        switch (interested) {
+            // TODO: Roll these into a single loop, with case just setting some
+            // variables
+            case 0:
+                /* BT Classic device count - Count it ourselves for consistency */
+                for (uint16_t i = 0; i < devices_count; ++i) {
+                    if (devices[i]->scanType == SCAN_HCI) {
+                        ++count;
+                    }
+                }
+                snprintf(strVal, sizeof(strVal), "%d", count);
+                attribute_value = strVal;
+                break;
+            case 1:
+                /* BLE device count */
+                for (uint16_t i = 0; i < devices_count; ++i) {
+                    if (devices[i]->scanType == SCAN_BLE) {
+                        ++count;
+                    }
+                }
+                snprintf(strVal, sizeof(strVal), "%d", count);
+                attribute_value = strVal;
+                break;
+            case 2:
+                /* WiFi STA */
+                for (uint16_t i = 0; i < devices_count; ++i) {
+                    if (devices[i]->scanType == SCAN_WIFI_STA) {
+                        ++count;
+                    }
+                }
+                snprintf(strVal, sizeof(strVal), "%d", count);
+                attribute_value = strVal;
+                break;
+            case 3:
+                /* WiFi AP */
+                for (uint16_t i = 0; i < devices_count; ++i) {
+                    if (devices[i]->scanType == SCAN_WIFI_AP) {
+                        ++count;
+                    }
+                }
+                snprintf(strVal, sizeof(strVal), "%d", count);
+                attribute_value = strVal;
+                break;
         }
-      }
-      snprintf(strVal, sizeof(strVal), "%d", count);
-      attribute_value = strVal;
-      break;
-    case 1:
-      /* BLE device count */
-      for (uint16_t i = 0; i < devices_count; ++i) {
-        if (devices[i]->scanType == SCAN_BLE) {
-          ++count;
-        }
-      }
-      snprintf(strVal, sizeof(strVal), "%d", count);
-      attribute_value = strVal;
-      break;
-    case 2:
-      /* WiFi STA */
-      for (uint16_t i = 0; i < devices_count; ++i) {
-        if (devices[i]->scanType == SCAN_WIFI_STA) {
-          ++count;
-        }
-      }
-      snprintf(strVal, sizeof(strVal), "%d", count);
-      attribute_value = strVal;
-      break;
-    case 3:
-      /* WiFi AP */
-      for (uint16_t i = 0; i < devices_count; ++i) {
-        if (devices[i]->scanType == SCAN_WIFI_AP) {
-          ++count;
-        }
-      }
-      snprintf(strVal, sizeof(strVal), "%d", count);
-      attribute_value = strVal;
-      break;
     }
-  }
-  wendigo_scene_status_add_attribute(app, attribute_name, attribute_value);
-  FURI_LOG_T(WENDIGO_TAG, "End process_and_display_status_attribute()");
+    wendigo_scene_status_add_attribute(app, attribute_name, attribute_value);
+    FURI_LOG_T(WENDIGO_TAG, "End process_and_display_status_attribute()");
 }
 
 /** Parse a Wendigo packet representing a Bluetooth device.
