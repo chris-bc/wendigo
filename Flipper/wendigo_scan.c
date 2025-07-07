@@ -906,7 +906,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app, uint8_t *packet, uint16_t packetL
         packet + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
     memcpy(&(dev->radio.bluetooth.eir_len), packet + WENDIGO_OFFSET_BT_EIR_LEN,
         sizeof(uint8_t));
-    memcpy(dev->rssi, packet + WENDIGO_OFFSET_BT_RSSI, sizeof(int16_t));
+    memcpy(&(dev->rssi), packet + WENDIGO_OFFSET_BT_RSSI, sizeof(int16_t));
     memcpy(&(dev->radio.bluetooth.cod), packet + WENDIGO_OFFSET_BT_COD,
         sizeof(uint32_t));
     memcpy(dev->mac, packet + WENDIGO_OFFSET_BT_BDA, MAC_BYTES);
@@ -1036,8 +1036,8 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     memcpy(&(dev->scanType), packet + WENDIGO_OFFSET_WIFI_SCANTYPE,
         sizeof(uint8_t));
     memcpy(dev->mac, packet + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
-    memcpy(dev->radio.ap.channel, packet + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(uint8_t));
-    memcpy(dev->rssi, packet + WENDIGO_OFFSET_WIFI_RSSI, sizeof(int16_t));
+    memcpy(&(dev->radio.ap.channel), packet + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(uint8_t));
+    memcpy(&(dev->rssi), packet + WENDIGO_OFFSET_WIFI_RSSI, sizeof(int16_t));
     /* Ignore lastSeen */
     // memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN,
     // sizeof(int64_t));
@@ -1092,7 +1092,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
 
 uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferWifiSta()");
-    uint8_t expectedLen = WENDIGO_OFFSET_STA_TERM + PREAMBLE_LEN;
+    uint8_t expectedLen = WENDIGO_OFFSET_STA_AP_SSID + PREAMBLE_LEN;
     if (packetLen < expectedLen) {
         /* Packet is too short - Log the issue along with the current packet */
         char shortMsg[60];
@@ -1103,7 +1103,21 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
         /* Also display a popup */
         // Popup disabled while debugging device list wendigo_display_popup(app,
         // "STA packet too short", shortMsg);
-        FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiSta()");
+        FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiSta() - Short packet");
+        return packetLen;
+    }
+    /* Get ssid_len to validate the full packet size */
+    uint8_t ap_ssid_len;
+    memcpy(&ap_ssid_len, packet + WENDIGO_OFFSET_STA_AP_SSID_LEN, sizeof(uint8_t));
+    expectedLen += ssid_len;
+    if (packetLen < expectedLen) {
+        /* Packet too short - Log and return */
+        char shortMsg[57];
+        snprintf(shortMsg, sizeof(shortMsg),
+            "STA packet too short for SSID: Expected %d, actual %d.",
+            expectedLen, packetLen);
+        wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
+        FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiSta() - Packet too short for SSID");
         return packetLen;
     }
     wendigo_device *dev = malloc(sizeof(wendigo_device));
@@ -1112,38 +1126,27 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     }
     /* Initialise all pointers */
     dev->view = NULL;
-    dev->radio.sta.ap = NULL;
+    memcpy(dev->radio.sta.apMac, nullMac, MAC_BYTES);
     /* Temp variables for attributes that need to be transformed */
     uint8_t tagged;
-    char rssi[RSSI_LEN + 1];
-    memset(rssi, '\0', RSSI_LEN + 1);
-    char channel[CHANNEL_LEN + 1];
-    memset(channel, '\0', CHANNEL_LEN + 1);
     /* Copy fixed-length attributes */
-    memcpy(&(dev->scanType), packet + WENDIGO_OFFSET_WIFI_SCANTYPE,
-        sizeof(uint8_t));
+    memcpy(&(dev->scanType), packet + WENDIGO_OFFSET_WIFI_SCANTYPE, sizeof(uint8_t));
     memcpy(dev->mac, packet + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
-
-    memcpy(channel, packet + WENDIGO_OFFSET_WIFI_CHANNEL, CHANNEL_LEN);
-    dev->radio.sta.channel = strtol(channel, NULL, 10);
-    memcpy(rssi, packet + WENDIGO_OFFSET_WIFI_RSSI, RSSI_LEN);
-    dev->rssi = strtol(rssi, NULL, 10);
+    memcpy(&(dev->radio.sta.channel), packet + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(uint8_t));
+    memcpy(&(dev->rssi), packet + WENDIGO_OFFSET_WIFI_RSSI, sizeof(int16_t));
     /* Ignore lastSeen */
     // memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN,
     // sizeof(int64_t));
     memcpy(&tagged, packet + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(uint8_t));
     dev->tagged = (tagged == 1);
     memcpy(dev->radio.sta.apMac, packet + WENDIGO_OFFSET_STA_AP_MAC, MAC_BYTES);
-    uint8_t ap_ssid_len;
     char ap_ssid[MAX_SSID_LEN + 1];
-    memset(ap_ssid, '\0', MAX_SSID_LEN + 1);
-    memcpy(&ap_ssid_len, packet + WENDIGO_OFFSET_STA_AP_SSID_LEN,
-        sizeof(uint8_t));
-    memcpy(ap_ssid, packet + WENDIGO_OFFSET_STA_AP_SSID, MAX_SSID_LEN);
+    bzero(ap_ssid, MAX_SSID_LEN + 1);
+    memcpy(ap_ssid, packet + WENDIGO_OFFSET_STA_AP_SSID, ap_ssid_len);
     ap_ssid[ap_ssid_len] = '\0';
     /* Do I want to do anything with ap_ssid? */
     /* We should find the packet terminator after the SSID */
-    if (memcmp(PACKET_TERM, packet + WENDIGO_OFFSET_STA_TERM, PREAMBLE_LEN)) {
+    if (memcmp(PACKET_TERM, packet + WENDIGO_OFFSET_STA_AP_SSID + ap_ssid_len, PREAMBLE_LEN)) {
         // Popup disabled while debugging device list        wendigo_display_popup(
         //            app, "STA Packet", "STA Packet terminator not found where
         //            expected.");
@@ -1152,6 +1155,7 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
             MSG_ERROR, "STA packet terminator not found where expected, skipping.",
             packet, packetLen);
     } else {
+        // TODO: Pretty sure I can delete this block
         if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
             //wendigo_link_wifi_devices(app, dev, (uint8_t **)&dev->radio.sta.apMac, 1); // I think this will work?
         } // TODO: Is this needed?
