@@ -903,134 +903,113 @@ void process_and_display_status_attribute(WendigoApp *app, char *attribute_name,
   FURI_LOG_T(WENDIGO_TAG, "End process_and_display_status_attribute()");
 }
 
-/* Returns the number of bytes consumed from the buffer - DOES NOT remove
-   consumed bytes from the buffer, this must be handled by the calling function.
-   The received packet must follow this structure:
-   * 4 bytes of 0xFF followed by 4 bytes of 0xAA
-   * Attributes as specified in wendigo_packet_offsets.h
-   * 4 bytes of 0xAA followed by 4 bytes of 0xFF
-*/
+/** Returns the number of bytes consumed from the buffer - DOES NOT remove
+ *  consumed bytes from the buffer, this must be handled by the calling function.
+ *  The received packet must follow this structure:
+ *  * 4 bytes of 0xFF followed by 4 bytes of 0xAA
+ *  * Attributes as specified in wendigo_packet_offsets.h
+ *  * 4 bytes of 0xAA followed by 4 bytes of 0xFF
+ */
 uint16_t parseBufferBluetooth(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
-  FURI_LOG_T(WENDIGO_TAG, "Start parseBufferBluetooth");
-  /* Sanity check - we should have at least 51 bytes including header and footer */
-  if (packetLen < (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN)) {
-    /* Ignore the malformed packet if scanning has been stopped */
-    if (app->is_scanning) {
-      // TODO: Introducing polling to recover from an ESP32 restart can lead to
-      // corrupted packets
-      //       if confirmation of scan status is interleaved with a device
-      //       packet. Create a queueing mechanism in ESP32 so packets are
-      //       guaranteed to be sent sequentially.
-      // wendigo_display_popup(app, "Packet Error", "Bluetooth packet is shorter
-      // than expected");
+    FURI_LOG_T(WENDIGO_TAG, "Start parseBufferBluetooth");
+    /* Sanity check - we should have at least WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN bytes */
+    if (packetLen < (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN)) {
+        char msg[98];
+        snprintf(msg, sizeof(msg), "Bluetooth packet too short even before considering BDName, EIR and CoD. Expected %d, actual %d.",
+                                    (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN), packetLen);
+        wendigo_log_with_packet(MSG_WARN, msg, packet, packetLen);
+        return packetLen;
     }
-    // Skip this packet
+    wendigo_device *dev = malloc(sizeof(wendigo_device));
+    if (dev == NULL) {
+        // TODO: Panic. For now just skip the device
+        return packetLen;
+    }
+    dev->radio.bluetooth.bdname = NULL;
+    dev->radio.bluetooth.eir = NULL;
+    dev->radio.bluetooth.bt_services.known_services = NULL;
+    dev->radio.bluetooth.bt_services.service_uuids = NULL;
+    dev->radio.bluetooth.cod_str = NULL;
+    dev->view = NULL;
+    /* Temporary variables for attributes that require transformation */
+    uint8_t tagged;
+    /* Copy fixed-byte members */
+    memcpy(&(dev->radio.bluetooth.bdname_len),
+        packet + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
+    memcpy(&(dev->radio.bluetooth.eir_len), packet + WENDIGO_OFFSET_BT_EIR_LEN,
+        sizeof(uint8_t));
+    memcpy(dev->rssi, packet + WENDIGO_OFFSET_BT_RSSI, sizeof(int16_t));
+    memcpy(&(dev->radio.bluetooth.cod), packet + WENDIGO_OFFSET_BT_COD,
+        sizeof(uint32_t));
+    memcpy(dev->mac, packet + WENDIGO_OFFSET_BT_BDA, MAC_BYTES);
+    memcpy(&(dev->scanType), packet + WENDIGO_OFFSET_BT_SCANTYPE, sizeof(uint8_t));
+    memcpy(&tagged, packet + WENDIGO_OFFSET_BT_TAGGED, sizeof(uint8_t));
+    dev->tagged = (tagged == 1);
+    /* Ignore lastSeen */
+    // memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_BT_LASTSEEN,
+    // sizeof(int64_t));
+    memcpy(&(dev->radio.bluetooth.bt_services.num_services),
+        packet + WENDIGO_OFFSET_BT_NUM_SERVICES, sizeof(uint8_t));
+    memcpy(&(dev->radio.bluetooth.bt_services.known_services_len),
+        packet + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN, sizeof(uint8_t));
+    uint8_t cod_len;
+    memcpy(&cod_len, packet + WENDIGO_OFFSET_BT_COD_LEN, sizeof(uint8_t));
+    /* Do we have a bdname? */
+    uint16_t index = WENDIGO_OFFSET_BT_BDNAME;
+    /* Rudimentary buffer capacity check - Is the buffer large enough to hold the
+     * specified bdname and packet terminator? */
+    if (dev->radio.bluetooth.bdname_len > 0 &&
+            packetLen >= (WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len + PREAMBLE_LEN - 1)) {
+        dev->radio.bluetooth.bdname = malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
+        if (dev->radio.bluetooth.bdname == NULL) {
+            /* Can't store bdname so set bdname_len to 0 */
+            dev->radio.bluetooth.bdname_len = 0;
+        } else {
+            memcpy(dev->radio.bluetooth.bdname, packet + WENDIGO_OFFSET_BT_BDNAME,
+                dev->radio.bluetooth.bdname_len);
+            dev->radio.bluetooth.bdname[dev->radio.bluetooth.bdname_len] = '\0';
+        }
+        /* Move index past bdname */
+        index += dev->radio.bluetooth.bdname_len;
+    }
+    /* EIR? */
+    if (dev->radio.bluetooth.eir_len > 0 &&
+            packetLen >= (index + dev->radio.bluetooth.eir_len + PREAMBLE_LEN - 1)) {
+        dev->radio.bluetooth.eir = malloc(sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
+        if (dev->radio.bluetooth.eir == NULL) {
+            dev->radio.bluetooth.eir_len = 0;
+        } else {
+            memcpy(dev->radio.bluetooth.eir, packet + index, dev->radio.bluetooth.eir_len);
+        }
+        index += dev->radio.bluetooth.eir_len;
+    }
+    /* Class of Device? */
+    if (cod_len > 0 && packetLen >= (index + cod_len + PREAMBLE_LEN - 1)) {
+        dev->radio.bluetooth.cod_str = malloc(sizeof(char) * (cod_len + 1));
+        if (dev->radio.bluetooth.cod_str != NULL) {
+            memcpy(dev->radio.bluetooth.cod_str, packet + index, cod_len);
+            dev->radio.bluetooth.cod_str[cod_len] = '\0';
+        }
+        index += cod_len; /* Cater for the trailing '\0' */
+    }
+    // TODO: Services to go here
+
+    /* Hopefully `index` now points to the packet terminator (unless scanning has
+       stopped, then all bets are off) */
+    if (app->is_scanning && memcmp(PACKET_TERM, packet + index, PREAMBLE_LEN)) {
+        char msg[62];
+        snprintf(msg, sizeof(msg), "Bluetooth packet terminator expected at index %d, not found.", index);
+        wendigo_log_with_packet(MSG_WARN, msg, packet, packetLen);
+    }
+
+    /* Add or update the device in devices[] - No longer need to check
+        whether we're adding or updating, the add/update functions will call
+        each other if required. */
+    wendigo_add_device(app, dev);
+    /* Clean up memory */
+    wendigo_free_device(dev);
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferBluetooth()");
-    return packetLen;
-  }
-  wendigo_device *dev = malloc(sizeof(wendigo_device));
-  if (dev == NULL) {
-    // TODO: Panic. For now just skip the device
-    return packetLen;
-  }
-  dev->radio.bluetooth.bdname = NULL;
-  dev->radio.bluetooth.eir = NULL;
-  dev->radio.bluetooth.bt_services.known_services = NULL;
-  dev->radio.bluetooth.bt_services.service_uuids = NULL;
-  dev->radio.bluetooth.cod_str = NULL;
-  dev->view = NULL;
-  /* Temporary variables for attributes that require transformation */
-  uint8_t tagged;
-  char rssi[RSSI_LEN + 1];
-  memset(rssi, '\0', RSSI_LEN + 1);
-  /* Copy fixed-byte members */
-  memcpy(&(dev->radio.bluetooth.bdname_len),
-         packet + WENDIGO_OFFSET_BT_BDNAME_LEN, sizeof(uint8_t));
-  memcpy(&(dev->radio.bluetooth.eir_len), packet + WENDIGO_OFFSET_BT_EIR_LEN,
-         sizeof(uint8_t));
-  memcpy(rssi, packet + WENDIGO_OFFSET_BT_RSSI, RSSI_LEN);
-  dev->rssi = strtol(rssi, NULL, 10);
-  memcpy(&(dev->radio.bluetooth.cod), packet + WENDIGO_OFFSET_BT_COD,
-         sizeof(uint32_t));
-  memcpy(dev->mac, packet + WENDIGO_OFFSET_BT_BDA, MAC_BYTES);
-  memcpy(&(dev->scanType), packet + WENDIGO_OFFSET_BT_SCANTYPE,
-         sizeof(uint8_t));
-  memcpy(&tagged, packet + WENDIGO_OFFSET_BT_TAGGED, sizeof(uint8_t));
-  dev->tagged = (tagged == 1);
-  /* Ignore lastSeen */
-  // memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_BT_LASTSEEN,
-  // sizeof(int64_t));
-  memcpy(&(dev->radio.bluetooth.bt_services.num_services),
-         packet + WENDIGO_OFFSET_BT_NUM_SERVICES, sizeof(uint8_t));
-  memcpy(&(dev->radio.bluetooth.bt_services.known_services_len),
-         packet + WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN, sizeof(uint8_t));
-  uint8_t cod_len;
-  memcpy(&cod_len, packet + WENDIGO_OFFSET_BT_COD_LEN, sizeof(uint8_t));
-  /* Do we have a bdname? */
-  uint16_t index = WENDIGO_OFFSET_BT_BDNAME;
-  /* Rudimentary buffer capacity check - Is the buffer large enough to hold the
-   * specified bdname and packet terminator? */
-  if (dev->radio.bluetooth.bdname_len > 0 &&
-      packetLen >= (index + dev->radio.bluetooth.bdname_len + PREAMBLE_LEN - 1)) {
-    dev->radio.bluetooth.bdname =
-        malloc(sizeof(char) * (dev->radio.bluetooth.bdname_len + 1));
-    if (dev->radio.bluetooth.bdname == NULL) {
-      /* Can't store bdname so set bdname_len to 0 */
-      dev->radio.bluetooth.bdname_len = 0;
-    } else {
-      memcpy(dev->radio.bluetooth.bdname, packet + index,
-             dev->radio.bluetooth.bdname_len + 1);
-    }
-    /* Move index past bdname and its terminating null character */
-    index += (dev->radio.bluetooth.bdname_len + 1);
-  }
-  /* EIR? */
-  if (dev->radio.bluetooth.eir_len > 0 &&
-      packetLen >= (index + dev->radio.bluetooth.eir_len + PREAMBLE_LEN - 1)) {
-    dev->radio.bluetooth.eir =
-        malloc(sizeof(uint8_t) * dev->radio.bluetooth.eir_len);
-    if (dev->radio.bluetooth.eir == NULL) {
-      dev->radio.bluetooth.eir_len = 0;
-    } else {
-      memcpy(dev->radio.bluetooth.eir, packet + index,
-             dev->radio.bluetooth.eir_len);
-    }
-    index += dev->radio.bluetooth.eir_len;
-  }
-  /* Class of Device? */
-  if (cod_len > 0 && packetLen >= (index + cod_len + PREAMBLE_LEN - 1)) {
-    dev->radio.bluetooth.cod_str = malloc(sizeof(char) * (cod_len + 1));
-    if (dev->radio.bluetooth.cod_str != NULL) {
-      memcpy(dev->radio.bluetooth.cod_str, packet + index, cod_len + 1);
-    }
-    index += (cod_len + 1); /* Cater for the trailing '\0' */
-  }
-  // TODO: Services to go here
-
-  /* Hopefully `index` now points to the packet terminator (unless scanning has
-   stopped, then all bets are off) */
-  if (app->is_scanning && memcmp(PACKET_TERM, packet + index, PREAMBLE_LEN)) {
-    // TODO: Introducing polling to recover from an ESP32 restart can lead to
-    // corrupted packets
-    //       if confirmation of scan status is interleaved with a device packet.
-    //       Create a queueing mechanism in ESP32 so packets are guaranteed to
-    //       be sent sequentially.
-    // wendigo_display_popup(app, "BT Packet Error", "Packet terminator not
-    // found where expected");
-  }
-
-  /* Add or update the device in devices[] - No longer need to check
-   whether we're adding or updating, the add/update functions will call
-   each other if required. */
-  wendigo_add_device(app, dev);
-  /* Clean up memory */
-  wendigo_free_device(dev);
-
-  /* We've consumed `index` bytes as well as the packet terminator */
-  // TODO: Consider pros & cons of this vs. returning packetLen. At the very
-  // least comparing the two could help find corrupted packets.
-  FURI_LOG_T(WENDIGO_TAG, "End parseBufferBluetooth()");
-  return index + PREAMBLE_LEN;
+    return index + PREAMBLE_LEN;
 }
 
 /* Returns the number of bytes consumed from the buffer - DOES NOT
