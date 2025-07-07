@@ -787,12 +787,17 @@ void wendigo_free_device(wendigo_device *dev) {
     }
   } else if (dev->scanType == SCAN_WIFI_AP) {
     if (dev->radio.ap.stations != NULL && dev->radio.ap.stations_count > 0) {
-      free(dev->radio.ap.stations);
-      dev->radio.ap.stations = NULL;
-      dev->radio.ap.stations_count = 0;
+        for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
+            if (dev->radio.ap.stations[i] != NULL) {
+                free(dev->radio.ap.stations[i]);
+            }
+        }
+        free(dev->radio.ap.stations);
+        dev->radio.ap.stations = NULL;
+        dev->radio.ap.stations_count = 0;
     }
   } else if (dev->scanType == SCAN_WIFI_STA) {
-    dev->radio.sta.ap = NULL;
+    /* Nothing to do */
   } else {
     /* Nothing to do */
   }
@@ -1018,7 +1023,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app, uint8_t *packet, uint16_t packetL
 uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferWifiAp()");
     /* Check the packet is a reasonable size */
-    uint16_t expectedLen = WENDIGO_OFFSET_AP_STA + PREAMBLE_LEN;
+    uint16_t expectedLen = WENDIGO_OFFSET_AP_SSID + PREAMBLE_LEN;
     if (packetLen < expectedLen) {
         char shortMsg[56];
         snprintf(shortMsg, sizeof(shortMsg),
@@ -1027,14 +1032,16 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         // Popup disabled while debugging device list wendigo_display_popup(app, "AP
         // too short", shortMsg);
         wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
-        FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp()");
+        FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp() - Packet too short");
         return packetLen;
     }
-    /* Retrieve stations_count from the packet for further validation */
+    /* Retrieve stations_count and ssid_len from the packet for further validation */
     uint8_t sta_count;
+    uint8_t ssid_len;
+    memcpy(&ssid_len, packet + WENDIGO_OFFSET_AP_SSID_LEN, sizeof(uint8_t));
     memcpy(&sta_count, packet + WENDIGO_OFFSET_AP_STA_COUNT, sizeof(uint8_t));
-    /* Now we have stations_count we know exactly how big the packet should be */
-    expectedLen = WENDIGO_OFFSET_AP_STA + (MAC_BYTES * sta_count) + PREAMBLE_LEN;
+    /* Now we have stations_count and ssid_len we know exactly how big the packet should be */
+    expectedLen = WENDIGO_OFFSET_AP_SSID + ssid_len + (MAC_BYTES * sta_count) + PREAMBLE_LEN;
     if (packetLen < expectedLen) {
         /* Packet is too short - Likely reflects a corrupted packet with the wrong
             byte in stations_count. Log and display the error and free `dev`.
@@ -1047,7 +1054,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
         // Popup disabled while debugging device list wendigo_display_popup(app, "AP
         // too short for STAtions", shortMsg);
-        FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp()");
+        FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp() - Packet too short for stations");
         return packetLen;
     }
     wendigo_device *dev = malloc(sizeof(wendigo_device));
@@ -1057,41 +1064,31 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     /* Initialise pointers */
     dev->view = NULL;
     dev->radio.ap.stations = NULL;
-    memset(dev->radio.ap.ssid, '\0', MAX_SSID_LEN + 1);
+    bzero(dev->radio.ap.ssid, MAX_SSID_LEN + 1);
     /* Temporary variables for elements that need to be transformed */
-    // TODO: Change channel back to a simple uint8_t. Maybe keep RSSI as a string?
     uint8_t tagged;
-    char rssi[RSSI_LEN + 1];
-    memset(rssi, '\0', RSSI_LEN + 1);
-    char channel[CHANNEL_LEN + 1];
-    memset(channel, '\0', CHANNEL_LEN + 1);
     /* Copy fixed-length attributes from the packet */
     memcpy(&(dev->scanType), packet + WENDIGO_OFFSET_WIFI_SCANTYPE,
         sizeof(uint8_t));
     memcpy(dev->mac, packet + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
-    memcpy(channel, packet + WENDIGO_OFFSET_WIFI_CHANNEL, CHANNEL_LEN);
-    dev->radio.ap.channel = strtol(channel, NULL, 10);
-    memcpy(rssi, packet + WENDIGO_OFFSET_WIFI_RSSI, RSSI_LEN);
-    dev->rssi = strtol(rssi, NULL, 10);
+    memcpy(dev->radio.ap.channel, packet + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(uint8_t));
+    memcpy(dev->rssi, packet + WENDIGO_OFFSET_WIFI_RSSI, sizeof(int16_t));
     /* Ignore lastSeen */
     // memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN,
     // sizeof(int64_t));
     memcpy(&tagged, packet + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(uint8_t));
     dev->tagged = (tagged == 1);
-    uint8_t ssid_len;
-    memcpy(&ssid_len, packet + WENDIGO_OFFSET_AP_SSID_LEN, sizeof(uint8_t));
     dev->radio.ap.stations_count = sta_count;
-    memcpy(dev->radio.ap.ssid, packet + WENDIGO_OFFSET_AP_SSID, MAX_SSID_LEN);
-    dev->radio.ap.ssid[ssid_len] = '\0';
+    memcpy(dev->radio.ap.ssid, packet + WENDIGO_OFFSET_AP_SSID, ssid_len);
 
     /* Retrieve stations_count MAC addresses */
-    uint8_t buffIndex = WENDIGO_OFFSET_AP_STA;
+    uint8_t buffIndex = WENDIGO_OFFSET_AP_SSID + ssid_len;
     uint8_t **stations = NULL;
     if (dev->radio.ap.stations_count > 0) {
         stations = malloc(sizeof(uint8_t *) * dev->radio.ap.stations_count);
         if (stations == NULL) {
             free(dev);
-            FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp()");
+            FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp() - Unable to malloc() stations[]");
             return packetLen;
         }
         for (uint8_t staIdx = 0; staIdx < dev->radio.ap.stations_count; ++staIdx) {
@@ -1119,20 +1116,11 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         if (dev->radio.ap.stations_count > 0) {
             //wendigo_link_wifi_devices(app, dev, stations, dev->radio.ap.stations_count);
             // TODO: Fix linking
-            dev->radio.ap.stations_count = 0;
+            dev->radio.ap.stations = stations;
         }
         wendigo_add_device(app, dev);
     }
     wendigo_free_device(dev);
-    if (stations != NULL) {
-        for (uint8_t staIdx = 0; staIdx < dev->radio.ap.stations_count; ++staIdx) {
-            if (stations[staIdx] != NULL) {
-                free(stations[staIdx]);
-                stations[staIdx] = NULL;
-            }
-        }
-        free(stations);
-    }
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp()");
     return packetLen;
 }
