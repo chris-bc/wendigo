@@ -934,12 +934,10 @@ esp_err_t wendigo_get_channels() {
         }
         memcpy(packet, PREAMBLE_CHANNELS, PREAMBLE_LEN);
         memcpy(packet + WENDIGO_OFFSET_CHANNEL_COUNT, &channels_count, sizeof(uint8_t));
-        uint8_t offset = WENDIGO_OFFSET_CHANNELS;
         if (channels_count > 0) {
-            memcpy(packet + offset, channels, channels_count);
-            offset += channels_count;
+            memcpy(packet + WENDIGO_OFFSET_CHANNELS, channels, channels_count);
         }
-        memcpy(packet + offset, PACKET_TERM, PREAMBLE_LEN);
+        memcpy(packet + WENDIGO_OFFSET_CHANNELS + channels_count, PACKET_TERM, PREAMBLE_LEN);
         /* Transmit the packet */
         wendigo_get_tx_lock(true);
         send_bytes(packet, packetLen);

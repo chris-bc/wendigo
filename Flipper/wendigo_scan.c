@@ -1184,8 +1184,7 @@ uint16_t parseBufferVersion(WendigoApp *app, uint8_t *packet, uint16_t packetLen
         return endSeq + PREAMBLE_LEN;
     }
     wendigo_popup_text = versionStr;
-    snprintf(wendigo_popup_text, messageLen, "Flipper-Wendigo v%s\n ESP32-",
-        FLIPPER_WENDIGO_VERSION);
+    snprintf(wendigo_popup_text, messageLen, "Flipper-Wendigo v%s\n ESP32-", FLIPPER_WENDIGO_VERSION);
     memcpy(wendigo_popup_text + 25 + strlen(FLIPPER_WENDIGO_VERSION), packet, endSeq);
     wendigo_popup_text[messageLen - 1] = '\0'; /* Just in case */
     wendigo_display_popup(app, "Wendigo Version", wendigo_popup_text);
@@ -1198,19 +1197,19 @@ uint16_t parseBufferChannels(WendigoApp *app, uint8_t *packet, uint16_t packetLe
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferChannels()");
     uint8_t channels_count;
     uint8_t *channels = NULL;
-    uint16_t offset = PREAMBLE_LEN;
-    memcpy(&channels_count, packet + offset, sizeof(uint8_t));
-    ++offset;
+    memcpy(&channels_count, packet + WENDIGO_OFFSET_CHANNEL_COUNT, sizeof(uint8_t));
     if (channels_count > 0) {
         channels = malloc(channels_count);
         if (channels != NULL) {
-            memcpy(channels, packet + offset, channels_count);
-            offset += channels_count;
+            memcpy(channels, packet + WENDIGO_OFFSET_CHANNELS, channels_count);
         }
     }
-    if (memcmp(PACKET_TERM, packet + offset, PREAMBLE_LEN)) {
+    if (memcmp(PACKET_TERM, packet + WENDIGO_OFFSET_CHANNELS + channels_count, PREAMBLE_LEN)) {
         //        wendigo_display_popup(app, "Channel Packet", "Channel packet is
         //        unexpected length");
+        wendigo_log_with_packet(MSG_ERROR, "Channels packet terminator not found where expected", packet, packetLen);
+        FURI_LOG_T(WENDIGO_TAG, "End parseBufferChannels() - Terminator not found");
+        return packetLen;
     }
     // TODO: Do something with channels
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferChannels()");
