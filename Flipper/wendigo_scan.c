@@ -1217,9 +1217,7 @@ uint16_t parseBufferChannels(WendigoApp *app, uint8_t *packet, uint16_t packetLe
 }
 
 /** Parse a status packet and display in the status view.
- * Returns the number of bytes consumed by the function, including the
- * end-of-packet bytes. DOES NOT remove these bytes, that is handled by the
- * calling function. This function requires that Wendigo_AppViewStatus be the
+ * This function requires that Wendigo_AppViewStatus be the
  * currently-displayed view (otherwise the packet is discarded).
  */
 uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
@@ -1238,19 +1236,21 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     char *attribute_value = NULL;
     uint16_t offset = PREAMBLE_LEN;
     memcpy(&attribute_count, packet + offset, sizeof(uint8_t));
-    offset += sizeof(uint8_t);
+    ++offset;
     for (uint8_t i = 0; i < attribute_count; ++i) {
         /* Parse attribute name length */
         memcpy(&attribute_name_len, packet + offset, sizeof(uint8_t));
         if (attribute_name_len == 0) {
-            // TODO: Panic
+            wendigo_log_with_packet(MSG_ERROR, "Status packet contained an attribute of length 0, skipping.", packet, packetLen);
             return packetLen;
         }
-        offset += sizeof(uint8_t);
+        ++offset;
         /* Name */
         attribute_name = malloc(sizeof(char) * (attribute_name_len + 1));
         if (attribute_name == NULL) {
-            // TODO: panic
+            char msg[51];
+            snprintf(msg, sizeof(msg), "Failed to allocate %d bytes for status attribute.", attribute_name_len + 1);
+            wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
             return packetLen;
         }
         memcpy(attribute_name, packet + offset, attribute_name_len);
@@ -1258,11 +1258,13 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         offset += attribute_name_len;
         /* Attribute value length */
         memcpy(&attribute_value_len, packet + offset, sizeof(uint8_t));
-        offset += sizeof(uint8_t);
+        ++offset;
         /* It's valid for this to have a length of 0 - attribute_value will be "" */
         attribute_value = malloc(sizeof(char) * (attribute_value_len + 1));
         if (attribute_value == NULL) {
-            // TODO: Panic
+            char msg[50];
+            snprintf(msg, sizeof(msg), "Failed to allocate %d bytes for attribute value.", attribute_value_len + 1);
+            wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
             free(attribute_name);
             return packetLen;
         }
@@ -1278,7 +1280,7 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
 
     /* buffer + offset should now point to the end of packet sequence */
     if (memcmp(PACKET_TERM, packet + offset, PREAMBLE_LEN)) {
-        // TODO: Panic
+        wendigo_log_with_packet(MSG_WARN, "Status packet terminator not found where expected.", packet, packetLen);
         return packetLen;
     }
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferStatus()");
@@ -1319,7 +1321,6 @@ void parsePacket(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     } else {
         wendigo_log_with_packet(MSG_WARN, "Packet doesn't have a valid preamble", packet, packetLen);
     }
-
     FURI_LOG_T(WENDIGO_TAG, "End parsePacket()");
 }
 
