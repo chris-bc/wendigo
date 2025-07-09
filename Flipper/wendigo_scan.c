@@ -820,53 +820,20 @@ void process_and_display_status_attribute(WendigoApp *app, char *attribute_name,
     uint16_t count = 0;
     char strVal[6];
     for (interested = 0; interested < interesting_attributes_count &&
-        strcmp(interesting_attributes[interested], attribute_name);
+            strcmp(interesting_attributes[interested], attribute_name);
         ++interested) { }
     if (interested < interesting_attributes_count) {
         /* We're interested in this attribute */
-        switch (interested) {
-            // TODO: Roll these into a single loop, with case just setting some
-            // variables
-            case 0:
-                /* BT Classic device count - Count it ourselves for consistency */
-                for (uint16_t i = 0; i < devices_count; ++i) {
-                    if (devices[i]->scanType == SCAN_HCI) {
-                        ++count;
-                    }
-                }
-                snprintf(strVal, sizeof(strVal), "%d", count);
-                attribute_value = strVal;
-                break;
-            case 1:
-                /* BLE device count */
-                for (uint16_t i = 0; i < devices_count; ++i) {
-                    if (devices[i]->scanType == SCAN_BLE) {
-                        ++count;
-                    }
-                }
-                snprintf(strVal, sizeof(strVal), "%d", count);
-                attribute_value = strVal;
-                break;
-            case 2:
-                /* WiFi STA */
-                for (uint16_t i = 0; i < devices_count; ++i) {
-                    if (devices[i]->scanType == SCAN_WIFI_STA) {
-                        ++count;
-                    }
-                }
-                snprintf(strVal, sizeof(strVal), "%d", count);
-                attribute_value = strVal;
-                break;
-            case 3:
-                /* WiFi AP */
-                for (uint16_t i = 0; i < devices_count; ++i) {
-                    if (devices[i]->scanType == SCAN_WIFI_AP) {
-                        ++count;
-                    }
-                }
-                snprintf(strVal, sizeof(strVal), "%d", count);
-                attribute_value = strVal;
-                break;
+        for (uint16_t i = 0; i < devices_count; ++i) {
+            /* Does the current device contribute to the interesting attribute count? */
+            if ((interested == 0 && devices[i]->scanType == SCAN_HCI) ||
+                (interested == 1 && devices[i]->scanType == SCAN_BLE) ||
+                (interested == 2 && devices[i]->scanType == SCAN_WIFI_STA) ||
+                (interested == 3 && devices[i]->scanType == SCAN_WIFI_AP)) {
+                    ++count;
+            }
+            snprintf(strVal, sizeof(strVal), "%d", count);
+            attribute_value = strVal;
         }
     }
     wendigo_scene_status_add_attribute(app, attribute_name, attribute_value);
