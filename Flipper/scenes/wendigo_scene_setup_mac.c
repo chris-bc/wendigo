@@ -45,11 +45,9 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
                 // Do nothing
                 break;
         }
-        snprintf(
-            popup_header_text,
+        snprintf(popup_header_text,
             strlen("Update  MAC") + strlen(result_if_text) + 1,
-            "Update %s MAC",
-            result_if_text);
+            "Update %s MAC", result_if_text);
         /* Was the MAC changed successfully? */
         if (mac_changed) {
             /* Record the new MAC in app->interfaces */
@@ -65,17 +63,13 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
                 default:
                     // Do nothing
             }
-            snprintf(
-                popup_text,
+            snprintf(popup_text,
                 strlen(result_if_text) + strlen(" MAC Updated!") + 1,
-                "%s MAC Updated!",
-                result_if_text);
+                "%s MAC Updated!", result_if_text);
         } else {
-            snprintf(
-                popup_text,
+            snprintf(popup_text,
                 strlen(result_if_text) + strlen("Failed to Update  MAC!") + 1,
-                "Failed to Update %s MAC!",
-                result_if_text);
+                "Failed to Update %s MAC!", result_if_text);
         }
         wendigo_display_popup(app, popup_header_text, popup_text);
     } else {
@@ -105,13 +99,9 @@ void wendigo_scene_setup_mac_on_enter(void *context) {
     memcpy(view_bytes, app->interfaces[app->active_interface].mac_bytes, MAC_BYTES);
 
     byte_input_set_header_text(mac_input, "MAC Address");
-    byte_input_set_result_callback(
-        mac_input,
+    byte_input_set_result_callback(mac_input,
         wendigo_scene_setup_mac_input_callback,
-        wendigo_scene_setup_mac_changed_callback,
-        app,
-        view_bytes,
-        MAC_BYTES);
+        wendigo_scene_setup_mac_changed_callback, app, view_bytes, MAC_BYTES);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewSetupMAC);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_on_enter()");
 }
