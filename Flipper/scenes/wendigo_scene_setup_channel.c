@@ -30,7 +30,6 @@ static void wendigo_scene_setup_channel_var_list_enter_callback(void *context, u
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_channel_var_list_enter_callback()");
     UNUSED(context);
     UNUSED(index);
-
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_channel_var_list_enter_callback()");
 }
 
@@ -56,7 +55,7 @@ static void wendigo_scene_setup_channel_var_list_change_callback(VariableItem *i
         /* Eck. This got less elegant.
            If channel currently ON, disable it by subtracting that channel's bit value */
         if ((app->channel_mask & app->CH_MASK[selected_menu_index + 1]) ==
-           app->CH_MASK[selected_menu_index + 1]) {
+                app->CH_MASK[selected_menu_index + 1]) {
             app->channel_mask -= app->CH_MASK[selected_menu_index + 1];
         }
     }
@@ -74,16 +73,13 @@ void wendigo_scene_setup_channel_on_enter(void *context) {
 
     VariableItem *item;
     for (int i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
-        item = variable_item_list_add(
-            var_item_list,
-            items[i].item_string,
+        item = variable_item_list_add(var_item_list, items[i].item_string,
             items[i].num_options_menu,
-            wendigo_scene_setup_channel_var_list_change_callback,
-            app);
+            wendigo_scene_setup_channel_var_list_change_callback, app);
 
         /* Use channels array and bitmask to determine current option value
-           I'd rather use the ternary operator but this is more readable and I think they'll be
-           optimised down to the same code */
+         *  I'd rather use the ternary operator but this is more readable and I think they'll be
+         *  optimised down to the same code */
         uint16_t ch_value;
         if ((app->channel_mask & app->CH_MASK[i + 1]) == app->CH_MASK[i + 1]) {
             ch_value = CH_ON;
