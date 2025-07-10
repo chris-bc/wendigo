@@ -1,4 +1,5 @@
 #include "../wendigo_app_i.h"
+#include "../wendigo_scan.h"
 
 static const WendigoItem items[SETUP_MENU_ITEMS] = {
     {"BLE", {"On", "Off", "MAC"}, 3, LIST_DEVICES, OFF},
@@ -146,7 +147,7 @@ void wendigo_scene_setup_on_enter(void *context) {
                 char msg[65];
                 snprintf(msg, sizeof(msg),
                     "wendigo_scene_setup_on_enter(): Unknown interface selected %s.",
-                    menu_item->item_string);
+                    items[i].item_string);
                 wendigo_log(MSG_ERROR, msg);
             }
             app->setup_selected_option_index[i] =

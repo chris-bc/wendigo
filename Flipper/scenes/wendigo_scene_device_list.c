@@ -349,17 +349,21 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
                 dev->radio.sta.channel);
         break;
       case WendigoOptionSTAAP:
-        if (dev->radio.sta.ap == NULL) {
-          snprintf(optionValue, sizeof(optionValue), "Unknown");
-        } else {
-          if (((wendigo_device *)dev->radio.sta.ap)->radio.ap.ssid[0] == '\0') {
-            /* No SSID for the AP - Display MAC instead */
+        if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
+          /* AP has a MAC - Do we have the AP in our cache? */
+          uint16_t apIdx = device_index_from_mac(dev->radio.sta.apMac);
+          if (apIdx == devices_count || devices[apIdx]->radio.ap.ssid[0] == '\0') {
+            /* Either we don't have the AP in our cache or
+             * the AP's SSID is unknown - Use MAC instead */
             bytes_to_string(dev->radio.sta.apMac, MAC_BYTES, optionValue);
           } else {
-            /* Use AP's SSID */
+            /* We have an SSID for the AP */
             snprintf(optionValue, sizeof(optionValue), "%s",
-                    ((wendigo_device *)dev->radio.sta.ap)->radio.ap.ssid);
+                    devices[apIdx]->radio.ap.ssid);
           }
+        } else {
+          /* We don't know the AP */
+          snprintf(optionValue, sizeof(optionValue), "Unknown");
         }
         break;
       case WendigoOptionSTAScanType:
@@ -679,7 +683,7 @@ bool wendigo_scene_device_list_on_event(void *context,
     default:
       char msg[54];
       snprintf(msg, sizeof(msg),
-              "wendigo_scene_device_list received unknown event %d.",
+              "wendigo_scene_device_list received unknown event %ld.",
               event.event);
       wendigo_log(MSG_WARN, msg);
       break;

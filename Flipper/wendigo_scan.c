@@ -122,7 +122,7 @@ bool wendigo_set_device_selected(wendigo_device *device, bool selected) {
             wendigo_device **new_devices = realloc(selected_devices,
                 sizeof(wendigo_device *) * (selected_devices_capacity + 1));
             if (new_devices == NULL) {
-                char msg[65];
+                char msg[67];
                 snprintf(msg, sizeof(msg), "Failed to expand selected_devices[] to hold %d wendigo_device*.",
                     selected_devices_capacity + 1);
                 wendigo_log(MSG_ERROR, msg);
@@ -936,10 +936,10 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
         FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiSta() - Short packet");
         return packetLen;
     }
-    /* Get ssid_len to validate the full packet size */
+    /* Get ap_ssid_len to validate the full packet size */
     uint8_t ap_ssid_len;
     memcpy(&ap_ssid_len, packet + WENDIGO_OFFSET_STA_AP_SSID_LEN, sizeof(uint8_t));
-    expectedLen += ssid_len;
+    expectedLen += ap_ssid_len;
     if (packetLen < expectedLen) {
         /* Packet too short - Log and return */
         char shortMsg[57];
