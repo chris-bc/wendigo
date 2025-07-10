@@ -5,25 +5,14 @@ extern void wendigo_scene_device_detail_set_device(wendigo_device *d);
 /** Internal method - I don't wan't to move all calling functions below it */
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem *item);
 
-/** For some obscene reason the ifndef barrier isn't stopping these from showing
- *  up in every single object file. No longer shared.
+/** TODO: For some obscene reason the ifndef barrier isn't stopping these
+ *  from showing up in every single object file. No longer shared.
  */
-char *authModeStrings[] = {"Open",
-                          "WEP",
-                          "WPA_PSK",
-                          "WPA2_PSK",
-                          "WPA_WPA2_PSK",
-                          "EAP (Enterprise)",
-                          "WPA3_PSK",
-                          "WPA2_WPA3_PSK",
-                          "WAPI_PSK",
-                          "OWE",
-                          "WPA_ENT_SUITE_B_192_BIT",
-                          "WPA3_PSK",
-                          "WPA3_PSK",
-                          "DPP",
-                          "WPA3-Enterprise",
-                          "WPA3-Enterprise Transition"};
+char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2",
+    "WPA+WPA2", "EAP", "EAP", "WPA3", "WPA2+WPA3", "WAPI", "OWE",
+    "WPA3 Enterprise 192-bit", "WPA3 EXT", "WPA3 EXT Mixed Mode", "DPP",
+    "WPA3 Enterprise", "WPA3 Enterprise Transition", "Unknown"};
+
 
 /** Enum to index the options menu for devices */
 enum wendigo_device_list_bt_options {
@@ -313,7 +302,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
         break;
       case WendigoOptionAPAuthMode:
         snprintf(optionValue, sizeof(optionValue), "%s",
-                authModeStrings[dev->radio.ap.authmode]);
+                wifi_auth_mode_strings[dev->radio.ap.authmode]);
         break;
       case WendigoOptionAPScanType:
         snprintf(optionValue, sizeof(optionValue), "%s",
@@ -598,14 +587,8 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem *ite
       variable_item_set_current_value_text(item, tempStr);
     } else if (menu_item->scanType == SCAN_WIFI_AP &&
                 option_index == WendigoOptionAPAuthMode) {
-      // TODO: This isn't implemented, these changes are just to guard against
-      // stack overflow
-      if (menu_item->radio.ap.authmode < WIFI_AUTH_MAX) {
-        snprintf(tempStr, sizeof(tempStr), "%s",
-                authModeStrings[menu_item->radio.ap.authmode]);
-      } else {
-        tempStr[0] = '\0';
-      }
+      snprintf(tempStr, sizeof(tempStr), "%s",
+                wifi_auth_mode_strings[menu_item->radio.ap.authmode]);
       variable_item_set_current_value_text(item, tempStr);
     } else if (menu_item->scanType == SCAN_WIFI_STA &&
                 option_index == WendigoOptionSTAAP) {

@@ -1,4 +1,4 @@
-* Add auth mode (find it in probe response)
+DONE * Add auth mode (find it in probe response)
 DONE * Change channel and RSSI back to integers
 DONE * Make SSID variable-length
 DONE * Update wendigo_wifi_ap and wendigo_wifi_sta to hold MACs, not object pointers

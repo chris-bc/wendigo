@@ -74,11 +74,6 @@
     #define WENDIGO_TAG     "WENDIGO"
 #endif
 
-char *wifi_auth_mode_strings[18] = {"Open", "WEP", "WPA", "WPA2",
-    "WPA+WPA2", "EAP", "EAP", "WPA3", "WPA2+WPA3", "WAPI", "OWE",
-    "WPA3 Enterprise 192-bit", "WPA3 EXT", "WPA3 EXT Mixed Mode", "DPP",
-    "WPA3 Enterprise", "WPA3 Enterprise-Only", "Unknown"};
-
 #define MAX_SSID_LEN    32
 #define MAC_STRLEN      17
 #define MAC_BYTES       6

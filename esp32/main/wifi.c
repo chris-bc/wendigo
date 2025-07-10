@@ -13,6 +13,12 @@ const uint8_t WENDIGO_SUPPORTED_5_CHANNELS[] = {32, 36, 40, 44, 48, 52, 56, 60, 
 long hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
 TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
 
+// TODO: This is duplicated for Flipper-Wendigo because the ifndef guard isn't working
+char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2",
+    "WPA+WPA2", "EAP", "EAP", "WPA3", "WPA2+WPA3", "WAPI", "OWE",
+    "WPA3 Enterprise 192-bit", "WPA3 EXT", "WPA3 EXT Mixed Mode", "DPP",
+    "WPA3 Enterprise", "WPA3 Enterprise Transition", "Unknown"};
+
 bool WIFI_INITIALISED = false;
 uint8_t BANNER_WIDTH = 62;
 static const char *WIFI_TAG = "WiFi@Wendigo";

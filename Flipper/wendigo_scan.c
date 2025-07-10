@@ -862,6 +862,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     memcpy(dev->mac, packet + WENDIGO_OFFSET_WIFI_MAC, MAC_BYTES);
     memcpy(&(dev->radio.ap.channel), packet + WENDIGO_OFFSET_WIFI_CHANNEL, sizeof(uint8_t));
     memcpy(&(dev->rssi), packet + WENDIGO_OFFSET_WIFI_RSSI, sizeof(int16_t));
+    memcpy(&(dev->radio.ap.authmode), packet + WENDIGO_OFFSET_AP_AUTH_MODE, sizeof(uint8_t));
     /* Ignore lastSeen */
     // memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN,
     // sizeof(int64_t));
