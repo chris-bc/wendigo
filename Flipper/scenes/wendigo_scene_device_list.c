@@ -609,13 +609,21 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem *ite
       }
       variable_item_set_current_value_text(item, tempStr);
     } else {
-      char msg[68 + MAC_STRLEN];
-      char macStr[MAC_STRLEN + 1];
-      bytes_to_string(menu_item->mac, MAC_BYTES, macStr);
-      snprintf(msg, sizeof(msg),
-              "Invalid scanType (%d) / optionIndex (%d) combination for device %s.",
-              menu_item->scanType, option_index, macStr);
-      wendigo_log(MSG_ERROR, msg);
+      char *msg = malloc(sizeof(char) * (68 + MAC_STRLEN));
+      char *macStr = malloc(sizeof(char) * (1 + MAC_STRLEN));
+      if (msg != NULL && macStr != NULL) {
+        bytes_to_string(menu_item->mac, MAC_BYTES, macStr);
+        snprintf(msg, sizeof(char) * (68 + MAC_STRLEN),
+                "Invalid scanType (%d) / optionIndex (%d) combination for device %s.",
+                menu_item->scanType, option_index, macStr);
+        wendigo_log(MSG_ERROR, msg);
+      }
+      if (msg != NULL) {
+        free(msg);
+      }
+      if (macStr != NULL) {
+        free(macStr);
+      }
     }
   }
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_var_list_change_callback()");
@@ -664,11 +672,14 @@ bool wendigo_scene_device_list_on_event(void *context,
       scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceDetail);
       break;
     default:
-      char msg[54];
-      snprintf(msg, sizeof(msg),
-              "wendigo_scene_device_list received unknown event %ld.",
-              event.event);
-      wendigo_log(MSG_WARN, msg);
+      char *msg = malloc(sizeof(char) * 54);
+      if (msg != NULL) {
+        snprintf(msg, sizeof(char) * 54,
+                "wendigo_scene_device_list received unknown event %ld.",
+                event.event);
+        wendigo_log(MSG_WARN, msg);
+        free(msg);
+      }
       break;
     }
     consumed = true;

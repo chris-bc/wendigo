@@ -122,10 +122,13 @@ bool wendigo_set_device_selected(wendigo_device *device, bool selected) {
             wendigo_device **new_devices = realloc(selected_devices,
                 sizeof(wendigo_device *) * (selected_devices_capacity + 1));
             if (new_devices == NULL) {
-                char msg[67];
-                snprintf(msg, sizeof(msg), "Failed to expand selected_devices[] to hold %d wendigo_device*.",
-                    selected_devices_capacity + 1);
-                wendigo_log(MSG_ERROR, msg);
+                char *msg = malloc(sizeof(char) * 67);
+                if (msg != NULL) {
+                    snprintf(msg, sizeof(char) * 67, "Failed to expand selected_devices[] to hold %d wendigo_device*.",
+                        selected_devices_capacity + 1);
+                    wendigo_log(MSG_ERROR, msg);
+                    free(msg);
+                }
                 return false;
             }
             selected_devices = new_devices;
@@ -706,10 +709,13 @@ uint16_t parseBufferBluetooth(WendigoApp *app, uint8_t *packet, uint16_t packetL
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferBluetooth");
     /* Sanity check - we should have at least WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN bytes */
     if (packetLen < (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN)) {
-        char msg[98];
-        snprintf(msg, sizeof(msg), "Bluetooth packet too short even before considering BDName, EIR and CoD. Expected %d, actual %d.",
-                                    (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN), packetLen);
-        wendigo_log_with_packet(MSG_WARN, msg, packet, packetLen);
+        char *msg = malloc(sizeof(char) * 98);
+        if (msg != NULL) {
+            snprintf(msg, sizeof(char) * 98, "Bluetooth packet too short even before considering BDName, EIR and CoD. Expected %d, actual %d.",
+                                        (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN), packetLen);
+            wendigo_log_with_packet(MSG_WARN, msg, packet, packetLen);
+            free(msg);
+        }
         return packetLen;
     }
     wendigo_device *dev = malloc(sizeof(wendigo_device));
@@ -789,9 +795,14 @@ uint16_t parseBufferBluetooth(WendigoApp *app, uint8_t *packet, uint16_t packetL
     /* Hopefully `index` now points to the packet terminator (unless scanning has
        stopped, then all bets are off) */
     if (app->is_scanning && memcmp(PACKET_TERM, packet + index, PREAMBLE_LEN)) {
-        char msg[62];
-        snprintf(msg, sizeof(msg), "Bluetooth packet terminator expected at index %d, not found.", index);
-        wendigo_log_with_packet(MSG_WARN, msg, packet, packetLen);
+        char *msg = malloc(sizeof(char) * 62);
+        if (msg != NULL) {
+            snprintf(msg, sizeof(char) * 62,
+                "Bluetooth packet terminator expected at index %d, not found.",
+                index);
+            wendigo_log_with_packet(MSG_WARN, msg, packet, packetLen);
+            free(msg);
+        }
     }
 
     /* Add or update the device in devices[] - No longer need to check
@@ -814,13 +825,16 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     /* Check the packet is a reasonable size */
     uint16_t expectedLen = WENDIGO_OFFSET_AP_SSID + PREAMBLE_LEN;
     if (packetLen < expectedLen) {
-        char shortMsg[56];
-        snprintf(shortMsg, sizeof(shortMsg),
-            "AP packet too short, expected %d actual %d. Skipping.",
-            expectedLen, packetLen);
-        // Popup disabled while debugging device list wendigo_display_popup(app, "AP
-        // too short", shortMsg);
-        wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
+        char *shortMsg = malloc(sizeof(char) * 56);
+        if (shortMsg != NULL) {
+            snprintf(shortMsg, sizeof(char) * 56,
+                "AP packet too short, expected %d actual %d. Skipping.",
+                expectedLen, packetLen);
+            // Popup disabled while debugging device list wendigo_display_popup(app,
+            // "AP too short", shortMsg);
+            wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
+            free(shortMsg);
+        }
         FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp() - Packet too short");
         return packetLen;
     }
@@ -835,14 +849,17 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         /* Packet is too short - Likely reflects a corrupted packet with the wrong
             byte in stations_count. Log and display the error and free `dev`.
         */
-        char shortMsg[77];
-        snprintf(shortMsg, sizeof(shortMsg),
-            "Packet's stations_count requires packet of size %d, actual %d. "
-            "Skipping.",
-            expectedLen, packetLen);
-        wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
-        // Popup disabled while debugging device list wendigo_display_popup(app, "AP
-        // too short for STAtions", shortMsg);
+        char *shortMsg = malloc(sizeof(char) * 77);
+        if (shortMsg != NULL) {
+            snprintf(shortMsg, sizeof(char) * 77,
+                "Packet's stations_count requires packet of size %d, actual %d. "
+                "Skipping.",
+                expectedLen, packetLen);
+            wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
+            // Popup disabled while debugging device list wendigo_display_popup(app, "AP
+            // too short for STAtions", shortMsg);
+            free(shortMsg);
+        }
         FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiAp() - Packet too short for stations");
         return packetLen;
     }
@@ -893,15 +910,23 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     }
     /* buffIndex should now point to the packet terminator */
     if (memcmp(packet + buffIndex, PACKET_TERM, PREAMBLE_LEN)) {
-        char bytesFound[3 * PREAMBLE_LEN];
-        char popupMsg[3 * PREAMBLE_LEN + 30];
-        bytes_to_string(packet + buffIndex, PREAMBLE_LEN, bytesFound);
-        snprintf(popupMsg, sizeof(popupMsg), "Expected end of packet, found %s",
-            bytesFound);
-        popupMsg[3 * PREAMBLE_LEN + 29] = '\0';
-        // Popup disabled while debugging device list wendigo_display_popup(app, "AP
-        // Packet Error", popupMsg);
-        wendigo_log_with_packet(MSG_ERROR, popupMsg, packet, packetLen);
+        char *bytesFound = malloc(sizeof(char) * 3 * PREAMBLE_LEN);
+        char *popupMsg = malloc(sizeof(char) * ((3 * PREAMBLE_LEN) + 30));
+        if (bytesFound != NULL && popupMsg != NULL) {
+            bytes_to_string(packet + buffIndex, PREAMBLE_LEN, bytesFound);
+            snprintf(popupMsg, sizeof(char) * ((3 * PREAMBLE_LEN) + 30),
+                "Expected end of packet, found %s", bytesFound);
+            popupMsg[3 * PREAMBLE_LEN + 29] = '\0';
+            // Popup disabled while debugging device list wendigo_display_popup(app, "AP
+            // Packet Error", popupMsg);
+            wendigo_log_with_packet(MSG_ERROR, popupMsg, packet, packetLen);
+        };
+        if (bytesFound != NULL) {
+            free(bytesFound);
+        }
+        if (popupMsg != NULL) {
+            free(popupMsg);
+        }
         if (stations != NULL) {
             for (uint8_t i = 0; i < dev->radio.ap.stations_count; ++i) {
                 if (stations[i] != NULL) {
@@ -926,14 +951,17 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     uint8_t expectedLen = WENDIGO_OFFSET_STA_AP_SSID + PREAMBLE_LEN;
     if (packetLen < expectedLen) {
         /* Packet is too short - Log the issue along with the current packet */
-        char shortMsg[60];
-        snprintf(shortMsg, sizeof(shortMsg),
-            "STA packet too short: Expected %d, actual %d. Skipping...",
-            expectedLen, packetLen);
-        wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
-        /* Also display a popup */
-        // Popup disabled while debugging device list wendigo_display_popup(app,
-        // "STA packet too short", shortMsg);
+        char *shortMsg = malloc(sizeof(char) * 60);
+        if (shortMsg != NULL) {
+            snprintf(shortMsg, sizeof(char) * 60,
+                "STA packet too short: Expected %d, actual %d. Skipping...",
+                expectedLen, packetLen);
+            wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
+            /* Also display a popup */
+            // Popup disabled while debugging device list wendigo_display_popup(app,
+            // "STA packet too short", shortMsg);
+            free(shortMsg);
+        }
         FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiSta() - Short packet");
         return packetLen;
     }
@@ -943,11 +971,14 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     expectedLen += ap_ssid_len;
     if (packetLen < expectedLen) {
         /* Packet too short - Log and return */
-        char shortMsg[57];
-        snprintf(shortMsg, sizeof(shortMsg),
-            "STA packet too short for SSID: Expected %d, actual %d.",
-            expectedLen, packetLen);
-        wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
+        char *shortMsg = malloc(sizeof(char) * 57);
+        if (shortMsg != NULL) {
+            snprintf(shortMsg, sizeof(char) * 57,
+                "STA packet too short for SSID: Expected %d, actual %d.",
+                expectedLen, packetLen);
+            wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
+            free(shortMsg);
+        }
         FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiSta() - Packet too short for SSID");
         return packetLen;
     }
@@ -1068,16 +1099,23 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         /* Parse attribute name length */
         memcpy(&attribute_name_len, packet + offset, sizeof(uint8_t));
         if (attribute_name_len == 0) {
-            wendigo_log_with_packet(MSG_ERROR, "Status packet contained an attribute of length 0, skipping.", packet, packetLen);
+            wendigo_log_with_packet(MSG_ERROR,
+                "Status packet contained an attribute of length 0, skipping.",
+                packet, packetLen);
             return packetLen;
         }
         ++offset;
         /* Name */
         attribute_name = malloc(sizeof(char) * (attribute_name_len + 1));
         if (attribute_name == NULL) {
-            char msg[51];
-            snprintf(msg, sizeof(msg), "Failed to allocate %d bytes for status attribute.", attribute_name_len + 1);
-            wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
+            char *msg = malloc(sizeof(char) * 51);
+            if (msg != NULL) {
+                snprintf(msg, sizeof(char) * 51,
+                    "Failed to allocate %d bytes for status attribute.",
+                    attribute_name_len + 1);
+                wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
+                free(msg);
+            }
             return packetLen;
         }
         memcpy(attribute_name, packet + offset, attribute_name_len);
@@ -1089,9 +1127,14 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         /* It's valid for this to have a length of 0 - attribute_value will be "" */
         attribute_value = malloc(sizeof(char) * (attribute_value_len + 1));
         if (attribute_value == NULL) {
-            char msg[50];
-            snprintf(msg, sizeof(msg), "Failed to allocate %d bytes for attribute value.", attribute_value_len + 1);
-            wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
+            char *msg = malloc(sizeof(char) * 50);
+            if (msg != NULL) {
+                snprintf(msg, sizeof(char) * 50,
+                    "Failed to allocate %d bytes for attribute value.",
+                    attribute_value_len + 1);
+                wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
+                free(msg);
+            }
             free(attribute_name);
             return packetLen;
         }

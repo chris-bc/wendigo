@@ -45,11 +45,14 @@ static void wendigo_scene_setup_var_list_enter_callback(void *context, uint32_t 
                 } else if (!strncmp(item->item_string, "WiFi", 4)) {
                     app->active_interface = IF_WIFI;
                 } else {
-                    char msg[83];
-                    snprintf(msg, sizeof(msg),
-                        "wendigo_scene_setup_var_list_enter_callback(): Invalid selected_option_index: %d.",
-                        selected_option_index);
-                    wendigo_log(MSG_ERROR, msg);
+                    char *msg = malloc(sizeof(char) * 83);
+                    if (msg != NULL) {
+                        snprintf(msg, sizeof(char) * 83,
+                            "wendigo_scene_setup_var_list_enter_callback(): Invalid selected_option_index: %d.",
+                            selected_option_index);
+                        wendigo_log(MSG_ERROR, msg);
+                        free(msg);
+                    }
                 }
                 view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventMAC);
             }
@@ -85,11 +88,14 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem *item) {
                     }
                     break;
                 default:
-                    char msg[72];
-                    snprintf(msg, sizeof(msg),
-                        "wendigo_scene_setup_var_list_change_callback(): Invalid item_index %d.",
-                        item_index);
-                    wendigo_log(MSG_ERROR, msg);
+                    char *msg = malloc(sizeof(char) * 72);
+                    if (msg != NULL) {
+                        snprintf(msg, sizeof(char) * 72,
+                            "wendigo_scene_setup_var_list_change_callback(): Invalid item_index %d.",
+                            item_index);
+                        wendigo_log(MSG_ERROR, msg);
+                        free(msg);
+                    }
                     break;
             }
             break;
@@ -102,11 +108,14 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem *item) {
             } else if (!strncmp(menu_item->item_string, "WiFi", 4)) {
                 app->active_interface = IF_WIFI;
             } else {
-                char msg[81];
-                snprintf(msg, sizeof(msg),
-                    "wendigo_scene_setup_var_list_change_callback(): Unknown interface selected %s.",
-                    menu_item->item_string);
-                wendigo_log(MSG_ERROR, msg);
+                char *msg = malloc(sizeof(char) * 81);
+                if (msg != NULL) {
+                    snprintf(msg, sizeof(char) * 81,
+                        "wendigo_scene_setup_var_list_change_callback(): Unknown interface selected %s.",
+                        menu_item->item_string);
+                    wendigo_log(MSG_ERROR, msg);
+                    free(msg);
+                }
             }
             /* Mark the interface as active or inactive if "On" or "Off" is selected */
             if (item_index == RADIO_ON || item_index == RADIO_OFF) {
@@ -144,11 +153,14 @@ void wendigo_scene_setup_on_enter(void *context) {
             } else if (!strncmp(items[i].item_string, "WiFi", 4)) {
                 if_type = IF_WIFI;
             } else {
-                char msg[65];
-                snprintf(msg, sizeof(msg),
-                    "wendigo_scene_setup_on_enter(): Unknown interface selected %s.",
-                    items[i].item_string);
-                wendigo_log(MSG_ERROR, msg);
+                char *msg = malloc(sizeof(char) * 65);
+                if (msg != NULL) {
+                    snprintf(msg, sizeof(char) * 65,
+                        "wendigo_scene_setup_on_enter(): Unknown interface selected %s.",
+                        items[i].item_string);
+                    wendigo_log(MSG_ERROR, msg);
+                    free(msg);
+                }
             }
             app->setup_selected_option_index[i] =
                 (app->interfaces[if_type].active) ? RADIO_ON : RADIO_OFF;
