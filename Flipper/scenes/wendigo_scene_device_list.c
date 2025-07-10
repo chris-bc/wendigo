@@ -3,27 +3,26 @@
 /* Public method from wendigo_scene_device_detail.c */
 extern void wendigo_scene_device_detail_set_device(wendigo_device *d);
 /* Internal method - I don't wan't to move all calling functions below it */
-static void
-wendigo_scene_device_list_var_list_change_callback(VariableItem *item);
+static void wendigo_scene_device_list_var_list_change_callback(VariableItem *item);
 
 /* For some obscene reason the ifndef barrier isn't stopping these from showing
    up in every single object file. No longer shared. */
 char *authModeStrings[] = {"Open",
-                           "WEP",
-                           "WPA_PSK",
-                           "WPA2_PSK",
-                           "WPA_WPA2_PSK",
-                           "EAP (Enterprise)",
-                           "WPA3_PSK",
-                           "WPA2_WPA3_PSK",
-                           "WAPI_PSK",
-                           "OWE",
-                           "WPA_ENT_SUITE_B_192_BIT",
-                           "WPA3_PSK",
-                           "WPA3_PSK",
-                           "DPP",
-                           "WPA3-Enterprise",
-                           "WPA3-Enterprise Transition"};
+                          "WEP",
+                          "WPA_PSK",
+                          "WPA2_PSK",
+                          "WPA_WPA2_PSK",
+                          "EAP (Enterprise)",
+                          "WPA3_PSK",
+                          "WPA2_WPA3_PSK",
+                          "WAPI_PSK",
+                          "OWE",
+                          "WPA_ENT_SUITE_B_192_BIT",
+                          "WPA3_PSK",
+                          "WPA3_PSK",
+                          "DPP",
+                          "WPA3-Enterprise",
+                          "WPA3-Enterprise Transition"};
 
 /* Enum to index the options menu for devices */
 enum wendigo_device_list_bt_options {
@@ -61,7 +60,8 @@ uint16_t current_devices_count = 0;
 uint8_t current_devices_mask = DEVICE_ALL;
 
 /** Determine whether the specified device should be displayed, based on the
- * criteria provided in wendigo_set_current_devices() */
+ * criteria provided in wendigo_set_current_devices()
+ */
 bool wendigo_device_is_displayed(wendigo_device *dev) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_device_is_displayed()");
   bool display_selected =
