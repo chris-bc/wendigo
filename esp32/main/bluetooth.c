@@ -75,26 +75,9 @@ bool BLE_INITIALISED = false;
 
 esp_err_t display_gap_interactive(wendigo_device *dev) {
     esp_err_t result = ESP_OK;
-    /* Before doing anything else check if we have seen this device
-       within CONFIG_DELAY_AFTER_DEVICE_DISPLAYED ms */
-    if (CONFIG_DELAY_AFTER_DEVICE_DISPLAYED > 0) {
-        /* Only display the device if it hasn't been seen before or
-           CONFIG_DELAY_AFTER_DEVICE_DISPLAYED ms have passed */
-        wendigo_device *existingDevice = retrieve_device(dev);
-        if (existingDevice != NULL) {
-            /* We've seen it before - decide whether it was too recent and update lastSeen */
-            struct timeval nowTime;
-            gettimeofday(&nowTime, NULL);
-            double elapsed = (nowTime.tv_sec - existingDevice->lastSeen.tv_sec);
-            if (elapsed < CONFIG_DELAY_AFTER_DEVICE_DISPLAYED) {
-                /* It's been seen too recently, don't display it */
-                return ESP_OK;
-            }
-        }
-    }
     bool cod_fit = false;
     char *dev_type = (dev->scanType == SCAN_HCI) ? radioShortNames[SCAN_HCI] :
-                      (dev->scanType == SCAN_BLE) ? radioShortNames[SCAN_BLE] : "UNK";
+        (dev->scanType == SCAN_BLE) ? radioShortNames[SCAN_BLE] : "UNK";
     char mac_str[MAC_STRLEN + 1];
     mac_bytes_to_string(dev->mac, mac_str);
     char cod_str[COD_MAX_LEN];

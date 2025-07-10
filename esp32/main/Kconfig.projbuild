@@ -33,6 +33,7 @@ menu "Wendigo Configuration"
         int "Delay before a device is re-reported in Interactive Mode"
         default 2000
         help
+            THIS SETTING IS CURRENTLY UNUSED.
             This specifies the minimum time that must elapse before a device that has been
             reported in scanning will be reported again in Interactive Mode. While this may
             reduce the quality of scan results, without this setting the interactive display

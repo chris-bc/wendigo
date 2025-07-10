@@ -262,18 +262,6 @@ esp_err_t display_wifi_device(wendigo_device *dev, bool force_display) {
         return ESP_OK;
     }
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-        /* If device throttling is enabled make sure sufficient time has passed before displaying it */
-        if (CONFIG_DELAY_AFTER_DEVICE_DISPLAYED > 0 && !force_display) {
-            if (existing_device != NULL) {
-                /* We've seen the device before, have we seen it too recently? */
-                struct timeval nowTime;
-                gettimeofday(&nowTime, NULL);
-                double elapsed = (nowTime.tv_sec - existing_device->lastSeen.tv_sec) * 1000;
-                if (elapsed < CONFIG_DELAY_AFTER_DEVICE_DISPLAYED) {
-                    return ESP_OK;
-                }
-            }
-        }
         if (dev->scanType == SCAN_WIFI_AP) {
             return display_wifi_ap_interactive(dev);
         } else if (dev->scanType == SCAN_WIFI_STA) {
@@ -450,6 +438,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     if (ssid_len > 0) {
         memcpy(ap->radio.ap.ssid, payload + PROBE_RESPONSE_SSID_OFFSET, ssid_len);
     }
+    /* Authentication mode */
+    memcpy(&(ap->radio.ap.authmode), payload + PROBE_RESPONSE_AUTH_TYPE_OFFSET + ssid_len, 1);
     if (creatingAp) {
         result |= add_device(ap);
         free(ap);
