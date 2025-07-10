@@ -371,13 +371,13 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
   if (dev->view == NULL) {
     /* Add a new item */
     dev->view = variable_item_list_add(
-        app->devices_var_item_list, (name == NULL) ? "" : name, optionsCount,
-        wendigo_scene_device_list_var_list_change_callback, app);
+        app->devices_var_item_list, (name == NULL) ? "(Unknown)" : name,
+        optionsCount, wendigo_scene_device_list_var_list_change_callback, app);
     /* Update current_devices[] to include the new device */
     wendigo_set_current_devices(current_devices_mask);
   } else {
     /* Update dev->view */
-    variable_item_set_item_label(dev->view, (name == NULL) ? "" : name);
+    variable_item_set_item_label(dev->view, (name == NULL) ? "(Unknown)" : name);
   }
   variable_item_set_current_value_index(dev->view, optionIndex);
   if (optionValue[0] != '\0') {
