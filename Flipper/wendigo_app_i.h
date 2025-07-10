@@ -82,8 +82,8 @@ typedef struct {
 } WendigoRadio;
 
 typedef struct {
-    const char* item_string;
-    const char* options_menu[MAX_OPTIONS];
+    const char *item_string;
+    const char *options_menu[MAX_OPTIONS];
     int num_options_menu;
     ActionType action;
     ModeMask mode_mask;
@@ -114,19 +114,19 @@ typedef enum {
 } WendigoAppView;
 
 struct WendigoApp {
-    Gui* gui;
-    ViewDispatcher* view_dispatcher;
-    SceneManager* scene_manager;
+    Gui *gui;
+    ViewDispatcher *view_dispatcher;
+    SceneManager *scene_manager;
     WendigoAppView current_view;
     bool is_scanning;
 
-    Widget* widget;
-    VariableItemList* var_item_list;
+    Widget *widget;
+    VariableItemList *var_item_list;
     VariableItemList *devices_var_item_list;
     VariableItemList *detail_var_item_list;
-    Wendigo_Uart* uart;
-    ByteInput* setup_mac;
-    Popup* popup; // Avoid continual allocation and freeing of Popup by initialising at launch
+    Wendigo_Uart *uart;
+    ByteInput *setup_mac;
+    Popup *popup; // Avoid continual allocation and freeing of Popup by initialising at launch
     WendigoRadio interfaces[IF_COUNT];
     InterfaceType active_interface;
     uint32_t last_packet;
@@ -141,13 +141,13 @@ struct WendigoApp {
 
     // TODO: Review these attributes - Remove what I can as remnants of the past
     char text_input_store[WENDIGO_TEXT_INPUT_STORE_SIZE + 1];
-    FuriString* text_box_store;
+    FuriString *text_box_store;
     size_t text_box_store_strlen;
-    TextBox* text_box;
-    TextInput* text_input;
-    Wendigo_TextInput* hex_input;
+    TextBox *text_box;
+    TextInput *text_input;
+    Wendigo_TextInput *hex_input;
 
-    const char* selected_tx_string;
+    const char *selected_tx_string;
     bool is_command;
     bool is_custom_tx_string;
     bool hex_mode;
@@ -163,7 +163,7 @@ void wendigo_popup_callback(void *context);
 void wendigo_display_popup(WendigoApp *app, char *header, char*body);
 void wendigo_uart_set_binary_cb(Wendigo_Uart *uart);
 void wendigo_uart_set_console_cb(Wendigo_Uart *uart);
-void bytes_to_string(uint8_t* bytes, uint16_t bytesCount, char* strBytes);
+void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes);
 
 /* Devices currently being displayed */
 extern wendigo_device **current_devices;

@@ -1,14 +1,14 @@
 #include "../wendigo_app_i.h"
 
-void wendigo_console_output_handle_rx_data_cb(uint8_t* buf, size_t len, void* context) {
+void wendigo_console_output_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     furi_assert(context);
-    WendigoApp* app = context;
-    FuriString* new_str = furi_string_alloc();
+    WendigoApp *app = context;
+    FuriString *new_str = furi_string_alloc();
 
-    if(app->hex_mode) {
-        while(len--) {
+    if (app->hex_mode) {
+        while (len--) {
             uint8_t byte = *(buf++);
-            if(byte == '\0') break;
+            if (byte == '\0') break;
             furi_string_cat_printf(new_str, "%02X ", byte);
         }
     } else {
@@ -19,7 +19,7 @@ void wendigo_console_output_handle_rx_data_cb(uint8_t* buf, size_t len, void* co
     // If text box store gets too big, then truncate it
     app->text_box_store_strlen += furi_string_size(new_str);
     ;
-    while(app->text_box_store_strlen >= WENDIGO_TEXT_BOX_STORE_SIZE - 1) {
+    while (app->text_box_store_strlen >= WENDIGO_TEXT_BOX_STORE_SIZE - 1) {
         furi_string_right(app->text_box_store, app->text_box_store_strlen / 2);
         app->text_box_store_strlen = furi_string_size(app->text_box_store) + len;
     }
@@ -31,24 +31,24 @@ void wendigo_console_output_handle_rx_data_cb(uint8_t* buf, size_t len, void* co
 }
 
 static uint8_t hex_char_to_byte(const char c) {
-    if(c >= '0' && c <= '9') {
+    if (c >= '0' && c <= '9') {
         return c - '0';
     }
-    if(c >= 'A' && c <= 'F') {
+    if (c >= 'A' && c <= 'F') {
         return c - 'A' + 10;
     }
-    if(c >= 'a' && c <= 'f') {
+    if (c >= 'a' && c <= 'f') {
         return c - 'a' + 10;
     }
     return 0;
 }
 
-void wendigo_scene_console_output_on_enter(void* context) {
+void wendigo_scene_console_output_on_enter(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_console_output_on_enter()");
-    WendigoApp* app = context;
+    WendigoApp *app = context;
     app->current_view = WendigoAppViewConsoleOutput;
 
-    TextBox* text_box = app->text_box;
+    TextBox *text_box = app->text_box;
     text_box_reset(app->text_box);
     text_box_set_font(text_box, TextBoxFontText);
     text_box_set_focus(text_box, TextBoxFocusEnd);
@@ -56,23 +56,23 @@ void wendigo_scene_console_output_on_enter(void* context) {
     bool need_reinit = false;
 
     //Change baudrate
-    if(app->BAUDRATE != app->NEW_BAUDRATE && app->NEW_BAUDRATE) {
+    if (app->BAUDRATE != app->NEW_BAUDRATE && app->NEW_BAUDRATE) {
         need_reinit = true;
     }
 
     //Change UART port
-    if(app->uart_ch != app->new_uart_ch) {
+    if (app->uart_ch != app->new_uart_ch) {
         need_reinit = true;
     }
 
-    if(need_reinit) {
+    if (need_reinit) {
         wendigo_uart_free(app->uart);
         app->BAUDRATE = app->NEW_BAUDRATE;
         app->uart_ch = app->new_uart_ch;
         app->uart = wendigo_uart_init(app);
     }
 
-    if(app->is_command) {
+    if (app->is_command) {
         furi_string_reset(app->text_box_store);
         app->text_box_store_strlen = 0;
     }
@@ -87,16 +87,16 @@ void wendigo_scene_console_output_on_enter(void* context) {
     wendigo_uart_set_handle_rx_data_cb(
         app->uart, wendigo_console_output_handle_rx_data_cb); // setup callback for rx thread
 
-    if(app->hex_mode) {
+    if (app->hex_mode) {
         // Send binary packet
-        if(app->selected_tx_string) {
-            const char* str = app->selected_tx_string;
+        if (app->selected_tx_string) {
+            const char *str = app->selected_tx_string;
             uint8_t digit_num = 0;
             uint8_t byte = 0;
-            while(*str) {
+            while (*str) {
                 byte |= (hex_char_to_byte(*str) << ((1 - digit_num) * 4));
 
-                if(++digit_num == 2) {
+                if (++digit_num == 2) {
                     wendigo_uart_tx(app->uart, &byte, 1);
                     digit_num = 0;
                     byte = 0;
@@ -104,14 +104,14 @@ void wendigo_scene_console_output_on_enter(void* context) {
                 str++;
             }
 
-            if(digit_num) {
+            if (digit_num) {
                 wendigo_uart_tx(app->uart, &byte, 1);
             }
         }
     } else {
         // Send command with CR+LF or newline '\n'
-        if(app->is_command && app->selected_tx_string) {
-            if(app->TERMINAL_MODE == 1) {
+        if (app->is_command && app->selected_tx_string) {
+            if (app->TERMINAL_MODE == 1) {
                 wendigo_uart_tx(
                     app->uart,
                     (uint8_t*)(app->selected_tx_string),
@@ -129,25 +129,25 @@ void wendigo_scene_console_output_on_enter(void* context) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_console_output_on_enter()");
 }
 
-bool wendigo_scene_console_output_on_event(void* context, SceneManagerEvent event) {
+bool wendigo_scene_console_output_on_event(void *context, SceneManagerEvent event) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_console_output_on_event()");
-    WendigoApp* app = context;
+    WendigoApp *app = context;
 
     bool consumed = false;
 
-    if(event.type == SceneManagerEventTypeCustom) {
+    if (event.type == SceneManagerEventTypeCustom) {
         text_box_set_text(app->text_box, furi_string_get_cstr(app->text_box_store));
         consumed = true;
-    } else if(event.type == SceneManagerEventTypeTick) {
+    } else if (event.type == SceneManagerEventTypeTick) {
         consumed = true;
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_console_output_on_event()");
     return consumed;
 }
 
-void wendigo_scene_console_output_on_exit(void* context) {
+void wendigo_scene_console_output_on_exit(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_console_output_on_exit()");
-    WendigoApp* app = context;
+    WendigoApp *app = context;
 
     // Unregister rx callback
     wendigo_uart_set_handle_rx_data_cb(app->uart, NULL);

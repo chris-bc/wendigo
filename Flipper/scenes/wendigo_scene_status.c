@@ -35,14 +35,14 @@ void wendigo_scene_status_begin_layout(WendigoApp *app) {
  * displays a placeholder menu item and sends a UART message asking ESP32-Wendigo
  * to send us status information.
  */
-void wendigo_scene_status_on_enter(void* context) {
+void wendigo_scene_status_on_enter(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_status_on_enter()");
-    WendigoApp* app = context;
-    VariableItemList* var_item_list = app->var_item_list;
+    WendigoApp *app = context;
+    VariableItemList *var_item_list = app->var_item_list;
     app->current_view = WendigoAppViewStatus;
 
     variable_item_list_reset(var_item_list);
-    VariableItem* item = variable_item_list_add(var_item_list, "Loading...", 1, NULL, app);
+    VariableItem *item = variable_item_list_add(var_item_list, "Loading...", 1, NULL, app);
     variable_item_set_current_value_index(item, 0);
     variable_item_set_current_value_text(item, "");
 
@@ -55,7 +55,7 @@ void wendigo_scene_status_on_enter(void* context) {
 }
 
 /* We have no need to respond to events */
-bool wendigo_scene_status_on_event(void* context, SceneManagerEvent event) {
+bool wendigo_scene_status_on_event(void *context, SceneManagerEvent event) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_status_on_event()");
     UNUSED(context);
     UNUSED(event);
@@ -63,9 +63,9 @@ bool wendigo_scene_status_on_event(void* context, SceneManagerEvent event) {
     return false;
 }
 
-void wendigo_scene_status_on_exit(void* context) {
+void wendigo_scene_status_on_exit(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_status_on_exit()");
-    WendigoApp* app = context;
+    WendigoApp *app = context;
     variable_item_list_reset(app->var_item_list);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_status_on_exit()");
 }
