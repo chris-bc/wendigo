@@ -11,7 +11,7 @@ char *wendigo_popup_text = NULL; // I suspect the popup text is going out of
 
 /* Internal function declarations */
 uint16_t custom_device_index(wendigo_device *dev, wendigo_device **array,
-                             uint16_t array_count);
+                            uint16_t array_count);
 
 /* Device caches */
 wendigo_device **devices = NULL;
@@ -167,7 +167,7 @@ void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
     char cmdString[CMD_LEN];
     /* This flag will cause incomplete packets to be ignored */
     app->is_scanning = starting;
-    for (int i = 0; i < IF_COUNT; ++i) {
+    for (uint8_t i = 0; i < IF_COUNT; ++i) {
         /* Set command */
         cmd = (i == IF_BLE) ? 'b' : (i == IF_BT_CLASSIC) ? 'h' : 'w';
         /* arg */

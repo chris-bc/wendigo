@@ -69,13 +69,13 @@ static uint8_t get_row_size(uint8_t row_index) {
     FURI_LOG_T(WENDIGO_TAG, "Start get_row_size()");
     uint8_t row_size = 0;
 
-    switch(row_index + 1) {
-    case 1:
-        row_size = sizeof(keyboard_keys_row_1) / sizeof(Wendigo_TextInputKey);
-        break;
-    case 2:
-        row_size = sizeof(keyboard_keys_row_2) / sizeof(Wendigo_TextInputKey);
-        break;
+    switch (row_index + 1) {
+        case 1:
+            row_size = sizeof(keyboard_keys_row_1) / sizeof(Wendigo_TextInputKey);
+            break;
+        case 2:
+            row_size = sizeof(keyboard_keys_row_2) / sizeof(Wendigo_TextInputKey);
+            break;
     }
     FURI_LOG_T(WENDIGO_TAG, "End get_row_size()");
     return row_size;
@@ -85,13 +85,13 @@ static const Wendigo_TextInputKey *get_row(uint8_t row_index) {
     FURI_LOG_T(WENDIGO_TAG, "Start get_row()");
     const Wendigo_TextInputKey *row = NULL;
 
-    switch(row_index + 1) {
-    case 1:
-        row = keyboard_keys_row_1;
-        break;
-    case 2:
-        row = keyboard_keys_row_2;
-        break;
+    switch (row_index + 1) {
+        case 1:
+            row = keyboard_keys_row_1;
+            break;
+        case 2:
+            row = keyboard_keys_row_2;
+            break;
     }
     FURI_LOG_T(WENDIGO_TAG, "End get_row()");
     return row;
@@ -321,76 +321,76 @@ static bool wendigo_hex_input_view_input_callback(InputEvent *event, void *conte
         consumed = true;
     } else if (event->type == InputTypeShort) {
         consumed = true;
-        switch(event->key) {
-        case InputKeyUp:
-            wendigo_hex_input_handle_up(wendigo_text_input, model);
-            break;
-        case InputKeyDown:
-            wendigo_hex_input_handle_down(wendigo_text_input, model);
-            break;
-        case InputKeyLeft:
-            wendigo_hex_input_handle_left(wendigo_text_input, model);
-            break;
-        case InputKeyRight:
-            wendigo_hex_input_handle_right(wendigo_text_input, model);
-            break;
-        case InputKeyOk:
-            wendigo_hex_input_handle_ok(wendigo_text_input, model, false);
-            break;
-        default:
-            consumed = false;
-            break;
+        switch (event->key) {
+            case InputKeyUp:
+                wendigo_hex_input_handle_up(wendigo_text_input, model);
+                break;
+            case InputKeyDown:
+                wendigo_hex_input_handle_down(wendigo_text_input, model);
+                break;
+            case InputKeyLeft:
+                wendigo_hex_input_handle_left(wendigo_text_input, model);
+                break;
+            case InputKeyRight:
+                wendigo_hex_input_handle_right(wendigo_text_input, model);
+                break;
+            case InputKeyOk:
+                wendigo_hex_input_handle_ok(wendigo_text_input, model, false);
+                break;
+            default:
+                consumed = false;
+                break;
         }
     } else if (event->type == InputTypeLong) {
         consumed = true;
-        switch(event->key) {
-        case InputKeyUp:
-            wendigo_hex_input_handle_up(wendigo_text_input, model);
-            break;
-        case InputKeyDown:
-            wendigo_hex_input_handle_down(wendigo_text_input, model);
-            break;
-        case InputKeyLeft:
-            wendigo_hex_input_handle_left(wendigo_text_input, model);
-            break;
-        case InputKeyRight:
-            wendigo_hex_input_handle_right(wendigo_text_input, model);
-            break;
-        case InputKeyOk:
-            wendigo_hex_input_handle_ok(wendigo_text_input, model, true);
-            break;
-        case InputKeyBack:
-            wendigo_hex_input_backspace_cb(model);
-            break;
-        default:
-            consumed = false;
-            break;
+        switch (event->key) {
+            case InputKeyUp:
+                wendigo_hex_input_handle_up(wendigo_text_input, model);
+                break;
+            case InputKeyDown:
+                wendigo_hex_input_handle_down(wendigo_text_input, model);
+                break;
+            case InputKeyLeft:
+                wendigo_hex_input_handle_left(wendigo_text_input, model);
+                break;
+            case InputKeyRight:
+                wendigo_hex_input_handle_right(wendigo_text_input, model);
+                break;
+            case InputKeyOk:
+                wendigo_hex_input_handle_ok(wendigo_text_input, model, true);
+                break;
+            case InputKeyBack:
+                wendigo_hex_input_backspace_cb(model);
+                break;
+            default:
+                consumed = false;
+                break;
         }
     } else if (event->type == InputTypeRepeat) {
         consumed = true;
-        switch(event->key) {
-        case InputKeyUp:
-            wendigo_hex_input_handle_up(wendigo_text_input, model);
-            break;
-        case InputKeyDown:
-            wendigo_hex_input_handle_down(wendigo_text_input, model);
-            break;
-        case InputKeyLeft:
-            wendigo_hex_input_handle_left(wendigo_text_input, model);
-            break;
-        case InputKeyRight:
-            wendigo_hex_input_handle_right(wendigo_text_input, model);
-            break;
-        case InputKeyBack:
-            wendigo_hex_input_backspace_cb(model);
-            break;
-        default:
-            consumed = false;
-            break;
+        switch (event->key) {
+            case InputKeyUp:
+                wendigo_hex_input_handle_up(wendigo_text_input, model);
+                break;
+            case InputKeyDown:
+                wendigo_hex_input_handle_down(wendigo_text_input, model);
+                break;
+            case InputKeyLeft:
+                wendigo_hex_input_handle_left(wendigo_text_input, model);
+                break;
+            case InputKeyRight:
+                wendigo_hex_input_handle_right(wendigo_text_input, model);
+                break;
+            case InputKeyBack:
+                wendigo_hex_input_backspace_cb(model);
+                break;
+            default:
+                consumed = false;
+                break;
         }
     }
 
-    // Commit model
+    /* Commit model */
     view_commit_model(wendigo_text_input->view, consumed);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_view_input_callback()");
     return consumed;

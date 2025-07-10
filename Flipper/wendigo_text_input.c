@@ -120,19 +120,19 @@ static uint8_t get_row_size(uint8_t row_index) {
     FURI_LOG_T(WENDIGO_TAG, "Start get_row_size()");
     uint8_t row_size = 0;
 
-    switch(row_index + 1) {
-    case 1:
-        row_size = sizeof(keyboard_keys_row_1) / sizeof(Wendigo_TextInputKey);
-        break;
-    case 2:
-        row_size = sizeof(keyboard_keys_row_2) / sizeof(Wendigo_TextInputKey);
-        break;
-    case 3:
-        row_size = sizeof(keyboard_keys_row_3) / sizeof(Wendigo_TextInputKey);
-        break;
-    case 4:
-        row_size = sizeof(keyboard_keys_row_4) / sizeof(Wendigo_TextInputKey);
-        break;
+    switch (row_index + 1) {
+        case 1:
+            row_size = sizeof(keyboard_keys_row_1) / sizeof(Wendigo_TextInputKey);
+            break;
+        case 2:
+            row_size = sizeof(keyboard_keys_row_2) / sizeof(Wendigo_TextInputKey);
+            break;
+        case 3:
+            row_size = sizeof(keyboard_keys_row_3) / sizeof(Wendigo_TextInputKey);
+            break;
+        case 4:
+            row_size = sizeof(keyboard_keys_row_4) / sizeof(Wendigo_TextInputKey);
+            break;
     }
     FURI_LOG_T(WENDIGO_TAG, "End get_row_size()");
     return row_size;
@@ -142,19 +142,19 @@ static const Wendigo_TextInputKey *get_row(uint8_t row_index) {
     FURI_LOG_T(WENDIGO_TAG, "Start get_row()");
     const Wendigo_TextInputKey *row = NULL;
 
-    switch(row_index + 1) {
-    case 1:
-        row = keyboard_keys_row_1;
-        break;
-    case 2:
-        row = keyboard_keys_row_2;
-        break;
-    case 3:
-        row = keyboard_keys_row_3;
-        break;
-    case 4:
-        row = keyboard_keys_row_4;
-        break;
+    switch (row_index + 1) {
+        case 1:
+            row = keyboard_keys_row_1;
+            break;
+        case 2:
+            row = keyboard_keys_row_2;
+            break;
+        case 3:
+            row = keyboard_keys_row_3;
+            break;
+        case 4:
+            row = keyboard_keys_row_4;
+            break;
     }
     FURI_LOG_T(WENDIGO_TAG, "End get_row()");
     return row;
@@ -177,34 +177,34 @@ static bool char_is_uppercase(char letter) {
 
 static char char_to_lowercase(const char letter) {
     FURI_LOG_T(WENDIGO_TAG, "Start char_to_lowercase()");
-    switch(letter) {
-    case ' ':
-        return 0x5f;
-        break;
-    case ')':
-        return 0x28;
-        break;
-    case '}':
-        return 0x7b;
-        break;
-    case ']':
-        return 0x5b;
-        break;
-    case '\\':
-        return 0x2f;
-        break;
-    case ':':
-        return 0x3b;
-        break;
-    case ',':
-        return 0x2e;
-        break;
-    case '?':
-        return 0x21;
-        break;
-    case '>':
-        return 0x3c;
-        break;
+    switch (letter) {
+        case ' ':
+            return 0x5f;
+            break;
+        case ')':
+            return 0x28;
+            break;
+        case '}':
+            return 0x7b;
+            break;
+        case ']':
+            return 0x5b;
+            break;
+        case '\\':
+            return 0x2f;
+            break;
+        case ':':
+            return 0x3b;
+            break;
+        case ',':
+            return 0x2e;
+            break;
+        case '?':
+            return 0x21;
+            break;
+        case '>':
+            return 0x3c;
+            break;
     }
     if (char_is_uppercase(letter)) {
         FURI_LOG_T(WENDIGO_TAG, "End char_to_lowercase()");
@@ -217,34 +217,34 @@ static char char_to_lowercase(const char letter) {
 
 static char char_to_uppercase(const char letter) {
     FURI_LOG_T(WENDIGO_TAG, "Start char_to_uppercase()");
-    switch(letter) {
-    case '_':
-        return 0x20;
-        break;
-    case '(':
-        return 0x29;
-        break;
-    case '{':
-        return 0x7d;
-        break;
-    case '[':
-        return 0x5d;
-        break;
-    case '/':
-        return 0x5c;
-        break;
-    case ';':
-        return 0x3a;
-        break;
-    case '.':
-        return 0x2c;
-        break;
-    case '!':
-        return 0x3f;
-        break;
-    case '<':
-        return 0x3e;
-        break;
+    switch (letter) {
+        case '_':
+            return 0x20;
+            break;
+        case '(':
+            return 0x29;
+            break;
+        case '{':
+            return 0x7d;
+            break;
+        case '[':
+            return 0x5d;
+            break;
+        case '/':
+            return 0x5c;
+            break;
+        case ';':
+            return 0x3a;
+            break;
+        case '.':
+            return 0x2c;
+            break;
+        case '!':
+            return 0x3f;
+            break;
+        case '<':
+            return 0x3e;
+            break;
     }
     if (char_is_lowercase(letter)) {
         FURI_LOG_T(WENDIGO_TAG, "End char_to_uppercase()");
@@ -488,77 +488,77 @@ static bool wendigo_text_input_view_input_callback(InputEvent *event, void *cont
     Wendigo_TextInputModel *model = view_get_model(wendigo_text_input->view);
 
     if ((!(event->type == InputTypePress) && !(event->type == InputTypeRelease)) &&
-       model->valadator_message_visible) {
+            model->valadator_message_visible) {
         model->valadator_message_visible = false;
         consumed = true;
     } else if (event->type == InputTypeShort) {
         consumed = true;
-        switch(event->key) {
-        case InputKeyUp:
-            wendigo_text_input_handle_up(wendigo_text_input, model);
-            break;
-        case InputKeyDown:
-            wendigo_text_input_handle_down(wendigo_text_input, model);
-            break;
-        case InputKeyLeft:
-            wendigo_text_input_handle_left(wendigo_text_input, model);
-            break;
-        case InputKeyRight:
-            wendigo_text_input_handle_right(wendigo_text_input, model);
-            break;
-        case InputKeyOk:
-            wendigo_text_input_handle_ok(wendigo_text_input, model, false);
-            break;
-        default:
-            consumed = false;
-            break;
+        switch (event->key) {
+            case InputKeyUp:
+                wendigo_text_input_handle_up(wendigo_text_input, model);
+                break;
+            case InputKeyDown:
+                wendigo_text_input_handle_down(wendigo_text_input, model);
+                break;
+            case InputKeyLeft:
+                wendigo_text_input_handle_left(wendigo_text_input, model);
+                break;
+            case InputKeyRight:
+                wendigo_text_input_handle_right(wendigo_text_input, model);
+                break;
+            case InputKeyOk:
+                wendigo_text_input_handle_ok(wendigo_text_input, model, false);
+                break;
+            default:
+                consumed = false;
+                break;
         }
     } else if (event->type == InputTypeLong) {
         consumed = true;
-        switch(event->key) {
-        case InputKeyUp:
-            wendigo_text_input_handle_up(wendigo_text_input, model);
-            break;
-        case InputKeyDown:
-            wendigo_text_input_handle_down(wendigo_text_input, model);
-            break;
-        case InputKeyLeft:
-            wendigo_text_input_handle_left(wendigo_text_input, model);
-            break;
-        case InputKeyRight:
-            wendigo_text_input_handle_right(wendigo_text_input, model);
-            break;
-        case InputKeyOk:
-            wendigo_text_input_handle_ok(wendigo_text_input, model, true);
-            break;
-        case InputKeyBack:
-            wendigo_text_input_backspace_cb(model);
-            break;
-        default:
-            consumed = false;
-            break;
+        switch (event->key) {
+            case InputKeyUp:
+                wendigo_text_input_handle_up(wendigo_text_input, model);
+                break;
+            case InputKeyDown:
+                wendigo_text_input_handle_down(wendigo_text_input, model);
+                break;
+            case InputKeyLeft:
+                wendigo_text_input_handle_left(wendigo_text_input, model);
+                break;
+            case InputKeyRight:
+                wendigo_text_input_handle_right(wendigo_text_input, model);
+                break;
+            case InputKeyOk:
+                wendigo_text_input_handle_ok(wendigo_text_input, model, true);
+                break;
+            case InputKeyBack:
+                wendigo_text_input_backspace_cb(model);
+                break;
+            default:
+                consumed = false;
+                break;
         }
     } else if (event->type == InputTypeRepeat) {
         consumed = true;
-        switch(event->key) {
-        case InputKeyUp:
-            wendigo_text_input_handle_up(wendigo_text_input, model);
-            break;
-        case InputKeyDown:
-            wendigo_text_input_handle_down(wendigo_text_input, model);
-            break;
-        case InputKeyLeft:
-            wendigo_text_input_handle_left(wendigo_text_input, model);
-            break;
-        case InputKeyRight:
-            wendigo_text_input_handle_right(wendigo_text_input, model);
-            break;
-        case InputKeyBack:
-            wendigo_text_input_backspace_cb(model);
-            break;
-        default:
-            consumed = false;
-            break;
+        switch (event->key) {
+            case InputKeyUp:
+                wendigo_text_input_handle_up(wendigo_text_input, model);
+                break;
+            case InputKeyDown:
+                wendigo_text_input_handle_down(wendigo_text_input, model);
+                break;
+            case InputKeyLeft:
+                wendigo_text_input_handle_left(wendigo_text_input, model);
+                break;
+            case InputKeyRight:
+                wendigo_text_input_handle_right(wendigo_text_input, model);
+                break;
+            case InputKeyBack:
+                wendigo_text_input_backspace_cb(model);
+                break;
+            default:
+                consumed = false;
+                break;
         }
     }
 

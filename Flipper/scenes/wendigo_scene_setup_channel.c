@@ -72,7 +72,7 @@ void wendigo_scene_setup_channel_on_enter(void *context) {
         wendigo_scene_setup_channel_var_list_enter_callback, app);
 
     VariableItem *item;
-    for (int i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
+    for (uint8_t i = 0; i < SETUP_CHANNEL_MENU_ITEMS; ++i) {
         item = variable_item_list_add(var_item_list, items[i].item_string,
             items[i].num_options_menu,
             wendigo_scene_setup_channel_var_list_change_callback, app);

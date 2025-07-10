@@ -74,7 +74,7 @@ void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
 /* Initialise app->interfaces - Default all radios to on */
 void wendigo_interface_init(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_interface_init()");
-    for (int i = 0; i < IF_COUNT; ++i) {
+    for (uint8_t i = 0; i < IF_COUNT; ++i) {
         app->interfaces[i].active = true;
         app->interfaces[i].mutable = true;
     }
@@ -113,23 +113,23 @@ WendigoApp *wendigo_app_alloc() {
         WendigoAppViewVarItemList,
         variable_item_list_get_view(app->var_item_list));
 
-    for (int i = 0; i < START_MENU_ITEMS; ++i) {
+    for (uint8_t i = 0; i < START_MENU_ITEMS; ++i) {
         app->selected_option_index[i] = 0;
     }
 
-    for (int i = 0; i < SETUP_MENU_ITEMS; ++i) {
+    for (uint8_t i = 0; i < SETUP_MENU_ITEMS; ++i) {
         app->setup_selected_option_index[i] = 0;
     }
 
     /* Initialise the channel bitmasks - pow() is slow so hardcode 0 & 1 and use multiplication for the rest */
     app->CH_MASK[0] = 0;
     app->CH_MASK[1] = 1;
-    for (int i = 2; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
+    for (uint8_t i = 2; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
         app->CH_MASK[i] = app->CH_MASK[i - 1] * 2;
     }
 
     /* Default to enabling all channels */
-    for (int i = 0; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
+    for (uint8_t i = 0; i <= SETUP_CHANNEL_MENU_ITEMS; ++i) {
         /* Bitwise - Add current channel to app->channel_mask */
         app->channel_mask = app->channel_mask | app->CH_MASK[i];
     }

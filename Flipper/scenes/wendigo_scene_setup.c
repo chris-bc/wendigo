@@ -70,10 +70,10 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem *item) {
     variable_item_set_current_value_text(item, menu_item->options_menu[item_index]);
     app->setup_selected_option_index[app->setup_selected_menu_index] = item_index;
 
-    switch(menu_item->action) {
+    switch (menu_item->action) {
         case OPEN_SETUP:
             /* Handle moving between "all" and "selected" channels */
-            switch(item_index) {
+            switch (item_index) {
                 case CH_ALL:
                     app->channel_mask |= CH_MASK_ALL;
                     break;

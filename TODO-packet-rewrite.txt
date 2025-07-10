@@ -8,4 +8,8 @@
 * Fix interactive mode display bug by only updating lastSeen if the required period has elapsed - Kludgey, but it'll probably never be used anyway - And Flipper creates its own timestamp so it won't affect Flipper-Wendigo
 * Review ESP32 wifi parsers and ensure that a STA's AP and an AP's STA have their MACs recorded in the object even if we don't have an object for them.
 
-up to wendigo_scene_help.c
+replace:
+* switch(
+* (int
+
+Last to do: wendigo_scene_status.c

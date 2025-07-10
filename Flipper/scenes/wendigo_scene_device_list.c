@@ -1,12 +1,13 @@
 #include "../wendigo_scan.h"
 
-/* Public method from wendigo_scene_device_detail.c */
+/** Public method from wendigo_scene_device_detail.c */
 extern void wendigo_scene_device_detail_set_device(wendigo_device *d);
-/* Internal method - I don't wan't to move all calling functions below it */
+/** Internal method - I don't wan't to move all calling functions below it */
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem *item);
 
-/* For some obscene reason the ifndef barrier isn't stopping these from showing
-   up in every single object file. No longer shared. */
+/** For some obscene reason the ifndef barrier isn't stopping these from showing
+ *  up in every single object file. No longer shared.
+ */
 char *authModeStrings[] = {"Open",
                           "WEP",
                           "WPA_PSK",
@@ -24,7 +25,7 @@ char *authModeStrings[] = {"Open",
                           "WPA3-Enterprise",
                           "WPA3-Enterprise Transition"};
 
-/* Enum to index the options menu for devices */
+/** Enum to index the options menu for devices */
 enum wendigo_device_list_bt_options {
   WendigoOptionBTRSSI = 0,
   WendigoOptionBTTagUntag,
@@ -54,7 +55,7 @@ enum wendigo_device_list_sta_options {
   WendigoOptionsSTACount
 };
 
-/* Devices currently being displayed */
+/** Devices currently being displayed */
 wendigo_device **current_devices = NULL;
 uint16_t current_devices_count = 0;
 uint8_t current_devices_mask = DEVICE_ALL;
