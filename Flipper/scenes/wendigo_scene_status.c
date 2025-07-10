@@ -17,7 +17,8 @@ void wendigo_scene_status_finish_layout(WendigoApp *app) {
 /** Add a variable item for `name` with selected option `value` */
 void wendigo_scene_status_add_attribute(WendigoApp *app, char *name, char *value) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_status_add_attribute()");
-    VariableItem *item = variable_item_list_add(app->var_item_list, name, 1, NULL, app);
+    VariableItem *item = variable_item_list_add(app->var_item_list, name, 1,
+                                                NULL, app);
     variable_item_set_current_value_index(item, 0);
     variable_item_set_current_value_text(item, value);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_status_add_attribute()");
@@ -32,8 +33,8 @@ void wendigo_scene_status_begin_layout(WendigoApp *app) {
 }
 
 /** Scene initialisation - Unlike most variable_item_list scenes, this function
- * displays a placeholder menu item and sends a UART message asking ESP32-Wendigo
- * to send us status information.
+ * displays a placeholder menu item and sends a UART message asking
+ * ESP32-Wendigo to send us status information.
  */
 void wendigo_scene_status_on_enter(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_status_on_enter()");
@@ -42,7 +43,8 @@ void wendigo_scene_status_on_enter(void *context) {
     app->current_view = WendigoAppViewStatus;
 
     variable_item_list_reset(var_item_list);
-    VariableItem *item = variable_item_list_add(var_item_list, "Loading...", 1, NULL, app);
+    VariableItem *item = variable_item_list_add(var_item_list, "Loading...",
+                                                1, NULL, app);
     variable_item_set_current_value_index(item, 0);
     variable_item_set_current_value_text(item, "");
 
@@ -50,16 +52,16 @@ void wendigo_scene_status_on_enter(void *context) {
     wendigo_uart_set_binary_cb(app->uart);
     wendigo_esp_status(app);
 
-    view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
+    view_dispatcher_switch_to_view(app->view_dispatcher,
+                                    WendigoAppViewVarItemList);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_status_on_enter()");
 }
 
-/* We have no need to respond to events */
+/** We have no need to respond to events */
 bool wendigo_scene_status_on_event(void *context, SceneManagerEvent event) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_status_on_event()");
+    FURI_LOG_T(WENDIGO_TAG, "Start+End wendigo_scene_status_on_event()");
     UNUSED(context);
     UNUSED(event);
-    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_status_on_event()");
     return false;
 }
 
