@@ -38,9 +38,10 @@
  #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (40)
  #define WENDIGO_OFFSET_STA_AP_SSID             (41)
  /* SSID is SSID_Len bytes, followed by the packet terminator which is PREAMBLE_LEN == 4 bytes */
- #define WENDIGO_OFFSET_AP_SSID_LEN             (34)
- #define WENDIGO_OFFSET_AP_STA_COUNT            (35)
- #define WENDIGO_OFFSET_AP_SSID                 (36)
+ #define WENDIGO_OFFSET_AP_AUTH_MODE            (34)
+ #define WENDIGO_OFFSET_AP_SSID_LEN             (35)
+ #define WENDIGO_OFFSET_AP_STA_COUNT            (36)
+ #define WENDIGO_OFFSET_AP_SSID                 (37)
  /* SSID is SSID_Len bytes. Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
  #define WENDIGO_OFFSET_CHANNEL_COUNT           (4)
@@ -54,7 +55,7 @@
         WIFI_AUTH_WPA2_PSK,         /**< Authenticate mode : WPA2_PSK */
         WIFI_AUTH_WPA_WPA2_PSK,     /**< Authenticate mode : WPA_WPA2_PSK */
         WIFI_AUTH_ENTERPRISE,       /**< Authenticate mode : Wi-Fi EAP security */
-        WIFI_AUTH_WPA2_ENTERPRISE = WIFI_AUTH_ENTERPRISE,  /**< Authenticate mode : Wi-Fi EAP security */
+        WIFI_AUTH_WPA2_ENTERPRISE,  /**< Authenticate mode : Wi-Fi EAP security */
         WIFI_AUTH_WPA3_PSK,         /**< Authenticate mode : WPA3_PSK */
         WIFI_AUTH_WPA2_WPA3_PSK,    /**< Authenticate mode : WPA2_WPA3_PSK */
         WIFI_AUTH_WAPI_PSK,         /**< Authenticate mode : WAPI_PSK */
@@ -72,6 +73,11 @@
 
     #define WENDIGO_TAG     "WENDIGO"
 #endif
+
+char *wifi_auth_mode_strings[18] = {"Open", "WEP", "WPA", "WPA2",
+    "WPA+WPA2", "EAP", "EAP", "WPA3", "WPA2+WPA3", "WAPI", "OWE",
+    "WPA3 Enterprise 192-bit", "WPA3 EXT", "WPA3 EXT Mixed Mode", "DPP",
+    "WPA3 Enterprise", "WPA3 Enterprise-Only", "Unknown"};
 
 #define MAX_SSID_LEN    32
 #define MAC_STRLEN      17
@@ -129,7 +135,7 @@ typedef struct wendigo_wifi_ap {
     uint8_t stations_count;               /** Count of devices in stations */
     char ssid[MAX_SSID_LEN + 1];          /** SSID of AP */
     uint8_t channel;
-    wifi_auth_mode_t authmode;
+    uint8_t authmode;                     /** Was wifi_auth_mode_t - Change to uint8_t to manage storage */
     uint32_t phy_11b: 1;                  /**< Bit: 0 flag to identify if 11b mode is enabled or not */
     uint32_t phy_11g: 1;                  /**< Bit: 1 flag to identify if 11g mode is enabled or not */
     uint32_t phy_11n: 1;                  /**< Bit: 2 flag to identify if 11n mode is enabled or not */

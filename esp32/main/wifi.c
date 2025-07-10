@@ -52,6 +52,7 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     /* Don't bother sending lastSeen */
     //memcpy(packet + WENDIGO_OFFSET_WIFI_LASTSEEN, (uint8_t *)&(dev->lastSeen.tv_sec), sizeof(int64_t));
     memcpy(packet + WENDIGO_OFFSET_WIFI_TAGGED, &tagged, sizeof(uint8_t));
+    memcpy(packet + WENDIGO_OFFSET_AP_AUTH_MODE, &(dev->radio.ap.authmode), sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_AP_SSID_LEN, &ssid_len, sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_AP_STA_COUNT, &(dev->radio.ap.stations_count), sizeof(uint8_t));
     if (ssid_len > 0) {
@@ -145,6 +146,13 @@ esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
         print_space(4, false);
         print_star(1, true);
     }
+    // TODO: Integrate authmode in the above
+    print_star(1, false);
+    print_space(4, false);
+    printf("Authentication: %s", wifi_auth_mode_strings[dev->radio.ap.authmode]);
+    // BANNER_WIDTH - 10 - 16 - strlen() + 4 spaces
+    print_space(BANNER_WIDTH - 22 - strlen(wifi_auth_mode_strings[dev->radio.ap.authmode]), false);
+    print_star(1, true);
     print_star(BANNER_WIDTH, true);
     return result;
 }
@@ -322,6 +330,7 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         dev->tagged = false;
         dev->radio.ap.stations = NULL;
         dev->radio.ap.stations_count = 0;
+        dev->radio.ap.authmode = WIFI_AUTH_MAX;
         /* Null out SSID */
         explicit_bzero(dev->radio.ap.ssid, MAX_SSID_LEN + 1);
     }
@@ -439,7 +448,7 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->radio.ap.ssid, payload + PROBE_RESPONSE_SSID_OFFSET, ssid_len);
     }
     /* Authentication mode */
-    memcpy(&(ap->radio.ap.authmode), payload + PROBE_RESPONSE_AUTH_TYPE_OFFSET + ssid_len, 1);
+    memcpy(&(ap->radio.ap.authmode), payload + PROBE_RESPONSE_AUTH_TYPE_OFFSET + ssid_len, sizeof(uint8_t));
     if (creatingAp) {
         result |= add_device(ap);
         free(ap);
@@ -503,6 +512,7 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
            explicit_bzero(ap->radio.ap.ssid, MAX_SSID_LEN + 1);
            ap->radio.ap.stations = NULL;
            ap->radio.ap.stations_count = 0;
+           ap->radio.ap.authmode = WIFI_AUTH_MAX;
     }
     ap->scanType = SCAN_WIFI_AP;
     ap->radio.ap.channel = rx_ctrl.channel;
@@ -545,6 +555,7 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         explicit_bzero(ap->radio.ap.ssid, MAX_SSID_LEN + 1);
         ap->radio.ap.stations_count = 0;
         ap->radio.ap.stations = NULL;
+        ap->radio.ap.authmode = WIFI_AUTH_MAX;
     }
     ap->scanType = SCAN_WIFI_AP;
     ap->rssi = rx_ctrl.rssi;
@@ -648,6 +659,7 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         explicit_bzero(ap->radio.ap.ssid, MAX_SSID_LEN + 1);
         ap->radio.ap.stations = NULL;
         ap->radio.ap.stations_count = 0;
+        ap->radio.ap.authmode = WIFI_AUTH_MAX;
     }
     ap->scanType = SCAN_WIFI_AP;
     ap->rssi = rx_ctrl.rssi;
@@ -740,6 +752,7 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         explicit_bzero(ap->radio.ap.ssid, MAX_SSID_LEN + 1);
         ap->radio.ap.stations = NULL;
         ap->radio.ap.stations_count = 0;
+        ap->radio.ap.authmode = WIFI_AUTH_MAX;
     }
     ap->scanType = SCAN_WIFI_AP;
     ap->radio.ap.channel = rx_ctrl.channel;
