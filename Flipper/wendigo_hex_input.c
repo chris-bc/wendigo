@@ -66,7 +66,7 @@ static const Wendigo_TextInputKey keyboard_keys_row_2[] = {
 };
 
 static uint8_t get_row_size(uint8_t row_index) {
-    FURI_LOG_T(WENDIGO_TAG, "Start get_row_size()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start get_row_size()");
     uint8_t row_size = 0;
 
     switch(row_index + 1) {
@@ -77,12 +77,12 @@ static uint8_t get_row_size(uint8_t row_index) {
         row_size = sizeof(keyboard_keys_row_2) / sizeof(Wendigo_TextInputKey);
         break;
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd get_row_size()");
+    FURI_LOG_T(WENDIGO_TAG, "End get_row_size()");
     return row_size;
 }
 
 static const Wendigo_TextInputKey* get_row(uint8_t row_index) {
-    FURI_LOG_T(WENDIGO_TAG, "Start get_row()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start get_row()");
     const Wendigo_TextInputKey* row = NULL;
 
     switch(row_index + 1) {
@@ -93,26 +93,26 @@ static const Wendigo_TextInputKey* get_row(uint8_t row_index) {
         row = keyboard_keys_row_2;
         break;
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd get_row()");
+    FURI_LOG_T(WENDIGO_TAG, "End get_row()");
     return row;
 }
 
 static char get_selected_char(Wendigo_TextInputModel* model) {
-    FURI_LOG_T(WENDIGO_TAG, "Start+End get_selected_char()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start+End get_selected_char()");
     return get_row(model->selected_row)[model->selected_column].text;
 }
 
 static void wendigo_hex_input_backspace_cb(Wendigo_TextInputModel* model) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_backspace_cb()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_backspace_cb()");
     uint8_t text_length = model->clear_default_text ? 1 : strlen(model->text_buffer);
     if(text_length > 0) {
         model->text_buffer[text_length - 1] = 0;
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_backspace_cb()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_backspace_cb()");
 }
 
 static void wendigo_hex_input_view_draw_callback(Canvas* canvas, void* _model) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_view_draw_callback()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_view_draw_callback()");
     Wendigo_TextInputModel* model = _model;
     uint8_t needed_string_width = canvas_width(canvas) - 8;
     uint8_t start_pos = 4;
@@ -215,13 +215,13 @@ static void wendigo_hex_input_view_draw_callback(Canvas* canvas, void* _model) {
         elements_multiline_text(canvas, 62, 20, furi_string_get_cstr(model->validator_text));
         canvas_set_font(canvas, FontKeyboard);
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_view_draw_callback()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_view_draw_callback()");
 }
 
 static void wendigo_hex_input_handle_up(
         Wendigo_TextInput* wendigo_text_input,
         Wendigo_TextInputModel* model) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_handle_up()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_handle_up()");
     UNUSED(wendigo_text_input);
     if(model->selected_row > 0) {
         model->selected_row--;
@@ -229,13 +229,13 @@ static void wendigo_hex_input_handle_up(
             model->selected_column = model->selected_column + 1;
         }
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_handle_up()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_handle_up()");
 }
 
 static void wendigo_hex_input_handle_down(
         Wendigo_TextInput* wendigo_text_input,
         Wendigo_TextInputModel* model) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_handle_down()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_handle_down()");
     UNUSED(wendigo_text_input);
     if(model->selected_row < keyboard_row_count - 1) {
         model->selected_row++;
@@ -243,40 +243,40 @@ static void wendigo_hex_input_handle_down(
             model->selected_column = model->selected_column - 1;
         }
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_handle_down()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_handle_down()");
 }
 
 static void wendigo_hex_input_handle_left(
         Wendigo_TextInput* wendigo_text_input,
         Wendigo_TextInputModel* model) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_handle_left()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_handle_left()");
     UNUSED(wendigo_text_input);
     if(model->selected_column > 0) {
         model->selected_column--;
     } else {
         model->selected_column = get_row_size(model->selected_row) - 1;
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_handle_left()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_handle_left()");
 }
 
 static void wendigo_hex_input_handle_right(
         Wendigo_TextInput* wendigo_text_input,
         Wendigo_TextInputModel* model) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_handle_right()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_handle_right()");
     UNUSED(wendigo_text_input);
     if(model->selected_column < get_row_size(model->selected_row) - 1) {
         model->selected_column++;
     } else {
         model->selected_column = 0;
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_handle_right()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_handle_right()");
 }
 
 static void wendigo_hex_input_handle_ok(
         Wendigo_TextInput* wendigo_text_input,
         Wendigo_TextInputModel* model,
         bool shift) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_handle_ok()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_handle_ok()");
     UNUSED(shift);
     char selected = get_selected_char(model);
     uint8_t text_length = strlen(model->text_buffer);
@@ -302,11 +302,11 @@ static void wendigo_hex_input_handle_ok(
         }
     }
     model->clear_default_text = false;
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_handle_ok()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_handle_ok()");
 }
 
 static bool wendigo_hex_input_view_input_callback(InputEvent* event, void* context) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_view_input_callback()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_view_input_callback()");
     Wendigo_TextInput* wendigo_text_input = context;
     furi_assert(wendigo_text_input);
 
@@ -392,12 +392,12 @@ static bool wendigo_hex_input_view_input_callback(InputEvent* event, void* conte
 
     // Commit model
     view_commit_model(wendigo_text_input->view, consumed);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_view_input_callback()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_view_input_callback()");
     return consumed;
 }
 
 void wendigo_hex_input_timer_callback(void* context) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_timer_callback()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_timer_callback()");
     furi_assert(context);
     Wendigo_TextInput* wendigo_text_input = context;
 
@@ -406,11 +406,11 @@ void wendigo_hex_input_timer_callback(void* context) {
         Wendigo_TextInputModel * model,
         { model->valadator_message_visible = false; },
         true);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_timer_callback()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_timer_callback()");
 }
 
 Wendigo_TextInput* wendigo_hex_input_alloc() {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_alloc()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_alloc()");
     Wendigo_TextInput* wendigo_text_input = malloc(sizeof(Wendigo_TextInput));
     wendigo_text_input->view = view_alloc();
     view_set_context(wendigo_text_input->view, wendigo_text_input);
@@ -429,12 +429,12 @@ Wendigo_TextInput* wendigo_hex_input_alloc() {
         false);
 
     wendigo_text_input_reset(wendigo_text_input);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_alloc()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_alloc()");
     return wendigo_text_input;
 }
 
 void wendigo_hex_input_free(Wendigo_TextInput* wendigo_text_input) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_free()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_free()");
     furi_assert(wendigo_text_input);
     with_view_model(
         wendigo_text_input->view,
@@ -450,11 +450,11 @@ void wendigo_hex_input_free(Wendigo_TextInput* wendigo_text_input) {
     view_free(wendigo_text_input->view);
 
     free(wendigo_text_input);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_free()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_free()");
 }
 
 void wendigo_hex_input_reset(Wendigo_TextInput* wendigo_text_input) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_reset()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_reset()");
     furi_assert(wendigo_text_input);
     with_view_model(
         wendigo_text_input->view,
@@ -475,13 +475,13 @@ void wendigo_hex_input_reset(Wendigo_TextInput* wendigo_text_input) {
             model->valadator_message_visible = false;
         },
         true);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_reset()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_reset()");
 }
 
 View* wendigo_hex_input_get_view(Wendigo_TextInput* wendigo_text_input) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_get_view()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_get_view()");
     furi_assert(wendigo_text_input);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_get_view()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_get_view()");
     return wendigo_text_input->view;
 }
 
@@ -492,7 +492,7 @@ void wendigo_hex_input_set_result_callback(
         char* text_buffer,
         size_t text_buffer_size,
         bool clear_default_text) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_set_result_callback()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_set_result_callback()");
     with_view_model(
         wendigo_text_input->view,
         Wendigo_TextInputModel * model,
@@ -509,14 +509,14 @@ void wendigo_hex_input_set_result_callback(
             }
         },
         true);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_set_result_callback()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_set_result_callback()");
 }
 
 void wendigo_hex_input_set_validator(
         Wendigo_TextInput* wendigo_text_input,
         Wendigo_TextInputValidatorCallback callback,
         void* callback_context) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_set_validator()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_set_validator()");
     with_view_model(
         wendigo_text_input->view,
         Wendigo_TextInputModel * model,
@@ -525,37 +525,37 @@ void wendigo_hex_input_set_validator(
             model->validator_callback_context = callback_context;
         },
         true);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_set_validator()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_set_validator()");
 }
 
 Wendigo_TextInputValidatorCallback
         wendigo_hex_input_get_validator_callback(Wendigo_TextInput* wendigo_text_input) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_get_validator_callback()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_get_validator_callback()");
     Wendigo_TextInputValidatorCallback validator_callback = NULL;
     with_view_model(
         wendigo_text_input->view,
         Wendigo_TextInputModel * model,
         { validator_callback = model->validator_callback; },
         false);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_get_validator_callback()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_get_validator_callback()");
     return validator_callback;
 }
 
 void* wendigo_hex_input_get_validator_callback_context(Wendigo_TextInput* wendigo_text_input) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_get_validator_callback_context()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_get_validator_callback_context()");
     void* validator_callback_context = NULL;
     with_view_model(
         wendigo_text_input->view,
         Wendigo_TextInputModel * model,
         { validator_callback_context = model->validator_callback_context; },
         false);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_get_validator_callback_context()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_get_validator_callback_context()");
     return validator_callback_context;
 }
 
 void wendigo_hex_input_set_header_text(Wendigo_TextInput* wendigo_text_input, const char* text) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_set_header_text()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_hex_input_set_header_text()");
     with_view_model(
         wendigo_text_input->view, Wendigo_TextInputModel * model, { model->header = text; }, true);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_hex_input_set_header_text()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_set_header_text()");
 }
