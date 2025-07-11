@@ -454,8 +454,9 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
         wendigo_add_bt_device(dev, new_device);
     } else if (dev->scanType == SCAN_WIFI_AP) {
         new_device->radio.ap.channel = dev->radio.ap.channel;
+        new_device->radio.ap.authmode = dev->radio.ap.authmode;
         new_device->radio.ap.stations_count = dev->radio.ap.stations_count;
-        if (dev->radio.ap.stations_count > 0) {
+        if (dev->radio.ap.stations_count > 0 && dev->radio.ap.stations != NULL) {
             /* Copy stations[] */
             new_device->radio.ap.stations = malloc(sizeof(uint8_t *) * dev->radio.ap.stations_count);
             if (new_device->radio.ap.stations == NULL) {
@@ -515,6 +516,9 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
     } else if (dev->scanType == SCAN_WIFI_AP) {
         /* Copy channel, ssid, sta_count, stations */
         target->radio.ap.channel = dev->radio.ap.channel;
+        if (dev->radio.ap.authmode != WIFI_AUTH_MAX) {
+            target->radio.ap.authmode = dev->radio.ap.authmode;
+        }
         uint8_t ssid_len = strnlen((char *)dev->radio.ap.ssid, MAX_SSID_LEN);
         if (ssid_len > 0) {
             memcpy(target->radio.ap.ssid, dev->radio.ap.ssid, ssid_len + 1);
