@@ -83,7 +83,7 @@ At a high level, these are Wendigo's features - Both implemented and planned:
   * [X] RSSI
   * [X] Bluetooth Class of Device (CoD)
   * [X] WiFi channel
-  * [ ] Access Point authentication mode (WEP, WPA2, etc.)
+  * [X] Access Point authentication mode (WEP, WPA2, etc.)
   * [X] SSID that a WiFi Station (client) is connected to
   * [X] Time since device was last seen
   * [X] Tag/Untag to select devices of interest
@@ -274,23 +274,8 @@ This section is a running list of current priorities.
 
 * [ ] BUG: ESP32 returns an RSSI of -4 or 3854 for many devices. I think this is a particular packet type, resulting in an invalid initial value that is resolved by subsequent packets. Figure out why & fix.
   * [ ] If I'm right about it being characteristic of a particular packet type the "fix" might just be detecting invalid RSSI and replacing with 0 or -127 (that's the minimum, right?)
-* [ ] While working on communication issues several device attributes, such as RSSI and channel, were converted from numbers to strings for transmission. Now that comms are working well reverse these changes.
-* [ ] BUG: Around 1% of Wendigo packets for WiFi devices are corrupted, having the first 6 bytes of the packet's preamble where the device's MAC should be, or having the full preamble scattered throughout the packet. I believe this is a concurrency problem related to how the buffer is managed in Flipper-Wendigo but it's a damn hard one to track down.
-  * [ ] The issue has been temporarily resolved by detecting and ignoring corrupted packets, but the buffer management and packetisation will need to be significantly rewritten.
-* [ ] Add authMode (from probe response) to AP packet
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [ ] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped - Use a single menu option that changes its text, similar to Tag/Untag.
-* [ ] BUG: Implementation of CONFIG_DELAY_AFTER_DEVICE_DISPLAYED is flawed - lastSeen is updated when device isn't displayed, if a device is always seen within that period it will never be displayed again.
-  * [ ] interactive display functions will need to track a lastDisplayed time to avoid this.
-* [ ] Explicitly test this scenario to see how it's handled - This error *could* indicate that the whole lot (2 packets) is being considered a single packet, or the error message *could* be referencing just the second packet (which contains a preamble)
-  * 311061 [E][WENDIGO] Packet contains preamble
-99:99:99:99:11:11:11:11:02:20:E8:82:EE:D7:D4:36:00:00:2D:35:38:00:60:78:1E:E0:01:00:C8:11:3A:01:20:E8:82:EE:D7:D4:32:8A:90:00:0A:00:57:68:79:6D:70:65:72:32:2E:34:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:AA:AA:AA:AA:FF:FF:FF:FF:99:99:99:99:FF:FF:FF:FF:03:99:99:99:99:FF:FF:36:00:00:31:36:33:38:60:78:1E:E0:01:00:C8:11:3A:01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:AA:AA:AA:AA:FF:FF:FF:FF
-* [ ] Also this one - 3 packets: bad, good, bad
-  * 311074 [E][WENDIGO] STA packet contains preamble
-99:99:99:99:FF:FF:FF:FF:03:99:99:99:99:FF:FF:36:00:00:31:36:33:38:60:78:1E:E0:01:00:C8:11:3A:01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:AA:AA:AA:AA:FF:FF:FF:FF:99:99:99:99:FF:FF:FF:FF:03:64:92:FC:3F:64:92:36:00:00:31:36:33:38:60:78:1E:E0:01:00:C8:11:3A:01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:AA:AA:AA:AA:FF:FF:FF:FF:99:99:99:99:11:11:11:11:02:99:99:99:99:11:11:36:00:00:31:36:33:38:60:78:1E:E0:01:00:C8:11:3A:01:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00
-* [ ] And a third - This time a definite bug. AP packet is well-formed, parser should be considering the packet terminator the end of packet and keeping subsequent bytes in the buffer
-  * 311248 [E][WENDIGO] Packet contains preamble
-99:99:99:99:11:11:11:11:02:20:E8:82:EE:D7:D4:36:00:00:2D:36:31:00:60:78:1E:E0:01:00:C8:11:3A:01:00:00:00:00:00:00:00:00:00:00:0A:00:57:68:79:6D:70:65:72:32:2E:34:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:AA:AA:AA:AA:FF:FF:FF:FF:99:99:99:99:11:11:11:11:02:20:E8:82:EE:D7:D4:36:00:00:2D:36:32
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
 * [X] BT Classic and LE device transmission from ESP32 to Flipper
@@ -330,11 +315,11 @@ This section is a running list of current priorities.
       * [X] AP (SSID if present, otherwise MAC)
       * [X] Channel
       * [X] LastSeen
-    * [ ] For AP
+    * [X] For AP
       * [X] RSSI
       * [X] Tag/Untag
       * [X] ScanType
-      * [ ] AuthMode
+        * [X] AuthMode
       * [X] Channel
       * [X] LastSeen
 * [ ] Bluetooth Services
@@ -349,7 +334,7 @@ This section is a running list of current priorities.
   * [ ] Update details when device updated
   * [ ] Use canvas view so properties can be layed out to (hopefully) make everything visible without scrolling
 * [ ] "Display Settings" menu
-  * [ ] Enable/Disable device types
+  * [X] Enable/Disable device types
   * [ ] Sort results by
     * [ ] Name
     * [ ] LastSeen
