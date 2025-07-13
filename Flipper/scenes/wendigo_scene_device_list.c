@@ -373,11 +373,14 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     return;
   }
   uint16_t dev_idx = custom_device_index(dev, current_devices, current_devices_count);
-  if (dev->view == NULL || dev_idx == current_devices_count) {
+  if (dev_idx == current_devices_count) {
     /* Add a new item */
     dev->view = variable_item_list_add(
         app->devices_var_item_list, (name == NULL) ? "(Unknown)" : name,
         optionsCount, wendigo_scene_device_list_var_list_change_callback, app);
+    /* And set option index */
+    variable_item_set_current_value_index(dev->view, optionIndex);
+    variable_item_set_current_value_text(dev->view, optionValue);
     /* Update current_devices[] to include the new device */
     wendigo_device **new_devices = realloc(current_devices, sizeof(wendigo_device *) * (current_devices_count + 1));
     if (new_devices != NULL) {
@@ -392,6 +395,8 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     variable_item_set_current_value_index(dev->view, optionIndex);
     if (optionValue[0] != '\0') {
       /* New value for the option */
+      char foo[5];
+      snprintf(foo, sizeof(foo), "%d", strlen(optionValue));
       //variable_item_set_current_value_text(dev->view, optionValue);
     }
   }
