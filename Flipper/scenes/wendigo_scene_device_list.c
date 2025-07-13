@@ -378,7 +378,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     dev->view = variable_item_list_add(
         app->devices_var_item_list, (name == NULL) ? "(Unknown)" : name,
         optionsCount, wendigo_scene_device_list_var_list_change_callback, app);
-    /* And set option index */
+    /* And set selected option */
     variable_item_set_current_value_index(dev->view, optionIndex);
     variable_item_set_current_value_text(dev->view, optionValue);
     /* Update current_devices[] to include the new device */
@@ -389,14 +389,14 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     }
   } else {
     /* Update dev->view */
+    // YAGNI: Seems to be an occasional bug with the API - This results in occasional NULL pointer dereference
     //variable_item_set_item_label(dev->view, (name == NULL) ? "(Unknown)" : name);
   }
   if (dev->view != NULL) {
     variable_item_set_current_value_index(dev->view, optionIndex);
     if (optionValue[0] != '\0') {
       /* New value for the option */
-      char foo[5];
-      snprintf(foo, sizeof(foo), "%d", strlen(optionValue));
+      // YAGNI: Seems to be an occasional bug with the PI - This results in an occasional NULL pointer dereference
       //variable_item_set_current_value_text(dev->view, optionValue);
     }
   }
