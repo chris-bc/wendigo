@@ -66,8 +66,6 @@ My hope is that Wendigo will be a quick and easy way to get information about a 
 
 At a high level, these are Wendigo's features - Both implemented and planned:
 
-#### NOTE: Version 0.2.0 drops a large number of Wendigo packets when scanning with all radios. Implementation of WiFi features revealed problems with how the Flipper app was managing the UART buffer and parsing Wendigo packets. This release provides WiFi scanning/sniffing, but due to this issue is an interim release before re-writing the Flipper UART receiver and packet parser. Scanning, if active, is also disabled when displaying the device list to prevent these issues from causing the device to crash. Version 0.3.0 will provide completely-rewritten UART buffer management and packet parsing.
-
 * [X] Bluetooth Classic discovery
 * [X] Bluetooth Low Energy discovery
 * [X] WiFi Access Point discovery (2.4GHz)
