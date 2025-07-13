@@ -851,7 +851,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     expectedLen = WENDIGO_OFFSET_AP_SSID + ssid_len + (MAC_BYTES * sta_count) + PREAMBLE_LEN;
     if (packetLen < expectedLen) {
         /* Packet is too short - Likely reflects a corrupted packet with the wrong
-            byte in stations_count. Log and display the error and free `dev`.
+            byte in stations_count. Log and display the error.
         */
         char *shortMsg = malloc(sizeof(char) * 77);
         if (shortMsg != NULL) {
@@ -885,8 +885,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     memcpy(&(dev->rssi), packet + WENDIGO_OFFSET_WIFI_RSSI, sizeof(int16_t));
     memcpy(&(dev->radio.ap.authmode), packet + WENDIGO_OFFSET_AP_AUTH_MODE, sizeof(uint8_t));
     /* Ignore lastSeen */
-    // memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN,
-    // sizeof(int64_t));
+    // memcpy(&(dev->lastSeen.tv_sec), buffer + WENDIGO_OFFSET_WIFI_LASTSEEN, sizeof(int64_t));
     memcpy(&tagged, packet + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(uint8_t));
     dev->tagged = (tagged == 1);
     dev->radio.ap.stations_count = sta_count;
