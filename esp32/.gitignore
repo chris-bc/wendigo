@@ -2,3 +2,4 @@ dependencies.lock
 build/*
 include/*
 sdkconfig.old
+.cache
