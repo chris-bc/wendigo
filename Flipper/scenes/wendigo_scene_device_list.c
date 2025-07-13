@@ -388,7 +388,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     /* Update dev->view */
     //variable_item_set_item_label(dev->view, (name == NULL) ? "(Unknown)" : name);
   }
-  if (dev_idx < current_devices_count) {
+  if (dev->view != NULL) {
     variable_item_set_current_value_index(dev->view, optionIndex);
     if (optionValue[0] != '\0') {
       /* New value for the option */
