@@ -235,7 +235,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
   uint8_t optionsCount;
   uint8_t optionIndex;
   char optionValue[MAX_SSID_LEN + 1];
-  bzero(optionValue, sizeof(optionValue)); /* Null out optionValue[] */
+  bzero(optionValue, MAX_SSID_LEN + 1); /* Null out optionValue[] */
   /* Set name and options menus based on dev->scanType */
   if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
     /* Use bdname as name if it's a bluetooth device and we have a name */
@@ -372,7 +372,8 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     /* Invalid device type */
     return;
   }
-  if (dev->view == NULL) {
+  uint16_t dev_idx = custom_device_index(dev, current_devices, current_devices_count);
+  if (dev->view == NULL || dev_idx == current_devices_count) {
     /* Add a new item */
     dev->view = variable_item_list_add(
         app->devices_var_item_list, (name == NULL) ? "(Unknown)" : name,
@@ -385,12 +386,14 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     }
   } else {
     /* Update dev->view */
-    variable_item_set_item_label(dev->view, (name == NULL) ? "(Unknown)" : name);
+    //variable_item_set_item_label(dev->view, (name == NULL) ? "(Unknown)" : name);
   }
-  variable_item_set_current_value_index(dev->view, optionIndex);
-  if (optionValue[0] != '\0') {
-    /* New value for the option */
-    variable_item_set_current_value_text(dev->view, optionValue);
+  if (dev_idx < current_devices_count) {
+    variable_item_set_current_value_index(dev->view, optionIndex);
+    if (optionValue[0] != '\0') {
+      /* New value for the option */
+      //variable_item_set_current_value_text(dev->view, optionValue);
+    }
   }
   /* Free `name` if we malloc'd it */
   if (free_name && name != NULL) {

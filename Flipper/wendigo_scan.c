@@ -9,10 +9,6 @@ uint16_t bufferCap = 0; // Buffer capacity - I don't want to allocate 65kb, but
 char *wendigo_popup_text = NULL; // I suspect the popup text is going out of
                                  // scope when declared at function scope
 
-/* Internal function declarations */
-uint16_t custom_device_index(wendigo_device *dev, wendigo_device **array,
-                            uint16_t array_count);
-
 /* Device caches */
 wendigo_device **devices = NULL;
 wendigo_device **selected_devices = NULL;
