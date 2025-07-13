@@ -1,0 +1,13 @@
+DONE * Add auth mode (find it in probe response)
+DONE * Change channel and RSSI back to integers
+DONE * Make SSID variable-length
+DONE * Update wendigo_wifi_ap and wendigo_wifi_sta to hold MACs, not object pointers
+* Add network_list[] to STA data model and packet
+
+DONE * Refactor wendigo_device free/cleanup functions
+REMOVED * Fix interactive mode display bug by only updating lastSeen if the required period has elapsed - Kludgey, but it'll probably never be used anyway - And Flipper creates its own timestamp so it won't affect Flipper-Wendigo
+DONE * Review ESP32 wifi parsers and ensure that a STA's AP and an AP's STA have their MACs recorded in the object even if we don't have an object for them.
+
+DONE * Update display_wifi_ap_interactive
+DONE * Update parseBufferWifiAp()
+* Check whether 802.11 data packets can be sent between stations - Currently the parser assumes that a STA will only be sending a data packet to an AP

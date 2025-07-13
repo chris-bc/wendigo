@@ -84,7 +84,8 @@ wendigo_device *retrieve_device(wendigo_device *dev);
 wendigo_device *retrieve_by_mac(esp_bd_addr_t bda);
 esp_err_t add_device(wendigo_device *dev);
 esp_err_t free_device(wendigo_device *dev);
-uint16_t wendigo_index_of(wendigo_device *dev, wendigo_device **array, uint16_t array_len);
-uint16_t wendigo_index_of_mac(uint8_t *mac, wendigo_device **array, uint16_t array_len);
+uint16_t wendigo_device_index_of(wendigo_device *dev, wendigo_device **array, uint16_t array_len);
+uint16_t wendigo_device_index_of_mac(uint8_t mac[MAC_BYTES], wendigo_device **array, uint16_t array_len);
+uint16_t wendigo_index_of(uint8_t mac[MAC_BYTES], uint8_t **array, uint16_t array_len);
 
 #endif

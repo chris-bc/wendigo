@@ -15,71 +15,70 @@
  #define WENDIGO_OFFSET_BT_BDNAME_LEN           (4)
  #define WENDIGO_OFFSET_BT_EIR_LEN              (5)
  #define WENDIGO_OFFSET_BT_RSSI                 (6)
- #define WENDIGO_OFFSET_BT_COD                  (10)
- #define WENDIGO_OFFSET_BT_BDA                  (14)
- #define WENDIGO_OFFSET_BT_SCANTYPE             (20)
- #define WENDIGO_OFFSET_BT_TAGGED               (21)
- #define WENDIGO_OFFSET_BT_LASTSEEN             (22)
- #define WENDIGO_OFFSET_BT_NUM_SERVICES         (41)
- #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (42)
- #define WENDIGO_OFFSET_BT_COD_LEN              (43)
- #define WENDIGO_OFFSET_BT_BDNAME               (44)
+ #define WENDIGO_OFFSET_BT_COD                  (8)
+ #define WENDIGO_OFFSET_BT_BDA                  (12)
+ #define WENDIGO_OFFSET_BT_SCANTYPE             (18)
+ #define WENDIGO_OFFSET_BT_TAGGED               (19)
+ #define WENDIGO_OFFSET_BT_LASTSEEN             (20)
+ #define WENDIGO_OFFSET_BT_NUM_SERVICES         (39)
+ #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (40)
+ #define WENDIGO_OFFSET_BT_COD_LEN              (41)
+ #define WENDIGO_OFFSET_BT_BDNAME               (42)
  /* bdname is bdname_len bytes, followed by eir_len bytes of EIR and cod_len bytes of CoD */
 
  /* Initial elements of AP and STA packets are common so are just defined once */
  #define WENDIGO_OFFSET_WIFI_SCANTYPE           (4)
  #define WENDIGO_OFFSET_WIFI_MAC                (5)
  #define WENDIGO_OFFSET_WIFI_CHANNEL            (11)
- #define WENDIGO_OFFSET_WIFI_RSSI               (14)
- #define WENDIGO_OFFSET_WIFI_LASTSEEN           (18)
- #define WENDIGO_OFFSET_WIFI_TAGGED             (37)
+ #define WENDIGO_OFFSET_WIFI_RSSI               (12)
+ #define WENDIGO_OFFSET_WIFI_LASTSEEN           (14)
+ #define WENDIGO_OFFSET_WIFI_TAGGED             (33)
  /* Unique elements */
- #define WENDIGO_OFFSET_STA_AP_MAC              (38)
- #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (44)
- #define WENDIGO_OFFSET_STA_AP_SSID             (45)
- #define WENDIGO_OFFSET_STA_TERM                (77)
- /* Packet terminator is PREAMBLE_LEN == 8 bytes */
- #define WENDIGO_OFFSET_AP_SSID_LEN             (38)
- #define WENDIGO_OFFSET_AP_STA_COUNT            (39)
- #define WENDIGO_OFFSET_AP_SSID                 (40)
- #define WENDIGO_OFFSET_AP_STA                  (72)
- /* Each station is a 6-byte MAC. There are STA_COUNT stations. */
+ #define WENDIGO_OFFSET_STA_AP_MAC              (34)
+ #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (40)
+ #define WENDIGO_OFFSET_STA_AP_SSID             (41)
+ /* SSID is SSID_Len bytes, followed by the packet terminator which is PREAMBLE_LEN == 4 bytes */
+ #define WENDIGO_OFFSET_AP_AUTH_MODE            (34)
+ #define WENDIGO_OFFSET_AP_SSID_LEN             (35)
+ #define WENDIGO_OFFSET_AP_STA_COUNT            (36)
+ #define WENDIGO_OFFSET_AP_SSID                 (37)
+ /* SSID is SSID_Len bytes. Each station is a 6-byte MAC. There are STA_COUNT stations. */
+
+ #define WENDIGO_OFFSET_CHANNEL_COUNT           (4)
+ #define WENDIGO_OFFSET_CHANNELS                (5)
 
  #ifdef IS_FLIPPER_APP
- typedef enum {
-    WIFI_AUTH_OPEN = 0,         /**< Authenticate mode : open */
-    WIFI_AUTH_WEP,              /**< Authenticate mode : WEP */
-    WIFI_AUTH_WPA_PSK,          /**< Authenticate mode : WPA_PSK */
-    WIFI_AUTH_WPA2_PSK,         /**< Authenticate mode : WPA2_PSK */
-    WIFI_AUTH_WPA_WPA2_PSK,     /**< Authenticate mode : WPA_WPA2_PSK */
-    WIFI_AUTH_ENTERPRISE,       /**< Authenticate mode : Wi-Fi EAP security */
-    WIFI_AUTH_WPA2_ENTERPRISE = WIFI_AUTH_ENTERPRISE,  /**< Authenticate mode : Wi-Fi EAP security */
-    WIFI_AUTH_WPA3_PSK,         /**< Authenticate mode : WPA3_PSK */
-    WIFI_AUTH_WPA2_WPA3_PSK,    /**< Authenticate mode : WPA2_WPA3_PSK */
-    WIFI_AUTH_WAPI_PSK,         /**< Authenticate mode : WAPI_PSK */
-    WIFI_AUTH_OWE,              /**< Authenticate mode : OWE */
-    WIFI_AUTH_WPA3_ENT_192,     /**< Authenticate mode : WPA3_ENT_SUITE_B_192_BIT */
-    WIFI_AUTH_WPA3_EXT_PSK,     /**< This authentication mode will yield same result as WIFI_AUTH_WPA3_PSK and
- not recommended to be used. It will be deprecated in future, please use WIFI_AUTH_WPA3_PSK instead. */
-    WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE, /**< This authentication mode will yield same result as WIFI_AUTH_WPA3_
-PSK and not recommended to be used. It will be deprecated in future, please use WIFI_AUTH_WPA3_PSK instead.*/
-    WIFI_AUTH_DPP,              /**< Authenticate mode : DPP */
-    WIFI_AUTH_WPA3_ENTERPRISE,  /**< Authenticate mode : WPA3-Enterprise Only Mode */
-    WIFI_AUTH_WPA2_WPA3_ENTERPRISE, /**< Authenticate mode : WPA3-Enterprise Transition Mode */
-    WIFI_AUTH_MAX
-} wifi_auth_mode_t;
+    typedef enum {
+        WIFI_AUTH_OPEN = 0,         /**< Authenticate mode : open */
+        WIFI_AUTH_WEP,              /**< Authenticate mode : WEP */
+        WIFI_AUTH_WPA_PSK,          /**< Authenticate mode : WPA_PSK */
+        WIFI_AUTH_WPA2_PSK,         /**< Authenticate mode : WPA2_PSK */
+        WIFI_AUTH_WPA_WPA2_PSK,     /**< Authenticate mode : WPA_WPA2_PSK */
+        WIFI_AUTH_ENTERPRISE,       /**< Authenticate mode : Wi-Fi EAP security */
+        WIFI_AUTH_WPA2_ENTERPRISE,  /**< Authenticate mode : Wi-Fi EAP security */
+        WIFI_AUTH_WPA3_PSK,         /**< Authenticate mode : WPA3_PSK */
+        WIFI_AUTH_WPA2_WPA3_PSK,    /**< Authenticate mode : WPA2_WPA3_PSK */
+        WIFI_AUTH_WAPI_PSK,         /**< Authenticate mode : WAPI_PSK */
+        WIFI_AUTH_OWE,              /**< Authenticate mode : OWE */
+        WIFI_AUTH_WPA3_ENT_192,     /**< Authenticate mode : WPA3_ENT_SUITE_B_192_BIT */
+        WIFI_AUTH_WPA3_EXT_PSK,     /**< This authentication mode will yield same result as WIFI_AUTH_WPA3_PSK and
+                 not recommended to be used. It will be deprecated in future, please use WIFI_AUTH_WPA3_PSK instead. */
+        WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE, /**< This authentication mode will yield same result as WIFI_AUTH_WPA3_
+            PSK and not recommended to be used. It will be deprecated in future, please use WIFI_AUTH_WPA3_PSK instead.*/
+        WIFI_AUTH_DPP,              /**< Authenticate mode : DPP */
+        WIFI_AUTH_WPA3_ENTERPRISE,  /**< Authenticate mode : WPA3-Enterprise Only Mode */
+        WIFI_AUTH_WPA2_WPA3_ENTERPRISE, /**< Authenticate mode : WPA3-Enterprise Transition Mode */
+        WIFI_AUTH_MAX
+    } wifi_auth_mode_t;
 
-#define WENDIGO_TAG     "WENDIGO"
- #endif
+    #define WENDIGO_TAG     "WENDIGO"
+#endif
 
 #define MAX_SSID_LEN    32
 #define MAC_STRLEN      17
 #define MAC_BYTES       6
-#define RSSI_LEN        4       /** Length of RSSI string representation, e.g. "-127" */
-#define CHANNEL_LEN     3
-#define LASTSEEN_LEN    19
 
- /* enum ScanType being replaced with uint8_t */
+/* enum ScanType being replaced with uint8_t */
 extern const uint8_t SCAN_HCI;
 extern const uint8_t SCAN_BLE;
 extern const uint8_t SCAN_WIFI_AP;
@@ -127,11 +126,11 @@ typedef struct {
 } wendigo_bt_device;
 
 typedef struct wendigo_wifi_ap {
-    void **stations;                      /** wendigo_device** */
+    uint8_t **stations;                   /** array of MACs */
     uint8_t stations_count;               /** Count of devices in stations */
-    uint8_t ssid[MAX_SSID_LEN + 1];       /** SSID of AP */
+    char ssid[MAX_SSID_LEN + 1];          /** SSID of AP */
     uint8_t channel;
-    wifi_auth_mode_t authmode;
+    uint8_t authmode;                     /** Was wifi_auth_mode_t - Change to uint8_t to manage storage */
     uint32_t phy_11b: 1;                  /**< Bit: 0 flag to identify if 11b mode is enabled or not */
     uint32_t phy_11g: 1;                  /**< Bit: 1 flag to identify if 11g mode is enabled or not */
     uint32_t phy_11n: 1;                  /**< Bit: 2 flag to identify if 11n mode is enabled or not */
@@ -146,7 +145,6 @@ typedef struct wendigo_wifi_ap {
 } wendigo_wifi_ap;
 
 typedef struct wendigo_wifi_sta {
-    void *ap;                   /* wendigo_device* */
     uint8_t apMac[MAC_BYTES];
     uint8_t channel;
 } wendigo_wifi_sta;

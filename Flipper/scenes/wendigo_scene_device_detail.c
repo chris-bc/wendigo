@@ -4,15 +4,15 @@
 wendigo_device *device = NULL;
 
 void wendigo_scene_device_detail_set_device(wendigo_device *d) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_set_device()\n----------");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_set_device()");
     device = d;
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_detail_set_device()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_detail_set_device()");
 }
 
-static void wendigo_scene_device_detail_var_list_enter_callback(void* context, uint32_t index) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_var_list_enter_callback()\n----------");
+static void wendigo_scene_device_detail_var_list_enter_callback(void *context, uint32_t index) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_var_list_enter_callback()");
     furi_assert(context);
-    WendigoApp* app = context;
+    WendigoApp *app = context;
 
 //    furi_assert(index < ((display_selected_only) ? bt_selected_devices_count : bt_devices_count));
 
@@ -20,33 +20,33 @@ static void wendigo_scene_device_detail_var_list_enter_callback(void* context, u
 
     // TODO: something
 
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_detail_var_list_enter_callback()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_detail_var_list_enter_callback()");
 }
 
-static void wendigo_scene_device_detail_var_list_change_callback(VariableItem* item) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_var_list_change_callback()\n----------");
+static void wendigo_scene_device_detail_var_list_change_callback(VariableItem *item) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_var_list_change_callback()");
     furi_assert(item);
 
-    WendigoApp* app = variable_item_get_context(item);
+    WendigoApp *app = variable_item_get_context(item);
     furi_assert(app);
 
     uint8_t item_index = variable_item_get_current_value_index(item);
     UNUSED(item_index);
 
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_detail_var_list_change_callback()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_detail_var_list_change_callback()");
 }
 
-void wendigo_scene_device_detail_on_enter(void* context) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_on_enter()\n----------");
-    WendigoApp* app = context;
-    VariableItemList* var_item_list = app->detail_var_item_list;
+void wendigo_scene_device_detail_on_enter(void *context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_on_enter()");
+    WendigoApp *app = context;
+    VariableItemList *var_item_list = app->detail_var_item_list;
     app->current_view = WendigoAppViewDeviceDetail;
 
     variable_item_list_set_enter_callback(
         var_item_list, wendigo_scene_device_detail_var_list_enter_callback, app);
 
     variable_item_list_reset(var_item_list);
-    VariableItem* item;
+    VariableItem *item;
     // TODO: Populate with device details
     item = variable_item_list_add(
             var_item_list,
@@ -60,16 +60,16 @@ void wendigo_scene_device_detail_on_enter(void* context) {
         var_item_list, scene_manager_get_scene_state(app->scene_manager, WendigoSceneDeviceDetail));
 
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewDeviceDetail);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_detail_on_enter()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_detail_on_enter()");
 }
 
-bool wendigo_scene_device_detail_on_event(void* context, SceneManagerEvent event) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_on_event()\n----------");
-    WendigoApp* app = context;
+bool wendigo_scene_device_detail_on_event(void *context, SceneManagerEvent event) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_on_event()");
+    WendigoApp *app = context;
     bool consumed = false;
     UNUSED(app);
 
-    if(event.type == SceneManagerEventTypeCustom) {
+    if (event.type == SceneManagerEventTypeCustom) {
         switch (event.event) {
             case Wendigo_EventListDevices:
                 // scene_manager_set_scene_state(
@@ -81,18 +81,18 @@ bool wendigo_scene_device_detail_on_event(void* context, SceneManagerEvent event
                 break;
         }
         consumed = true;
-    } else if(event.type == SceneManagerEventTypeTick) {
+    } else if (event.type == SceneManagerEventTypeTick) {
         // app->device_detail_selected_menu_index =
         //     variable_item_list_get_selected_item_index(app->detail_var_item_list);
         consumed = true;
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_detail_on_event()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_detail_on_event()");
     return consumed;
 }
 
-void wendigo_scene_device_detail_on_exit(void* context) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_on_exit()\n----------");
-    WendigoApp* app = context;
+void wendigo_scene_device_detail_on_exit(void *context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_detail_on_exit()");
+    WendigoApp *app = context;
     variable_item_list_reset(app->detail_var_item_list);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_device_detail_on_exit()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_detail_on_exit()");
 }

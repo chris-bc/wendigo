@@ -2,14 +2,16 @@
 #include "../wendigo_scan.h"
 #include <dolphin/dolphin.h>
 
-// NUM_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here, increment it!
+/** NUM_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here,
+ * increment it!
+ */
 static const WendigoItem items[START_MENU_ITEMS] = {
     {"Setup", {""}, 1, OPEN_SETUP, BOTH_MODES},
     {"Scan", {"Start", "Stop", "Status"}, 3, OPEN_SCAN, TEXT_MODE},
-    {"Devices", {"All", "Bluetooth", "WiFi", "BT Classic",
-        "BLE", "WiFi AP", "WiFi STA"}, 7, LIST_DEVICES, BOTH_MODES},
-    {"Selected Devices", {"All", "Bluetooth", "WiFi", "BT Classic",
-        "BLE", "WiFi AP", "WiFi STA"}, 7, LIST_SELECTED_DEVICES, BOTH_MODES},
+    {"Devices", {"All", "Bluetooth", "WiFi", "BT Classic", "BLE", "WiFi AP",
+        "WiFi STA"}, 7, LIST_DEVICES, BOTH_MODES},
+    {"Selected Devices", {"All", "Bluetooth", "WiFi", "BT Classic", "BLE",
+        "WiFi AP", "WiFi STA"}, 7, LIST_SELECTED_DEVICES, BOTH_MODES},
     {"Track Selected", {""}, 1, TRACK_DEVICES, TEXT_MODE},
     {"Help", {"About", "Version"}, 2, OPEN_HELP, TEXT_MODE},
 };
@@ -54,16 +56,16 @@ uint8_t wendigo_device_mask(uint8_t selected_option) {
     }
 }
 
-/* Callback invoked when a menu item is selected */
-static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t index) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_start_var_list_enter_callback()\n----------");
+/** Callback invoked when a menu item is selected */
+static void wendigo_scene_start_var_list_enter_callback(void *context, uint32_t index) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_start_var_list_enter_callback()");
     furi_assert(context);
-    WendigoApp* app = context;
+    WendigoApp *app = context;
 
     furi_assert(index < menu_items_num);
     uint8_t item_index = item_indexes[index];
     furi_assert(item_index < START_MENU_ITEMS);
-    const WendigoItem* item = &items[item_index];
+    const WendigoItem *item = &items[item_index];
 
     const int selected_option_index = app->selected_option_index[index];
     furi_assert(selected_option_index < item->num_options_menu);
@@ -76,13 +78,14 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
     /* Reward Dolphin for running a command */
     dolphin_deed(DolphinDeedGpioUartBridge);
 
-    switch(item->action) {
+    switch (item->action) {
         case OPEN_SETUP:
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventSetup);
-            FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
+            FURI_LOG_T(WENDIGO_TAG,
+                "End wendigo_scene_start_var_list_enter_callback(): Displaying Setup menu.");
             return;
         case OPEN_SCAN:
-            VariableItem* myItem;
+            VariableItem *myItem;
             /* Quit now if there's nothing to do */
             if ((selected_option_index == SCAN_START_IDX && app->is_scanning) ||
                 (selected_option_index == SCAN_STOP_IDX && !app->is_scanning)) {
@@ -102,7 +105,8 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
                 wendigo_set_scanning_active(app, starting);
             } else if (selected_option_index == SCAN_STATUS_IDX) {
                 view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventDisplayStatus);
-                FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
+                FURI_LOG_T(WENDIGO_TAG,
+                    "End wendigo_scene_start_var_list_enter_callback(): Displaying status.");
                 return;
             }
             break;
@@ -110,16 +114,19 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
             /* Find selected option to determine device mask */
             wendigo_set_current_devices(wendigo_device_mask(selected_option_index));
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
-            FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
+            FURI_LOG_T(WENDIGO_TAG,
+                "End wendigo_scene_start_var_list_enter_callback(): Displaying device list.");
             return;
         case LIST_SELECTED_DEVICES:
             wendigo_set_current_devices(wendigo_device_mask(selected_option_index) | DEVICE_SELECTED_ONLY);
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
-            FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
+            FURI_LOG_T(WENDIGO_TAG,
+                "End wendigo_scene_start_var_list_enter_callback(): Displaying selected device lists.");
             return;
         case TRACK_DEVICES:
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
-            FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
+            FURI_LOG_T(WENDIGO_TAG,
+                "End wendigo_scene_start_var_list_enter_callback(): Displaying device tracking.");
             return;
         case OPEN_HELP:
             switch (selected_option_index) {
@@ -133,150 +140,171 @@ static void wendigo_scene_start_var_list_enter_callback(void* context, uint32_t 
                     wendigo_version(app);
                     break;
                 default:
-                    // TODO: Panic
+                    char *msg = malloc(sizeof(char) * 72);
+                    if (msg != NULL) {
+                        snprintf(msg, sizeof(char) * 72,
+                            "wendigo_scene_start_var_list_enter_callback(): Invalid help option %d.",
+                            selected_option_index);
+                        wendigo_log(MSG_ERROR, msg);
+                        free(msg);
+                    }
                     break;
             }
-            FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
+            FURI_LOG_T(WENDIGO_TAG,
+                "End wendigo_scene_start_var_list_enter_callback(): Displaying a help page.");
             return;
         default:
-            FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
+            FURI_LOG_T(WENDIGO_TAG,
+                "End wendigo_scene_start_var_list_enter_callback(): Unknown action %d.",
+                item->action);
             return;
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_enter_callback()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_start_var_list_enter_callback()");
 }
 
-/* Callback invoked when a menu option is changed */
-static void wendigo_scene_start_var_list_change_callback(VariableItem* item) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_start_var_list_change_callback()\n----------");
+/** Callback invoked when a menu option is changed */
+static void wendigo_scene_start_var_list_change_callback(VariableItem *item) {
+    FURI_LOG_T(WENDIGO_TAG,
+        "Start wendigo_scene_start_var_list_change_callback()");
     furi_assert(item);
 
-    WendigoApp* app = variable_item_get_context(item);
+    WendigoApp *app = variable_item_get_context(item);
     furi_assert(app);
 
     uint8_t item_index = item_indexes[app->selected_menu_index];
-    const WendigoItem* menu_item = &items[item_index];
+    const WendigoItem *menu_item = &items[item_index];
     uint8_t option_index = variable_item_get_current_value_index(item);
     furi_assert(option_index < menu_item->num_options_menu);
-    variable_item_set_current_value_text(item, menu_item->options_menu[option_index]);
+    variable_item_set_current_value_text(item,
+                                        menu_item->options_menu[option_index]);
     app->selected_option_index[app->selected_menu_index] = option_index;
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_var_list_change_callback()");
+    FURI_LOG_T(WENDIGO_TAG,
+                "End wendigo_scene_start_var_list_change_callback()");
 }
 
-/* Callback invoked when the view is launched */
-void wendigo_scene_start_on_enter(void* context) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_start_on_enter()\n----------");
-    WendigoApp* app = context;
+/** Callback invoked when the view is launched */
+void wendigo_scene_start_on_enter(void *context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_start_on_enter()");
+    WendigoApp *app = context;
     app->current_view = WendigoAppViewVarItemList;
 
     variable_item_list_set_enter_callback(app->var_item_list,
         wendigo_scene_start_var_list_enter_callback, app);
 
-    VariableItem* item;
+    VariableItem *item;
     menu_items_num = 0;
-    for(uint8_t i = 0; i < START_MENU_ITEMS; ++i) {
+    for (uint8_t i = 0; i < START_MENU_ITEMS; ++i) {
         bool enabled = false;
-        if(app->hex_mode && (items[i].mode_mask & HEX_MODE)) {
+        if (app->hex_mode && (items[i].mode_mask & HEX_MODE)) {
             enabled = true;
         }
-        if(!app->hex_mode && (items[i].mode_mask & TEXT_MODE)) {
+        if (!app->hex_mode && (items[i].mode_mask & TEXT_MODE)) {
             enabled = true;
         }
 
-        if(enabled) {
+        if (enabled) {
             item = variable_item_list_add(
                 app->var_item_list,
                 items[i].item_string,
                 items[i].num_options_menu,
                 wendigo_scene_start_var_list_change_callback,
                 app);
-            variable_item_set_current_value_index(item, app->selected_option_index[i]);
-            variable_item_set_current_value_text(
-                item, items[i].options_menu[app->selected_option_index[i]]);
+            variable_item_set_current_value_index(item,
+                app->selected_option_index[i]);
+            variable_item_set_current_value_text(item,
+                items[i].options_menu[app->selected_option_index[i]]);
 
-            item_indexes[menu_items_num] = i;
-            menu_items_num++;
+            item_indexes[menu_items_num++] = i;
             if (i == SETUP_IDX && app->is_scanning) {
                 variable_item_set_locked(item, true, LOCKED_MSG);
             } else if (i == SCAN_IDX) {
                 if (app->is_scanning) {
                     variable_item_set_current_value_index(item, SCAN_STOP_IDX);
                     app->selected_option_index[i] = SCAN_STOP_IDX;
-                    variable_item_set_current_value_text(item, items[i].options_menu[SCAN_STOP_IDX]);
+                    variable_item_set_current_value_text(item,
+                        items[i].options_menu[SCAN_STOP_IDX]);
                 } else {
                     variable_item_set_current_value_index(item, SCAN_START_IDX);
                     app->selected_option_index[i] = SCAN_START_IDX;
-                    variable_item_set_current_value_text(item, items[i].options_menu[SCAN_START_IDX]);
+                    variable_item_set_current_value_text(item,
+                        items[i].options_menu[SCAN_START_IDX]);
                 }
             }
         }
     }
-
     variable_item_list_set_selected_item(app->var_item_list,
         scene_manager_get_scene_state(app->scene_manager, WendigoSceneStart));
-
-    view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
-
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_on_enter()");
+    view_dispatcher_switch_to_view(app->view_dispatcher,
+                                    WendigoAppViewVarItemList);
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_start_on_enter()");
 }
 
-bool wendigo_scene_start_on_event(void* context, SceneManagerEvent event) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_start_on_event()\n----------");
-    WendigoApp* app = context;
+bool wendigo_scene_start_on_event(void *context, SceneManagerEvent event) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_start_on_event()");
+    WendigoApp *app = context;
     bool consumed = false;
 
-    if(event.type == SceneManagerEventTypeCustom) {
+    if (event.type == SceneManagerEventTypeCustom) {
         switch (event.event) {
             case Wendigo_EventSetup:
-                scene_manager_set_scene_state(
-                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-                scene_manager_next_scene(app->scene_manager, WendigoSceneSetup);
+                scene_manager_set_scene_state(app->scene_manager,
+                    WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager,
+                                        WendigoSceneSetup);
                 break;
             case Wendigo_EventStartKeyboardText:
-                scene_manager_set_scene_state(
-                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-                scene_manager_next_scene(app->scene_manager, WendigoSceneTextInput);
+                scene_manager_set_scene_state(app->scene_manager,
+                    WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager,
+                                        WendigoSceneTextInput);
                 break;
             case Wendigo_EventStartKeyboardHex:
-                scene_manager_set_scene_state(
-                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-                scene_manager_next_scene(app->scene_manager, WendigoSceneHexInput);
+                scene_manager_set_scene_state(app->scene_manager,
+                    WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager,
+                                        WendigoSceneHexInput);
                 break;
             case Wendigo_EventStartConsole:
-                scene_manager_set_scene_state(
-                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-                scene_manager_next_scene(app->scene_manager, WendigoSceneConsoleOutput);
+                scene_manager_set_scene_state(app->scene_manager,
+                    WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager,
+                                        WendigoSceneConsoleOutput);
                 break;
             case Wendigo_EventStartHelp:
-                scene_manager_set_scene_state(
-                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-                scene_manager_next_scene(app->scene_manager, WendigoSceneHelp);
+                scene_manager_set_scene_state(app->scene_manager,
+                    WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager,
+                                        WendigoSceneHelp);
                 break;
             case Wendigo_EventListDevices:
-                scene_manager_set_scene_state(
-                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-                scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceList);
+                scene_manager_set_scene_state(app->scene_manager,
+                    WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager,
+                                        WendigoSceneDeviceList);
                 break;
             case Wendigo_EventDisplayStatus:
-                scene_manager_set_scene_state(
-                    app->scene_manager, WendigoSceneStart, app->selected_menu_index);
-                scene_manager_next_scene(app->scene_manager, WendigoSceneStatus);
+                scene_manager_set_scene_state(app->scene_manager,
+                    WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager,
+                                        WendigoSceneStatus);
                 break;
             default:
-                // Do nothing
+                /* Do nothing */
                 break;
         }
         consumed = true;
-    } else if(event.type == SceneManagerEventTypeTick) {
-        app->selected_menu_index = variable_item_list_get_selected_item_index(app->var_item_list);
+    } else if (event.type == SceneManagerEventTypeTick) {
+        app->selected_menu_index =
+            variable_item_list_get_selected_item_index(app->var_item_list);
         consumed = true;
     }
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_on_event()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_start_on_event()");
     return consumed;
 }
 
-void wendigo_scene_start_on_exit(void* context) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_start_on_exit()\n----------");
-    WendigoApp* app = context;
+void wendigo_scene_start_on_exit(void *context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_start_on_exit()");
+    WendigoApp *app = context;
     variable_item_list_reset(app->var_item_list);
-    FURI_LOG_T(WENDIGO_TAG, "----------\nEnd wendigo_scene_start_on_exit()");
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_start_on_exit()");
 }

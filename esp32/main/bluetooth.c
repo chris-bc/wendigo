@@ -40,8 +40,9 @@ struct gattc_profile_inst {
     esp_bd_addr_t remote_bda;
 };
 
-/* One gatt-based profile, one app_id and one gattc_if. This array will store the
-   gattc_if returned by ESP_GATTS_REG_EVT */
+/** One gatt-based profile, one app_id and one gattc_if. This array will store the
+ *  gattc_if returned by ESP_GATTS_REG_EVT
+ */
 static struct gattc_profile_inst gl_profile_tab[1] = {
     [0] = {
         .gattc_cb = gattc_profile_event_handler,
@@ -49,7 +50,7 @@ static struct gattc_profile_inst gl_profile_tab[1] = {
     },
 };
 
-/* Bluetooth attributes used by gattc_profile_event_handler */
+/** Bluetooth attributes used by gattc_profile_event_handler */
 static esp_bt_uuid_t remote_filter_service_uuid = {
     .len    = ESP_UUID_LEN_16,
     .uuid   = { .uuid16 = 0x00FF, },
@@ -74,26 +75,9 @@ bool BLE_INITIALISED = false;
 
 esp_err_t display_gap_interactive(wendigo_device *dev) {
     esp_err_t result = ESP_OK;
-    /* Before doing anything else check if we have seen this device
-       within CONFIG_DELAY_AFTER_DEVICE_DISPLAYED ms */
-    if (CONFIG_DELAY_AFTER_DEVICE_DISPLAYED > 0) {
-        /* Only display the device if it hasn't been seen before or
-           CONFIG_DELAY_AFTER_DEVICE_DISPLAYED ms have passed */
-        wendigo_device *existingDevice = retrieve_device(dev);
-        if (existingDevice != NULL) {
-            /* We've seen it before - decide whether it was too recent and update lastSeen */
-            struct timeval nowTime;
-            gettimeofday(&nowTime, NULL);
-            double elapsed = (nowTime.tv_sec - existingDevice->lastSeen.tv_sec);
-            if (elapsed < CONFIG_DELAY_AFTER_DEVICE_DISPLAYED) {
-                /* It's been seen too recently, don't display it */
-                return ESP_OK;
-            }
-        }
-    }
     bool cod_fit = false;
     char *dev_type = (dev->scanType == SCAN_HCI) ? radioShortNames[SCAN_HCI] :
-                      (dev->scanType == SCAN_BLE) ? radioShortNames[SCAN_BLE] : "UNK";
+        (dev->scanType == SCAN_BLE) ? radioShortNames[SCAN_BLE] : "UNK";
     char mac_str[MAC_STRLEN + 1];
     mac_bytes_to_string(dev->mac, mac_str);
     char cod_str[COD_MAX_LEN];
@@ -138,15 +122,14 @@ esp_err_t display_gap_interactive(wendigo_device *dev) {
         print_star(1, true);
     }
     print_star(banner_width, true);
-
     return result;
 }
 
-/* Send device info to stdout to transmit over UART
-   * Sends 4 bytes of 0xFF followed by 4 bytes of 0xAA to begin the transmission
-   * Sends device attributes
-   * Ends the transmission with the reverse of the start: 4*0xAA 4*0xFF
-*/
+/** Send device info to stdout to transmit over UART
+ * Sends the Bluetooth packet preamble to begin the transmission
+ * Sends device attributes
+ * Ends the transmission with the packet terminator
+ */
 esp_err_t display_gap_uart(wendigo_device *dev) {
     esp_err_t result = ESP_OK;
     char cod_short[SHORT_COD_MAX_LEN];
@@ -154,15 +137,10 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     cod2shortStr(dev->radio.bluetooth.cod, cod_short, &cod_len);
     /* Account for NULL terminator on cod_short */
     ++cod_len;
-    /* Send RSSI as a char[4] to avoid casting between uint8_t and int16_t */
-    char rssi[RSSI_LEN + 3];    /* +3 rather than 1 to avoid compiler errors - int16_t can be up to 6 chars */
-    memset(rssi, '\0', RSSI_LEN + 3);
-    snprintf(rssi, RSSI_LEN + 3, "%d", dev->rssi);
     /* Send tagged as 1 for true, 0 for false */
     uint8_t tagged = (dev->tagged) ? 1 : 0;
 
-    /* Assemble the packet and send it in one go - I can't figure out why AP packet length
-       is a byte too long, this will at least cover up the issue :/ */
+    /* Assemble the packet and send it in one go */
     uint8_t packet_len = WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
         dev->radio.bluetooth.eir_len + cod_len + PREAMBLE_LEN;
     uint8_t *packet = malloc(sizeof(uint8_t *) * packet_len);
@@ -172,7 +150,7 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     memcpy(packet, PREAMBLE_BT_BLE, PREAMBLE_LEN);
     memcpy(packet + WENDIGO_OFFSET_BT_BDNAME_LEN, &(dev->radio.bluetooth.bdname_len), sizeof(uint8_t));
     memcpy(packet + WENDIGO_OFFSET_BT_EIR_LEN, &(dev->radio.bluetooth.eir_len), sizeof(uint8_t));
-    memcpy(packet + WENDIGO_OFFSET_BT_RSSI, (uint8_t *)rssi, RSSI_LEN);
+    memcpy(packet + WENDIGO_OFFSET_BT_RSSI, (uint8_t *)&(dev->rssi), sizeof(int16_t));
     memcpy(packet + WENDIGO_OFFSET_BT_COD, (uint8_t *)&(dev->radio.bluetooth.cod), sizeof(uint32_t));
     memcpy(packet + WENDIGO_OFFSET_BT_BDA, dev->mac, MAC_BYTES);
     memcpy(packet + WENDIGO_OFFSET_BT_SCANTYPE, &(dev->scanType), sizeof(uint8_t));
@@ -212,7 +190,7 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     return result;
 }
 
-/* Display the specified Bluetooth (Classic or LE) device */
+/** Display the specified Bluetooth (Classic or LE) device */
 esp_err_t display_gap_device(wendigo_device *dev) {
     /* If we're in Focus Mode only display the device if it's tagged
        => Ignore if Focus Mode and device not selected */
@@ -263,7 +241,7 @@ esp_err_t wendigo_ble_initialise() {
     if (!BT_INITIALISED) {
         result = wendigo_bt_initialise();
     }
-    /* Not testing the result because BLE can be supported independently of BLE */
+    /* Not testing the result because BLE can be supported independently of BT */
     // TODO: This needs to be tested extensively - Bluetooth functions have been created on the assumption
     //       that both BT Classic and BLE are enabled. Test different combinations of BT/BLE support
     if (!BLE_INITIALISED) {
@@ -295,7 +273,7 @@ esp_err_t wendigo_ble_initialise() {
     return result;
 }
 
-/* Bluetooth Low Energy scanning callback - Called when a BLE device is seen */
+/** Bluetooth Low Energy scanning callback - Called when a BLE device is seen */
 static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {
     uint8_t *adv_name = NULL;
     uint8_t adv_name_len = 0;
@@ -358,7 +336,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                 dev.radio.bluetooth.bdname[strlen(param->get_dev_name_cmpl.name)] = '\0';
                 // TODO: Can I get anything else out of these structs?
                 display_gap_device(&dev);
-                /* Add to or update all_gap_devices[] */
+                /* Add to or update devices[] */
                 add_device(&dev);
                 free_device(&dev);
                 break;
@@ -406,7 +384,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                     // TODO: Can I find the COD (Class Of Device) anywhere?
                     mac_bytes_to_string(dev.mac, bdaStr);
                     display_gap_device(&dev);
-                    /* Add to or update all_gap_devices[] */
+                    /* Add to or update devices[] */
                     add_device(&dev);
                     free_device(&dev);
                     break;
@@ -418,7 +396,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
     }
 }
 
-/* BLE GATTC callback. I need to put some time into better understanding what I can do with this */
+/** BLE GATTC callback. I need to put some time into better understanding what I can do with this */
 static void ble_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param) {
     /* If event is register event, store the gattc_if for each profile */
     if (event == ESP_GATTC_REG_EVT) {
@@ -445,7 +423,7 @@ static void ble_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp
     } while (0);
 }
 
-/* GATTC profile event handler. Called by the above via gl_profile_tab's elements */
+/** GATTC profile event handler. Called by the above via gl_profile_tab's elements */
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param) {
     esp_ble_gattc_cb_param_t *p_data = (esp_ble_gattc_cb_param_t *)param;
 
@@ -729,8 +707,9 @@ wendigo_device *device_from_gap_cb(esp_bt_gap_cb_param_t *param) {
     return dev;
 }
 
-/* Bluetooth Classic Discovery callback - Called on Bluetooth Classic events including
-   device discovery, additional device information, discovery completed */
+/** Bluetooth Classic Discovery callback - Called on Bluetooth Classic events including
+ *  device discovery, additional device information, discovery completed
+ */
 static void bt_gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param) {
     switch (event) {
         case ESP_BT_GAP_DISC_RES_EVT:
@@ -797,9 +776,10 @@ esp_err_t wendigo_bt_enable() {
     return wendigo_bt_gap_start();
 }
 
-/* This function does not terminate in-flight discovery. Its calling function -
-   cmd_bluetooth in wendigo.c - sets scanStatus[SCAN_HCI] to ACTION_DISABLE.
-   When the current discovery interval expires a new discovery task will not be launched */
+/** This function does not terminate in-flight discovery. Its calling function -
+ *  cmd_bluetooth in wendigo.c - sets scanStatus[SCAN_HCI] to ACTION_DISABLE.
+ *  When the current discovery interval expires a new discovery task will not be launched
+ */
 esp_err_t wendigo_bt_disable() {
     esp_err_t result = ESP_OK;
     if (!BT_INITIALISED) {
@@ -833,16 +813,16 @@ esp_err_t wendigo_ble_disable() {
     return esp_ble_gap_stop_scanning();
 }
 
-/* cod2deviceStr
-   Converts a uint32_t representing a Bluetooth Class Of Device (COD)'s major
-   device code into a useful string descriptor of the specified COD major device.
-   Returns an error indicator. Input 'cod' is the COD to be converted.
-   char *string is a pointer to a character array of sufficient size to hold
-   the results. The maximum possible number of characters required by this
-   function, including the trailing NULL, is 59.
-   uint8_t *stringLen is a pointer to a uint8_t variable in the calling code.
-   This variable will be overwritten with the length of string.
-*/
+/** cod2deviceStr
+ *  Converts a uint32_t representing a Bluetooth Class Of Device (COD)'s major
+ *  device code into a useful string descriptor of the specified COD major device.
+ *  Returns an error indicator. Input 'cod' is the COD to be converted.
+ *  char *string is a pointer to a character array of sufficient size to hold
+ *  the results. The maximum possible number of characters required by this
+ *  function, including the trailing NULL, is 59.
+ *  uint8_t *stringLen is a pointer to a uint8_t variable in the calling code.
+ *  This variable will be overwritten with the length of string.
+ */
 esp_err_t cod2deviceStr(uint32_t cod, char *string, uint8_t *stringLen) {
     esp_err_t err = ESP_OK;
     char temp[COD_MAX_LEN] = "";
@@ -891,7 +871,7 @@ esp_err_t cod2deviceStr(uint32_t cod, char *string, uint8_t *stringLen) {
     return err;
 }
 
-/* As above, but returning a shortened string suitable for display by VIEW */
+/** As above, but returning a shortened string suitable for display by VIEW */
 esp_err_t cod2shortStr(uint32_t cod, char *string, uint8_t *stringLen) {
     esp_err_t err = ESP_OK;
     char temp[SHORT_COD_MAX_LEN] = "";
@@ -940,7 +920,7 @@ esp_err_t cod2shortStr(uint32_t cod, char *string, uint8_t *stringLen) {
     return err;
 }
 
-/* Convert a UUID (service or attribute descriptor) to a printable hex string */
+/** Convert a UUID (service or attribute descriptor) to a printable hex string */
 char *uuid2str(esp_bt_uuid_t *uuid, char *str, size_t size) {
     if (uuid == NULL || str == NULL) {
         return NULL;
@@ -1004,7 +984,7 @@ static bool get_string_name_from_eir(uint8_t *eir, char *bdname, uint8_t *bdname
     return retVal;
 }
 
-/* Search the store of known UUIDs for the specified UUID */
+/** Search the store of known UUIDs for the specified UUID */
 bt_uuid *svcForUUID(uint16_t uuid) {
     uint8_t svcIdx = 0;
     for ( ; svcIdx < BT_UUID_COUNT && uuid != bt_uuids[svcIdx].uuid16; ++ svcIdx) {}
