@@ -10,10 +10,13 @@ const uint8_t WENDIGO_SUPPORTED_24_CHANNELS_COUNT = 14;
 const uint8_t WENDIGO_SUPPORTED_24_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 const uint8_t WENDIGO_SUPPORTED_5_CHANNELS_COUNT = 31;
 const uint8_t WENDIGO_SUPPORTED_5_CHANNELS[] = {32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
+const uint8_t PRIVACY_ON_BITS[] = {0x11, 0x11};
+const uint8_t PRIVACY_OFF_BITS[] = {0x01, 0x11};
 long hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
 TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
 
 // TODO: This is duplicated for Flipper-Wendigo because the ifndef guard isn't working
+uint8_t auth_mode_strings_count = 17;
 char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2",
     "WPA+WPA2", "EAP", "EAP", "WPA3", "WPA2+WPA3", "WAPI", "OWE",
     "WPA3 Enterprise 192-bit", "WPA3 EXT", "WPA3 EXT Mixed Mode", "DPP",
@@ -87,7 +90,7 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
 
 esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
     esp_err_t result = ESP_OK;
-    if (dev->scanType != SCAN_WIFI_AP) {
+    if (dev == NULL || dev->scanType != SCAN_WIFI_AP) {
         return ESP_ERR_INVALID_ARG;
     }
     char macStr[MAC_STRLEN + 1];
@@ -155,6 +158,9 @@ esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
     // TODO: Integrate authmode in the above
     print_star(1, false);
     print_space(4, false);
+    if (dev->radio.ap.authmode > auth_mode_strings_count) {
+        dev->radio.ap.authmode = auth_mode_strings_count;
+    }
     printf("Authentication: %s", wifi_auth_mode_strings[dev->radio.ap.authmode]);
     // BANNER_WIDTH - 10 - 16 - strlen() + 4 spaces
     print_space(BANNER_WIDTH - 22 - strlen(wifi_auth_mode_strings[dev->radio.ap.authmode]), false);
@@ -336,13 +342,25 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         dev->tagged = false;
         dev->radio.ap.stations = NULL;
         dev->radio.ap.stations_count = 0;
-        dev->radio.ap.authmode = WIFI_AUTH_MAX;
         /* Null out SSID */
         explicit_bzero(dev->radio.ap.ssid, MAX_SSID_LEN + 1);
     }
     dev->scanType = SCAN_WIFI_AP;
     dev->rssi = rx_ctrl.rssi;
     dev->radio.ap.channel = rx_ctrl.channel;
+    if (dev->radio.ap.authmode == WIFI_AUTH_MAX) {
+        /* Try & get better security info */
+        uint8_t privacy;
+        memcpy(&privacy, payload + BEACON_PRIVACY_OFFSET, sizeof(uint8_t));
+        if (privacy == 0x31) {
+            /* It's a protected network. Call it WPA *shrugs* */
+            dev->radio.ap.authmode = WIFI_AUTH_WPA_PSK;
+        } else if (privacy == 0x21) {
+            dev->radio.ap.authmode = WIFI_AUTH_OPEN;
+        } else {
+            dev->radio.ap.authmode = WIFI_AUTH_MAX;
+        }
+    }
     uint8_t ssid_len = payload[BEACON_SSID_OFFSET - 1];
     if (ssid_len > 0) {
         memcpy(dev->radio.ap.ssid, payload + BEACON_SSID_OFFSET, ssid_len);
@@ -454,7 +472,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->radio.ap.ssid, payload + PROBE_RESPONSE_SSID_OFFSET, ssid_len);
     }
     /* Authentication mode */
-    memcpy(&(ap->radio.ap.authmode), payload + PROBE_RESPONSE_AUTH_TYPE_OFFSET + ssid_len, sizeof(uint8_t));
+    memcpy(&(ap->radio.ap.authmode), payload + ssid_len + PROBE_RESPONSE_AUTH_TYPE_OFFSET, sizeof(uint8_t));
+    
     if (creatingAp) {
         result |= add_device(ap);
         free(ap);
@@ -620,6 +639,7 @@ esp_err_t parse_data(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
             src->radio.ap.channel = rx_ctrl.channel;
             if (dest != NULL && dest->scanType == SCAN_WIFI_STA) {
                 set_associated(dest, src); // TODO: Call this nyway so that associated MACs are recorded even if we don't have their objects
+                                                    // TODO: Check whether data packets can be sent between stations
             }
         } else if (src->scanType == SCAN_WIFI_STA) {
             src->radio.sta.channel = rx_ctrl.channel;
