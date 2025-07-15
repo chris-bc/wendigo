@@ -147,6 +147,8 @@ typedef struct wendigo_wifi_ap {
 typedef struct wendigo_wifi_sta {
     uint8_t apMac[MAC_BYTES];
     uint8_t channel;
+    uint8_t saved_networks_count;
+    char **saved_networks;
 } wendigo_wifi_sta;
 
 typedef struct wendigo_device {

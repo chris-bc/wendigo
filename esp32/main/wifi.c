@@ -393,12 +393,32 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(dev->mac, payload + PROBE_SRCADDR_OFFSET, MAC_BYTES);
         dev->tagged = false;
+        dev->radio.sta.saved_networks_count = 0;
+        dev->radio.sta.saved_networks = NULL;
         memcpy(dev->radio.sta.apMac, nullMac, MAC_BYTES);
     }
     dev->scanType = SCAN_WIFI_STA;
     dev->rssi = rx_ctrl.rssi;
     dev->radio.sta.channel = rx_ctrl.channel;
-    // TODO: Add SSID to the STA's network list
+    uint8_t ssid_len;
+    char *ssid;
+    memcpy(&ssid_len, payload + PROBE_SSID_OFFSET - 1, sizeof(uint8_t));
+    if (ssid_len > 0) {
+        ssid = malloc(sizeof(char) * (ssid_len + 1));
+        if (ssid != NULL) {
+            memcpy(ssid, payload + PROBE_SSID_OFFSET, ssid_len);
+            ssid[ssid_len] = '\0';
+            uint8_t ssid_idx = wendigo_index_of_string(ssid,
+                dev->radio.sta.saved_networks, dev->radio.sta.saved_networks_count);
+            if (ssid_idx == dev->radio.sta.saved_networks_count) {
+                /* SSID not in STA's saved networks - Add it */
+                // TODO: realloc saved_networks, append SSID, inc saved_networks_count
+            } else {
+                free(ssid);
+                ssid = NULL;
+            }
+        }
+    }
 
     esp_err_t result = ESP_OK;
     if (creating) {
@@ -434,6 +454,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
             if (sta != NULL) {
                 memcpy(sta->mac, payload + PROBE_RESPONSE_DESTADDR_OFFSET, MAC_BYTES);
                 sta->tagged = false;
+                sta->radio.sta.saved_networks_count = 0;
+                sta->radio.sta.saved_networks = NULL;
                 memcpy(sta->radio.sta.apMac, nullMac, MAC_BYTES);
             }
         }
@@ -510,6 +532,8 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(sta->mac, payload + RTS_CTS_SRCADDR, MAC_BYTES);
         sta->tagged = false;
+        sta->radio.sta.saved_networks_count = 0;
+        sta->radio.sta.saved_networks = NULL;
         memcpy(sta->radio.sta.apMac, nullMac, MAC_BYTES);
     }
     sta->rssi = rx_ctrl.rssi;
@@ -602,6 +626,8 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(sta->mac, payload + RTS_CTS_DESTADDR, MAC_BYTES);
         sta->tagged = false;
+        sta->radio.sta.saved_networks_count = 0;
+        sta->radio.sta.saved_networks = NULL;
         memcpy(sta->radio.sta.apMac, nullMac, MAC_BYTES);
     }
     sta->scanType = SCAN_WIFI_STA;
@@ -710,6 +736,8 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(sta->mac, payload + DEAUTH_DESTADDR_OFFSET, MAC_BYTES);
         sta->tagged = false;
+        sta->radio.sta.saved_networks_count = 0;
+        sta->radio.sta.saved_networks = NULL;
     }
     sta->scanType = SCAN_WIFI_STA;
     sta->radio.sta.channel = rx_ctrl.channel;
@@ -748,6 +776,8 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(sta->mac, payload + DEAUTH_SRCADDR_OFFSET, MAC_BYTES);
         sta->tagged = false;
+        sta->radio.sta.saved_networks_count = 0;
+        sta->radio.sta.saved_networks = NULL;
         memcpy(sta->radio.sta.apMac, nullMac, MAX_CANON);
     }
     sta->scanType = SCAN_WIFI_STA;

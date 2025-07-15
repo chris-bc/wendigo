@@ -102,6 +102,16 @@ uint16_t wendigo_index_of(uint8_t mac[MAC_BYTES], uint8_t **array, uint16_t arra
     return idx;
 }
 
+uint8_t wendigo_index_of_string(char *str, char **array, uint8_t array_len) {
+    // TODO: Can I merge this with the above function?
+    if (str == NULL || array == NULL || array_len == 0 || str[0] == '\0') {
+        return array_len;
+    }
+    uint8_t idx = 0;
+    for (; idx < array_len && (array[idx] == NULL || strncasecmp(str, array[idx], MAX_SSID_LEN)); ++idx) { }
+    return idx;
+}
+
 /** Adds the specified device to devices[] if not already present.
  *  Updates the attributes of the specified device in devices[]
  *  if it already exists. */
