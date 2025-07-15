@@ -272,6 +272,7 @@ This section is a running list of current priorities.
 
 * [ ] BUG: ESP32 returns an RSSI of -4 or 3854 for many devices. I think this is a particular packet type, resulting in an invalid initial value that is resolved by subsequent packets. Figure out why & fix.
   * [ ] If I'm right about it being characteristic of a particular packet type the "fix" might just be detecting invalid RSSI and replacing with 0 or -127 (that's the minimum, right?)
+* [ ] Review wifi.c for possible memory leaks resulting from its parsers calling free() rather than free_device()
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [ ] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped - Use a single menu option that changes its text, similar to Tag/Untag.
 * [X] Combined Bluetooth packet for BT Classic and LE devices
