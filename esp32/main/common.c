@@ -328,7 +328,7 @@ esp_err_t add_device(wendigo_device *dev) {
                         if (new_pnl[current_network] != NULL) {
                             strncpy(new_pnl[current_network], dev->radio.sta.saved_networks[i], ssid_len);
                             new_pnl[current_network][ssid_len] = '\0';
-                            ++current_netork;
+                            ++current_network;
                         }
                     }
                 }

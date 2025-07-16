@@ -58,7 +58,7 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
         explicit_bzero(attribute_values[i], VAL_MAX_LEN);
     }
 
-    strncpy(attribute_values[ATTR_VERSION], WENDIGO_VERSION, strlen(WENDIGO_VERSION));
+    strncpy(attribute_values[ATTR_VERSION], WENDIGO_VERSION, strlen(WENDIGO_VERSION) + 1);
     strncpy(attribute_values[ATTR_GITHUB], github, strlen(github));
     strncpy(attribute_values[ATTR_UUID_DICTIONARY], (uuidDictionarySupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
     strncpy(attribute_values[ATTR_BT_CLASSIC_SUPPORT], (btClassicSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);

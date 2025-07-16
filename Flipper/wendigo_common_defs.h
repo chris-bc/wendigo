@@ -34,10 +34,14 @@
  #define WENDIGO_OFFSET_WIFI_LASTSEEN           (14)
  #define WENDIGO_OFFSET_WIFI_TAGGED             (33)
  /* Unique elements */
- #define WENDIGO_OFFSET_STA_AP_MAC              (34)
- #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (40)
- #define WENDIGO_OFFSET_STA_AP_SSID             (41)
- /* SSID is SSID_Len bytes, followed by the packet terminator which is PREAMBLE_LEN == 4 bytes */
+ #define WENDIGO_OFFSET_STA_PNL_COUNT           (34)
+ #define WENDIGO_OFFSET_STA_AP_MAC              (35)
+ #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (41)
+ #define WENDIGO_OFFSET_STA_AP_SSID             (42)
+ /* SSID is SSID_Len bytes, followed by WENDIGO_OFFSET_STA_PNL_COUNT sets of SSIDs,
+    where each SSID is 1 byte for SSID length followed by that number of bytes for
+    the SSID. Finally, this is followed by the packet terminator which is
+    PREAMBLE_LEN == 4 bytes */
  #define WENDIGO_OFFSET_AP_AUTH_MODE            (34)
  #define WENDIGO_OFFSET_AP_SSID_LEN             (35)
  #define WENDIGO_OFFSET_AP_STA_COUNT            (36)

@@ -268,6 +268,26 @@ esp_err_t display_wifi_sta_interactive(wendigo_device *dev) {
         print_space(BANNER_WIDTH - strlen("AP Not Yet Found") - space_len - 6, false);
     }
     print_star(1, true);
+    /* Display saved networks */
+    print_star(1, false);
+    print_space(4, false);
+    printf("%3d saved networks collected.", dev->radio.sta.saved_networks_count);
+    print_space(BANNER_WIDTH - 35, false);
+    print_star(1, true);
+    if (dev->radio.sta.saved_networks_count > 0) {
+        /* Display each saved network */
+        uint8_t ssid_len;
+        for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+            if (dev->radio.sta.saved_networks[i] != NULL) {
+                ssid_len = strlen(dev->radio.sta.saved_networks[i]);
+                print_star(1, false);
+                print_space(8, false);
+                printf("* %s", dev->radio.sta.saved_networks[i]);
+                print_space(BANNER_WIDTH - ssid_len - 12, false);
+                print_star(1, true);
+            }
+        }
+    }
     print_star(BANNER_WIDTH, true);
     return result;
 }
