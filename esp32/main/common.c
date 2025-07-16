@@ -180,7 +180,8 @@ esp_err_t add_device(wendigo_device *dev) {
                     }
                 }
             } else if (dev->scanType == SCAN_WIFI_STA) {
-                // No special cases
+                // TODO: Copy saved_networks[]
+                // As long as free_device() isn't called on dev we can ignore this - memcpy() will cover everything needed.
             }
             ++devices_count;
         }
@@ -273,6 +274,7 @@ esp_err_t add_device(wendigo_device *dev) {
         } else if (dev->scanType == SCAN_WIFI_STA) {
             existingDevice->radio.sta.channel = dev->radio.sta.channel;
             memcpy(existingDevice->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
+            // TODO: Update saved_networks
         }
     }
     return result;
@@ -298,7 +300,16 @@ esp_err_t free_device(wendigo_device *dev) {
             dev->radio.ap.stations_count = 0;
         }
     } else if (dev->scanType == SCAN_WIFI_STA) {
-        /* Nothing to do */
+        if (dev->radio.sta.saved_networks_count > 0 && dev->radio.sta.saved_networks != NULL) {
+            for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                if (dev->radio.sta.saved_networks[i] != NULL) {
+                    free(dev->radio.sta.saved_networks[i]);
+                }
+            }
+            free(dev->radio.sta.saved_networks);
+            dev->radio.sta.saved_networks = NULL;
+            dev->radio.sta.saved_networks_count = 0;
+        }
     }
     return ESP_OK;
 }
