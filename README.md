@@ -309,7 +309,7 @@ This section is a running list of current priorities.
     * [X] Extract PNL SSID's from probe requests
     * [X] Maintain PNL in data model
     * [X] Transmit PNL in packet to Flipper-Wendigo
-    * [ ] Parse PNL out of packet in Flipper-Wendigo
+    * [X] Parse PNL out of packet in Flipper-Wendigo
     * [ ] Reconstruct PNL in Flipper-Wendigo's data model
     * [ ] Display PNL in device list
       * [ ] New STA option "%d SSIDs"
