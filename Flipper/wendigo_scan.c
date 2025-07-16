@@ -233,7 +233,16 @@ uint16_t wendigo_index_of(uint8_t mac[MAC_BYTES], uint8_t **array, uint16_t arra
     uint16_t idx = 0;
     for (; idx < array_len && (array[idx] == NULL || memcmp(array[idx], mac, MAC_BYTES)); ++idx) { }
     return idx;
-} // TODO: this and device_index_* functions are also defined in ESP32-Wendigo, in common.c. Merge and move to wendigo_common_defs.c
+} // TODO: this, the following, and device_index_* functions are also defined in ESP32-Wendigo, in common.c. Merge and move to wendigo_common_defs.c
+
+uint8_t wendigo_index_of_string(char *str, char **array, uint8_t array_len) {
+    if (str == NULL || array == NULL || array_len == 0 || str[0] == '\0') {
+        return array_len;
+    }
+    uint8_t idx = 0;
+    for (; idx < array_len && (array[idx] == NULL || strncasecmp(str, array[idx], MAX_SSID_LEN)); ++idx) { }
+    return idx;
+}
 
 /** Called from parseBufferBluetooth(), this function updates the existing device
  *  `dev` with new attributes from `new_device`.
@@ -589,6 +598,57 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
         /* Only replace AP MAC if dev has a "better" AP than target - If dev isn't nullMac. */
         if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
             memcpy(target->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
+        }
+        if (dev->radio.sta.saved_networks_count > 0 &&
+                dev->radio.sta.saved_networks != NULL) {
+            /* `dev` has saved networks, copy across any not already
+                in `target`.
+                First count the number of new SSIDs.
+            */
+            uint8_t target_idx;
+            uint8_t new_pnl_count = 0;
+            for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                target_idx = wendigo_index_of_string(
+                    dev->radio.sta.saved_networks[i],
+                    target->radio.sta.saved_networks,
+                    target->radio.sta.saved_networks_count);
+                if (target_idx == target->radio.sta.saved_networks_count &&
+                        dev->radio.sta.saved_networks[i] != NULL) {
+                    ++new_pnl_count;
+                }
+            }
+            if (new_pnl_count > 0) {
+                /* There are new SSIDs to add - realloc target */
+                new_pnl_count += target->radio.sta.saved_networks_count;
+                char **new_pnl = realloc(target->radio.sta.saved_networks,
+                    sizeof(char *) * new_pnl_count);
+                if (new_pnl != NULL) {
+                    /* Copy across new elements */
+                    uint8_t pnl_len;
+                    uint8_t pnl_idx = target->radio.sta.saved_networks_count;
+                    for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                        target_idx = wendigo_index_of_string(
+                            dev->radio.sta.saved_networks[i], new_pnl,
+                            target->radio.sta.saved_networks_count);
+                        if (target_idx == target->radio.sta.saved_networks_count &&
+                                dev->radio.sta.saved_networks[i] != NULL) {
+                            /* Copy dev[i] to target[pnl_idx] */
+                            pnl_len = strlen(dev->radio.sta.saved_networks[i]);
+                            new_pnl[pnl_idx] = malloc(sizeof(char) * (pnl_len + 1));
+                            if (new_pnl[pnl_idx] != NULL) {
+                                strncpy(new_pnl[pnl_idx],
+                                    dev->radio.sta.saved_networks[i], pnl_len);
+                                new_pnl[pnl_idx][pnl_len] = '\0';
+                                ++pnl_idx;
+                            }
+                        }
+                    }
+                    /* Hopefully pnl_idx == new_pnl_count. If not some mallocs
+                        have failed, but that's OK */
+                    target->radio.sta.saved_networks = new_pnl;
+                    target->radio.sta.saved_networks_count = pnl_idx;
+                } /* If we failed to malloc new_pnl don't do anything */
+            }
         }
     }
     /* Update the device list if it's currently displayed */

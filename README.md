@@ -310,7 +310,7 @@ This section is a running list of current priorities.
     * [X] Maintain PNL in data model
     * [X] Transmit PNL in packet to Flipper-Wendigo
     * [X] Parse PNL out of packet in Flipper-Wendigo
-    * [ ] Reconstruct PNL in Flipper-Wendigo's data model
+    * [X] Reconstruct PNL in Flipper-Wendigo's data model
     * [ ] Display PNL in device list
       * [ ] New STA option "%d SSIDs"
       * [ ] New var_item_list-based scene wendigo_scene_network_list
