@@ -54,6 +54,42 @@
   </ol>
 </details>
 
+## What's New
+
+### v0.3.0
+
+Finally, NULL pointer dereference exceptions while WiFi scanning with the device list
+active are fixed. It was down to calling two FZ API functions -
+```variable_item_set_item_label()``` and
+```variable_item_set_current_value_text()``` - see [Flipper/scenes/wendigo_scene_device_list.c](https://github.com/chris-bc/wendigo/blob/main/Flipper/scenes/wendigo_scene_device_list.c) for details.
+
+Wendigo now supports WiFi scanning. Without crashing all the time. Without
+crashing at all, in fact. I think. YMMV :) And the device list is now dynamic
+again, with items added/updated as they are discovered. To an extent at least.
+Due to the bug mentioned above, if a device is displaying its MAC in the list
+and a packet containing its name is received, its name **won't** be updated
+in the device list. If a changing option is displayed - elapsed time or
+RSSI - that value is no longer updated every time a packet for that device
+is received (it'll still be updated during tick events though - these
+explicitly cater for elapsed time and RSSI).
+
+If the 2.4GHz spectrum is busy I've found that the radio only supplies BLE
+packets - In my home I need to disable BLE in the ```Setup``` menu in order
+to receive WiFi packets. Sorry about that - I don't think there's anything I
+can do, other than change the UI so it's no longer possible to run both WiFi
+and Bluetooth scanning concurrently. And I hate the idea of removing a
+feature.
+
+Next up is collecting a STAtion's Preferred Network List (PNL) - The set
+of SSIDs it's configured to automatically connect to. [There's a branch for
+that](https://github.com/chris-bc/wendigo/tree/collect-preferred-network-lists).
+If you put this list into a geolocation service such as Wigle you can
+get a good idea of where someone lives and works, the coffee shops they go
+to, etc. I find it spooky how transparent our personal lives are to anyone
+within a few hundred metres who cares to listen. And *maybe* sending them
+beacons, or setting up to serve probe responses (aka Mana). Possibly
+Bluetooth services.
+
 <a id="about-the-project"></a>
 
 ## About The Project
