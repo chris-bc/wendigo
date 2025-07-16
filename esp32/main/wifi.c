@@ -186,6 +186,14 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     }
     /* Assemble the packet so it can be sent all at once */
     uint8_t packet_len = WENDIGO_OFFSET_STA_AP_SSID + ssid_len + PREAMBLE_LEN;
+    /* Also account for the preferred network list, if it exists */
+    for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+        if (dev->radio.sta.saved_networks[i] != NULL) {
+            packet_len += strlen(dev->radio.sta.saved_networks[i]);
+        }
+        /* Account for the SSID_LEN byte - whether or not current SSID is NULL */
+        ++packet_len;
+    }
     uint8_t *packet = malloc(sizeof(uint8_t) * packet_len);
     if (packet == NULL) {
         return outOfMemory();
@@ -204,7 +212,28 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     if (ssid_len > 0) {
         memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, ssid, ssid_len);
     }
-    memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID + ssid_len, PACKET_TERM, PREAMBLE_LEN);
+    /* Send saved_networks_count */
+    memcpy(packet + WENDIGO_OFFSET_STA_PNL_COUNT, &(dev->radio.sta.saved_networks_count), sizeof(uint8_t));
+    /* Send saved_networks[] */
+    uint8_t packetIdx = WENDIGO_OFFSET_STA_AP_SSID + ssid_len;
+    uint8_t pnl_len;
+    for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+        if (dev->radio.sta.saved_networks[i] == NULL) {
+            pnl_len = 0;
+        } else {
+            pnl_len = strlen(dev->radio.sta.saved_networks[i]);
+        }
+        /* Add current SSID len */
+        memcpy(packet + packetIdx, &pnl_len, sizeof(uint8_t));
+        ++packetIdx;
+        /* Add current SSID */
+        if (pnl_len > 0) {
+            memcpy(packet + packetIdx, dev->radio.sta.saved_networks[i], pnl_len);
+            packetIdx += pnl_len;
+        }
+    }
+    /* Packet terminator */
+    memcpy(packet + packetIdx, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
     wendigo_get_tx_lock(true);
     send_bytes(packet, packet_len);
