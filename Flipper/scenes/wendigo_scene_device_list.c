@@ -2,6 +2,8 @@
 
 /** Public method from wendigo_scene_device_detail.c */
 extern void wendigo_scene_device_detail_set_device(wendigo_device *d);
+/** Public method from wendigo_scene_pnl_list.c */
+extern void wendigo_scene_pnl_list_set_device(wendigo_device *d);
 /** Internal method - I don't wan't to move all calling functions below it */
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem *item);
 
