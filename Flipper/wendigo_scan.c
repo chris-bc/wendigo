@@ -947,6 +947,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
 
 uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferWifiSta()");
+    // TODO: Refactor packet length to uint16_t
     uint8_t expectedLen = WENDIGO_OFFSET_STA_AP_SSID + PREAMBLE_LEN;
     if (packetLen < expectedLen) {
         /* Packet is too short - Log the issue along with the current packet */
@@ -964,10 +965,15 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
         FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiSta() - Short packet");
         return packetLen;
     }
-    /* Get ap_ssid_len to validate the full packet size */
+    /* Get ap_ssid_len and pnl_count to validate the full packet size */
     uint8_t ap_ssid_len;
+    uint8_t pnl_count;
     memcpy(&ap_ssid_len, packet + WENDIGO_OFFSET_STA_AP_SSID_LEN, sizeof(uint8_t));
     expectedLen += ap_ssid_len;
+    memcpy(&pnl_count, packet + WENDIGO_OFFSET_STA_PNL_COUNT, sizeof(uint8_t));
+    /* This still won't be the full packet length because each PNL has a 1-byte
+        length and a length-byte SSID */
+    expectedLen += pnl_count;
     if (packetLen < expectedLen) {
         /* Packet too short - Log and return */
         char *shortMsg = malloc(sizeof(char) * 57);
@@ -987,6 +993,7 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     }
     /* Initialise all pointers */
     dev->view = NULL;
+    dev->radio.sta.saved_networks = NULL;
     memcpy(dev->radio.sta.apMac, nullMac, MAC_BYTES);
     /* Temp variables for attributes that need to be transformed */
     uint8_t tagged;
@@ -1000,14 +1007,67 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     // sizeof(int64_t));
     memcpy(&tagged, packet + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(uint8_t));
     dev->tagged = (tagged == 1);
+    dev->radio.sta.saved_networks_count = pnl_count;
     memcpy(dev->radio.sta.apMac, packet + WENDIGO_OFFSET_STA_AP_MAC, MAC_BYTES);
     char ap_ssid[MAX_SSID_LEN + 1];
     bzero(ap_ssid, MAX_SSID_LEN + 1);
     memcpy(ap_ssid, packet + WENDIGO_OFFSET_STA_AP_SSID, ap_ssid_len);
     ap_ssid[ap_ssid_len] = '\0';
-    /* Do I want to do anything with ap_ssid? */
-    /* We should find the packet terminator after the SSID */
-    if (memcmp(PACKET_TERM, packet + WENDIGO_OFFSET_STA_AP_SSID + ap_ssid_len, PREAMBLE_LEN)) {
+    /* Do I want to do anything with ap_ssid? Not right now... */
+    if (pnl_count > 0) {
+        /* Retrieve pnl_count saved networks */
+        dev->radio.sta.saved_networks = malloc(sizeof(char *) * pnl_count);
+        if (dev->radio.sta.saved_networks == NULL) {
+            dev->radio.sta.saved_networks_count = 0;
+            // TODO: Alert insufficient memory
+        }
+    }
+    uint16_t packet_idx = WENDIGO_OFFSET_STA_AP_SSID + ap_ssid_len;
+    uint8_t pnl_idx = 0;
+    uint8_t this_pnl_len;
+    bool short_pkt = false;
+    while (pnl_idx < dev->radio.sta.saved_networks_count && !short_pkt) {
+        /* Ensure the packet is big enough */
+        if (packetLen > (packet_idx + PREAMBLE_LEN)) {
+            /* Get current SSID length */
+            memcpy(&this_pnl_len, packet + packet_idx, sizeof(uint8_t));
+            ++packet_idx;
+            /* Make sure the packet is big enough to contain the SSID */
+            if (packetLen > (packet_idx + this_pnl_len + PREAMBLE_LEN)) {
+                if (this_pnl_len == 0) {
+                    dev->radio.sta.saved_networks[pnl_idx] = NULL;
+                } else {
+                    dev->radio.sta.saved_networks[pnl_idx] = malloc(sizeof(char) *
+                        (this_pnl_len + 1));
+                    if (dev->radio.sta.saved_networks[pnl_idx] != NULL) {
+                        memcpy(dev->radio.sta.saved_networks[pnl_idx],
+                            packet + packet_idx, this_pnl_len);
+                    }
+                    packet_idx += this_pnl_len;
+                }
+                ++pnl_idx;
+            } else {
+                short_pkt = true;
+            }
+        } else {
+            short_pkt = true;
+        }
+    }
+    if (short_pkt) {
+        // TODO: Log error
+        if (pnl_idx > 0) {
+            for (uint8_t i = 0; i < pnl_idx; ++i) {
+                if (dev->radio.sta.saved_networks[i] != NULL) {
+                    free(dev->radio.sta.saved_networks[i]);
+                }
+            }
+        }
+        if (dev->radio.sta.saved_networks != NULL) {
+            free(dev->radio.sta.saved_networks);
+        }
+        dev->radio.sta.saved_networks_count = 0;
+    /* Otherwise we should find the packet terminator at packet_idx */
+    } else if (memcmp(PACKET_TERM, packet + packet_idx, PREAMBLE_LEN)) {
         // Popup disabled while debugging device list        wendigo_display_popup(
         //            app, "STA Packet", "STA Packet terminator not found where
         //            expected.");
@@ -1016,9 +1076,9 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
             MSG_ERROR, "STA packet terminator not found where expected, skipping.",
             packet, packetLen);
     } else {
-        wendigo_add_device(app, dev);
+        wendigo_add_device(app, dev); // TODO: Add PNL here
     }
-    wendigo_free_device(dev);
+    wendigo_free_device(dev); // TODO: Add PNL here
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiSta()");
     return packetLen;
 }
