@@ -305,6 +305,16 @@ This section is a running list of current priorities.
     * [X] Move data model definitions into a common header file, included by both ESP32 and Flipper apps
     * [X] Standardise data model as a struct with common attributes, and a union of specialised structs.
   * [X] Channel hopping
+  * [ ] Capture a STA's Preferred Network List
+    * [X] Extract PNL SSID's from probe requests
+    * [X] Maintain PNL in data model
+    * [X] Transmit PNL in packet to Flipper-Wendigo
+    * [ ] Parse PNL out of packet in Flipper-Wendigo
+    * [ ] Reconstruct PNL in Flipper-Wendigo's data model
+    * [ ] Display PNL in device list
+      * [ ] New STA option "%d SSIDs"
+      * [ ] New var_item_list-based scene wendigo_scene_network_list
+      * [ ] Displays new scene
   * [ ] Support for 5GHz channels (ESP32-C5)
   * [X] Display different options in wendigo_scene_device_list
     * [X] For STA
@@ -328,7 +338,7 @@ This section is a running list of current priorities.
   * [ ] Flipper service data model
 * [ ] Settings
   * [ ] Retrieve and change MACs
-  * [ ] Enable/Disable channels
+  * [X] Enable/Disable channels
 * [ ] Display device details
   * [ ] Update details when device updated
   * [ ] Use canvas view so properties can be layed out to (hopefully) make everything visible without scrolling
