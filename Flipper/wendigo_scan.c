@@ -473,6 +473,35 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
     } else if (dev->scanType == SCAN_WIFI_STA) {
         new_device->radio.sta.channel = dev->radio.sta.channel;
         memcpy(new_device->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
+        /* Copy saved_networks[] to new_device */
+        if (dev->radio.sta.saved_networks_count > 0 &&
+                dev->radio.sta.saved_networks != NULL) {
+            new_device->radio.sta.saved_networks_count = dev->radio.sta.saved_networks_count;
+            new_device->radio.sta.saved_networks = malloc(sizeof(char *) *
+                dev->radio.sta.saved_networks_count);
+            if (new_device->radio.sta.saved_networks == NULL) {
+                new_device->radio.sta.saved_networks_count = 0;
+            } else {
+                uint8_t this_ssid_len;
+                for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                    if (dev->radio.sta.saved_networks[i] == NULL) {
+                        new_device->radio.sta.saved_networks[i] = NULL;
+                    } else {
+                        this_ssid_len = strlen(dev->radio.sta.saved_networks[i]);
+                        new_device->radio.sta.saved_networks[i] = malloc(
+                            sizeof(char) * (this_ssid_len + 1));
+                        if (new_device->radio.sta.saved_networks[i] != NULL) {
+                            strncpy(new_device->radio.sta.saved_networks[i],
+                                dev->radio.sta.saved_networks[i], this_ssid_len);
+                            new_device->radio.sta.saved_networks[i][this_ssid_len] = '\0';
+                        }
+                    }
+                }
+            }
+        } else {
+            new_device->radio.sta.saved_networks = NULL;
+            new_device->radio.sta.saved_networks_count = 0;
+        }
     }
 
     /* If the device list scene is currently displayed, add the device to the UI */
