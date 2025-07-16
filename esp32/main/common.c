@@ -180,8 +180,32 @@ esp_err_t add_device(wendigo_device *dev) {
                     }
                 }
             } else if (dev->scanType == SCAN_WIFI_STA) {
-                // TODO: Copy saved_networks[]
-                // As long as free_device() isn't called on dev we can ignore this - memcpy() will cover everything needed.
+                /* Copy dev->radio.sta.saved_networks[] */
+                if (dev->radio.sta.saved_networks_count == 0) {
+                    devices[devices_count].radio.sta.saved_networks = NULL;
+                } else {
+                    devices[devices_count].radio.sta.saved_networks = malloc(
+                        sizeof(char *) * dev->radio.sta.saved_networks_count);
+                    if (devices[devices_count].radio.sta.saved_networks == NULL) {
+                        devices[devices_count].radio.sta.saved_networks_count = 0;
+                        // TODO: Error message
+                    } else {
+                        /* We have the array, copy the SSIDs */
+                        uint8_t ssid_len;
+                        for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                            if (dev->radio.sta.saved_networks[i] != NULL) {
+                                ssid_len = strlen(dev->radio.sta.saved_networks[i]);
+                                devices[devices_count].radio.sta.saved_networks[i] = malloc(
+                                    sizeof(char) * (ssid_len + 1));
+                                if (devices[devices_count].radio.sta.saved_networks[i] != NULL) {
+                                    strncpy(devices[devices_count].radio.sta.saved_networks[i],
+                                        dev->radio.sta.saved_networks[i], ssid_len);
+                                    devices[devices_count].radio.sta.saved_networks[i][ssid_len] = '\0';
+                                }
+                            }
+                        }
+                    }
+                }
             }
             ++devices_count;
         }
@@ -274,7 +298,43 @@ esp_err_t add_device(wendigo_device *dev) {
         } else if (dev->scanType == SCAN_WIFI_STA) {
             existingDevice->radio.sta.channel = dev->radio.sta.channel;
             memcpy(existingDevice->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
-            // TODO: Update saved_networks
+            /* Add any SSIDs in saved_networks[] that aren't already there.
+               First, count the number of new devices. */
+            uint8_t new_networks = 0;
+            uint8_t ssid_idx;
+            for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                /* Is dev->radio.sta.saved_networks[i] in existingDevice->radio.sta.saved_networks? */
+                ssid_idx = wendigo_index_of_string(dev->radio.sta.saved_networks[i],
+                    existingDevice->radio.sta.saved_networks,
+                    existingDevice->radio.sta.saved_networks_count);
+                if (ssid_idx == existingDevice->radio.sta.saved_networks_count) {
+                    ++new_networks;
+                }
+            }
+            new_networks += existingDevice->radio.sta.saved_networks_count;
+            char **new_pnl = realloc(existingDevice->radio.sta.saved_networks, sizeof(char *) * new_networks);
+            if (new_pnl != NULL) {
+                /* Append new SSIDs from dev->radio.sta.saved_networks */
+                uint8_t current_network = existingDevice->radio.sta.saved_networks_count;
+                uint8_t ssid_len;
+                for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count &&
+                        current_network < new_networks; ++i) {
+                    ssid_idx = wendigo_index_of_string(dev->radio.sta.saved_networks[i],
+                        new_pnl, existingDevice->radio.sta.saved_networks_count);
+                    if (ssid_idx == existingDevice->radio.sta.saved_networks_count) {
+                        /* Append the SSID */
+                        ssid_len = strlen(dev->radio.sta.saved_networks[i]);
+                        new_pnl[current_network] = malloc(sizeof(char) * (ssid_len + 1));
+                        if (new_pnl[current_network] != NULL) {
+                            strncpy(new_pnl[current_network], dev->radio.sta.saved_networks[i], ssid_len);
+                            new_pnl[current_network][ssid_len] = '\0';
+                            ++current_netork;
+                        }
+                    }
+                }
+                existingDevice->radio.sta.saved_networks = new_pnl;
+                existingDevice->radio.sta.saved_networks_count = new_networks;
+            }
         }
     }
     return result;

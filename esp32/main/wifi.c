@@ -412,7 +412,18 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
                 dev->radio.sta.saved_networks, dev->radio.sta.saved_networks_count);
             if (ssid_idx == dev->radio.sta.saved_networks_count) {
                 /* SSID not in STA's saved networks - Add it */
-                // TODO: realloc saved_networks, append SSID, inc saved_networks_count
+                char **new_pnl = realloc(dev->radio.sta.saved_networks,
+                    sizeof(char *) * (dev->radio.sta.saved_networks_count + 1));
+                if (new_pnl != NULL) {
+                    new_pnl[dev->radio.sta.saved_networks_count] = malloc(sizeof(char) * (ssid_len + 1));
+                    if (new_pnl[dev->radio.sta.saved_networks_count] != NULL) {
+                        strncpy(new_pnl[dev->radio.sta.saved_networks_count],
+                            ssid, ssid_len);
+                        new_pnl[dev->radio.sta.saved_networks_count][ssid_len] = '\0';
+                        dev->radio.sta.saved_networks = new_pnl;
+                        ++(dev->radio.sta.saved_networks_count);
+                    }
+                }
             } else {
                 free(ssid);
                 ssid = NULL;
@@ -428,7 +439,7 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     }
     display_wifi_device(dev, creating);
     if (creating) {
-        free(dev);
+        free_device(dev);
     }
     return result;
 }
