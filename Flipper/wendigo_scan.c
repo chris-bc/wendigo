@@ -1126,12 +1126,12 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
              * anyway, just without its Preferred Network List. */
             dev->radio.sta.saved_networks_count = 0;
             skip_validation = true;
-            char *errMsg = malloc(sizeof(char) * 38);
+            char *errMsg = malloc(sizeof(char) * 39);
             if (errMsg == NULL) {
                 wendigo_log_with_packet(MSG_ERROR, "Can't allocate PNL.",
                     packet, packetLen);
             } else {
-                snprintf(errMsg, 38, "Failed to allocate %d bytes for PNL.",
+                snprintf(errMsg, 39, "Failed to allocate %d bytes for PNL.",
                     sizeof(char *) * pnl_count);
                 wendigo_log_with_packet(MSG_WARN, errMsg, packet, packetLen);
                 free(errMsg);
