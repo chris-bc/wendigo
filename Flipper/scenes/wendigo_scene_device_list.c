@@ -30,6 +30,7 @@ enum wendigo_device_list_ap_options {
   WendigoOptionAPRSSI = 0,
   WendigoOptionAPTagUntag,
   WendigoOptionAPScanType,
+  WendigoOptionAPStaCount,
   WendigoOptionAPAuthMode,
   WendigoOptionAPChannel,
   WendigoOptionAPLastSeen,
@@ -40,6 +41,7 @@ enum wendigo_device_list_sta_options {
   WendigoOptionSTARSSI = 0,
   WendigoOptionSTATagUntag,
   WendigoOptionSTAScanType,
+  WendigoOptionSTASavedNetworks,
   WendigoOptionSTAAP,
   WendigoOptionSTAChannel,
   WendigoOptionSTALastSeen,
@@ -313,6 +315,10 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
           (dev->scanType == SCAN_WIFI_AP)  ? "WiFi AP"
                                             : "Unknown");
         break;
+      case WendigoOptionAPStaCount:
+        snprintf(optionValue, sizeof(optionValue), "%d Stations Found",
+          dev->radio.ap.stations_count);
+        break;
       default:
         // Nothing
         break;
@@ -365,6 +371,10 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
         snprintf(optionValue, sizeof(optionValue), "%s",
           (dev->scanType == SCAN_WIFI_STA) ? "WiFi STA"
                                             : "Unknown");
+        break;
+      case WendigoOptionSTASavedNetworks:
+        snprintf(optionValue, sizeof(optionValue), "%d Saved Networks",
+          dev->radio.sta.saved_networks_count);
         break;
       default:
         /* Nothing to do, I think */
