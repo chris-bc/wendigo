@@ -749,13 +749,15 @@ bool wendigo_scene_device_list_on_event(void *context,
         variable_item_list_get_selected_item_index(app->devices_var_item_list);
     consumed = true;
 
-    /* Update displayed value for any device where lastSeen is currently selected */
+    /* Update displayed value for any device where the currently-selected
+        option is subject to change - lastSeen, RSSI, saved_networks_count,
+        stations_count, STA's AP, or authMode */
     char elapsedStr[7];
     uint32_t now = furi_hal_rtc_get_timestamp();
     for (uint16_t i = 0; i < current_devices_count; ++i) {
       if (current_devices != NULL && current_devices[i] != NULL &&
-          current_devices[i]->view != NULL &&
-          (((current_devices[i]->scanType == SCAN_HCI ||
+          current_devices[i]->view != NULL) {
+        if (((current_devices[i]->scanType == SCAN_HCI ||
             current_devices[i]->scanType == SCAN_BLE) &&
             variable_item_get_current_value_index(current_devices[i]->view) ==
                 WendigoOptionBTLastSeen) ||
@@ -764,12 +766,44 @@ bool wendigo_scene_device_list_on_event(void *context,
                 WendigoOptionAPLastSeen) ||
             (current_devices[i]->scanType == SCAN_WIFI_STA &&
             variable_item_get_current_value_index(current_devices[i]->view) ==
-                WendigoOptionSTALastSeen))) {
-        /* Update option text if lastSeen is selected for this device */
-        _elapsedTime(&(current_devices[i]->lastSeen), &now, elapsedStr,
+                WendigoOptionSTALastSeen)) {
+          /* Update lastSeen for this device */
+          _elapsedTime(&(current_devices[i]->lastSeen), &now, elapsedStr,
                       sizeof(elapsedStr));
-        variable_item_set_current_value_text(current_devices[i]->view,
-                                            elapsedStr);
+          variable_item_set_current_value_text(current_devices[i]->view,
+                                              elapsedStr);
+        } else if (((current_devices[i]->scanType == SCAN_HCI ||
+            current_devices[i]->scanType == SCAN_BLE) &&
+            variable_item_get_current_value_index(current_devices[i]->view) ==
+            WendigoOptionBTRSSI) || (current_devices[i]->scanType ==
+            SCAN_WIFI_AP && variable_item_get_current_value_index(
+              current_devices[i]->view) == WendigoOptionAPRSSI) ||
+            (current_devices[i]->scanType == SCAN_WIFI_STA &&
+            variable_item_get_current_value_index(current_devices[i]->view) ==
+            WendigoOptionSTARSSI)) {
+          /* Update RSSI for the current device */
+          // TODO
+        } else if (current_devices[i]->scanType == SCAN_WIFI_AP &&
+            variable_item_get_current_value_index(current_devices[i]->view) ==
+            WendigoOptionAPStaCount) {
+          /* Update stations_count for the current device */
+          // TODO
+        } else if (current_devices[i]->scanType == SCAN_WIFI_AP &&
+            variable_item_get_current_value_index(current_devices[i]->view) ==
+            WendigoOptionAPAuthMode) {
+          /* Update authMode for the current device */
+          // TODO
+        } else if (current_devices[i]->scanType == SCAN_WIFI_STA &&
+            variable_item_get_current_value_index(current_devices[i]->view) ==
+            WendigoOptionSTASavedNetworks) {
+          /* Update saved_networks_count for the current device */
+          // TODO
+        } else if (current_devices[i]->scanType == SCAN_WIFI_STA &&
+            variable_item_get_current_value_index(current_devices[i]->view) ==
+            WendigoOptionSTAAP) {
+          /* Update displayed AP for the current device */
+          // TODO
+        }
       }
     }
   }
