@@ -660,7 +660,7 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem *ite
       char *macStr = malloc(sizeof(char) * (1 + MAC_STRLEN));
       if (msg != NULL && macStr != NULL) {
         bytes_to_string(menu_item->mac, MAC_BYTES, macStr);
-        snprintf(msg, sizeof(char) * (68 + MAC_STRLEN),
+        snprintf(msg, 68 + MAC_STRLEN,
                 "Invalid scanType (%d) / optionIndex (%d) combination for device %s.",
                 menu_item->scanType, option_index, macStr);
         wendigo_log(MSG_ERROR, msg);
@@ -731,7 +731,7 @@ bool wendigo_scene_device_list_on_event(void *context,
     default:
       char *msg = malloc(sizeof(char) * 54);
       if (msg != NULL) {
-        snprintf(msg, sizeof(char) * 54,
+        snprintf(msg, 54,
                 "wendigo_scene_device_list received unknown event %ld.",
                 event.event);
         wendigo_log(MSG_WARN, msg);

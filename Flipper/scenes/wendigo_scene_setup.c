@@ -47,7 +47,7 @@ static void wendigo_scene_setup_var_list_enter_callback(void *context, uint32_t 
                 } else {
                     char *msg = malloc(sizeof(char) * 83);
                     if (msg != NULL) {
-                        snprintf(msg, sizeof(char) * 83,
+                        snprintf(msg, 83,
                             "wendigo_scene_setup_var_list_enter_callback(): Invalid selected_option_index: %d.",
                             selected_option_index);
                         wendigo_log(MSG_ERROR, msg);
@@ -90,7 +90,7 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem *item) {
                 default:
                     char *msg = malloc(sizeof(char) * 72);
                     if (msg != NULL) {
-                        snprintf(msg, sizeof(char) * 72,
+                        snprintf(msg, 72,
                             "wendigo_scene_setup_var_list_change_callback(): Invalid item_index %d.",
                             item_index);
                         wendigo_log(MSG_ERROR, msg);
@@ -110,7 +110,7 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem *item) {
             } else {
                 char *msg = malloc(sizeof(char) * 81);
                 if (msg != NULL) {
-                    snprintf(msg, sizeof(char) * 81,
+                    snprintf(msg, 81,
                         "wendigo_scene_setup_var_list_change_callback(): Unknown interface selected %s.",
                         menu_item->item_string);
                     wendigo_log(MSG_ERROR, msg);
@@ -155,7 +155,7 @@ void wendigo_scene_setup_on_enter(void *context) {
             } else {
                 char *msg = malloc(sizeof(char) * 65);
                 if (msg != NULL) {
-                    snprintf(msg, sizeof(char) * 65,
+                    snprintf(msg, 65,
                         "wendigo_scene_setup_on_enter(): Unknown interface selected %s.",
                         items[i].item_string);
                     wendigo_log(MSG_ERROR, msg);

@@ -142,7 +142,7 @@ static void wendigo_scene_start_var_list_enter_callback(void *context, uint32_t 
                 default:
                     char *msg = malloc(sizeof(char) * 72);
                     if (msg != NULL) {
-                        snprintf(msg, sizeof(char) * 72,
+                        snprintf(msg, 72,
                             "wendigo_scene_start_var_list_enter_callback(): Invalid help option %d.",
                             selected_option_index);
                         wendigo_log(MSG_ERROR, msg);

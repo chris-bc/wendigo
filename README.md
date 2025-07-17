@@ -270,9 +270,6 @@ Alternatively you can connect ESP32-Wendigo to any device with a serial console 
 
 This section is a running list of current priorities.
 
-* [ ] BUG: ESP32 returns an RSSI of -4 or 3854 for many devices. I think this is a particular packet type, resulting in an invalid initial value that is resolved by subsequent packets. Figure out why & fix.
-  * [ ] If I'm right about it being characteristic of a particular packet type the "fix" might just be detecting invalid RSSI and replacing with 0 or -127 (that's the minimum, right?)
-* [ ] Review wifi.c for possible memory leaks resulting from its parsers calling free() rather than free_device()
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [ ] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped - Use a single menu option that changes its text, similar to Tag/Untag.
 * [X] Combined Bluetooth packet for BT Classic and LE devices
@@ -310,10 +307,10 @@ This section is a running list of current priorities.
     * [X] Maintain PNL in data model
     * [X] Transmit PNL in packet to Flipper-Wendigo
     * [X] Parse PNL out of packet in Flipper-Wendigo
-    * [X] Reconstruct PNL in Flipper-Wendigo's data model
-    * [ ] Display PNL in device list
-      * [ ] New STA option "%d SSIDs"
-      * [ ] New var_item_list-based scene wendigo_scene_network_list
+    * [ ] Reconstruct PNL in Flipper-Wendigo's data model
+    * [X] Display PNL in device list
+      * [X] New STA option "%d SSIDs"
+      * [X] New var_item_list-based scene wendigo_scene_network_list
       * [ ] Displays new scene
   * [ ] Support for 5GHz channels (ESP32-C5)
   * [X] Display different options in wendigo_scene_device_list
