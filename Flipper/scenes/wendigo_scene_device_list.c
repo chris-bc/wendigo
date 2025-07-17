@@ -633,6 +633,16 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem *ite
       snprintf(tempStr, sizeof(tempStr), "%s",
                 wifi_auth_mode_strings[menu_item->radio.ap.authmode]);
       variable_item_set_current_value_text(item, tempStr);
+    } else if (menu_item->scanType == SCAN_WIFI_AP &&
+              option_index == WendigoOptionAPStaCount) {
+      snprintf(tempStr, sizeof(tempStr), "%d Stations Found",
+              menu_item->radio.ap.stations_count);
+      variable_item_set_current_value_text(item, tempStr);
+    } else if (menu_item->scanType == SCAN_WIFI_STA &&
+              option_index == WendigoOptionSTASavedNetworks) {
+      snprintf(tempStr, sizeof(tempStr), "%d Saved Networks",
+              menu_item->radio.sta.saved_networks_count);
+      variable_item_set_current_value_text(item, tempStr);
     } else if (menu_item->scanType == SCAN_WIFI_STA &&
                 option_index == WendigoOptionSTAAP) {
       /* Use SSID if available, otherwise MAC */
