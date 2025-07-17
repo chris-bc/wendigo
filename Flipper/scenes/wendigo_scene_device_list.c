@@ -536,12 +536,27 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       item->view = NULL; // TODO: Is this leaking memory? Can I free a VariableItem?
       wendigo_scene_device_list_redraw(app);
     }
+  } else if (item->view != NULL && ((item->scanType == SCAN_WIFI_AP &&
+      variable_item_get_current_value_index(item->view) ==
+      WendigoOptionAPStaCount) || (item->scanType == SCAN_WIFI_STA &&
+      variable_item_get_current_value_index(item->view) ==
+      WendigoOptionSTAAP))) {
+    // TODO: Figure out how to set current_devices[] to either the AP's STAs or the STA's AP
+    view_dispatcher_send_custom_event(app->view_dispatcher,
+      Wendigo_EventListDevices);
+  } else if (item->view != NULL && item->scanType == SCAN_WIFI_STA &&
+      variable_item_get_current_value_index(item->view) ==
+        WendigoOptionSTASavedNetworks) {
+    /* Tell the scene which device we're interested in */
+    wendigo_scene_pnl_list_set_device(item);
+    view_dispatcher_send_custom_event(app->view_dispatcher,
+      Wendigo_EventListNetworks);
   } else {
     /* Display details for `item` */
     wendigo_scene_device_detail_set_device(item);
     // TODO Fix detail scene, then
     // view_dispatcher_send_custom_event(app->view_dispatcher,
-    // Wendigo_EventListDevices);
+    // Wendigo_EventListDeviceDetails);
   }
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_var_list_enter_callback()");
 }
@@ -551,7 +566,7 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem *ite
   furi_assert(item);
 
   /* app->device_list_selected_menu_index should reliably point to the selected
-     menu item. Use that to obtain the flipper_bt_device* */
+     menu item. Use that to obtain the wendigo_device* */
   WendigoApp *app = variable_item_get_context(item);
   app->device_list_selected_menu_index =
       variable_item_list_get_selected_item_index(app->devices_var_item_list);
@@ -694,11 +709,19 @@ bool wendigo_scene_device_list_on_event(void *context,
 
   if (event.type == SceneManagerEventTypeCustom) {
     switch (event.event) {
-    case Wendigo_EventListDevices:
+    case Wendigo_EventListDeviceDetails:
       scene_manager_set_scene_state(app->scene_manager, WendigoSceneDeviceList,
                                     app->device_list_selected_menu_index);
       scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceDetail);
       break;
+    case Wendigo_EventListDevices:
+      // TODO: List an AP's STAs or a STA's AP
+      break;
+    case Wendigo_EventListNetworks:
+        scene_manager_set_scene_state(app->scene_manager, WendigoSceneDeviceList,
+                                      app->device_list_selected_menu_index);
+        scene_manager_next_scene(app->scene_manager, WendigoScenePNLList);
+        break;
     default:
       char *msg = malloc(sizeof(char) * 54);
       if (msg != NULL) {

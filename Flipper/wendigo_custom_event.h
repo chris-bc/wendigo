@@ -10,4 +10,6 @@ typedef enum {
     Wendigo_EventStartHelp,
     Wendigo_EventDisplayStatus,
     Wendigo_EventListDevices,
+    Wendigo_EventListNetworks,
+    Wendigo_EventListDeviceDetails,
 } Wendigo_CustomEvent;
