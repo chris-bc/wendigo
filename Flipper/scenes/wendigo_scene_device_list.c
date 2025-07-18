@@ -529,7 +529,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
         (item->scanType == SCAN_WIFI_STA &&
         variable_item_get_current_value_index(item->view) ==
             WendigoOptionSTATagUntag))) {
-    wendigo_set_device_selected(item, !item->tagged);
+    item->tagged = !(item->tagged);
     variable_item_set_current_value_text(item->view,
                                         (item->tagged) ? "Untag" : "Tag");
     /* If the device is now untagged and we're viewing tagged devices only,

@@ -11,11 +11,8 @@ char *wendigo_popup_text = NULL; // I suspect the popup text is going out of
 
 /* Device caches */
 wendigo_device **devices = NULL;
-wendigo_device **selected_devices = NULL;
 uint16_t devices_count = 0;
-uint16_t selected_devices_count = 0;
 uint16_t devices_capacity = 0;
-uint16_t selected_devices_capacity = 0;
 
 /* How much will we increase bt_devices[] by when additional space is needed? */
 #define INC_DEVICE_CAPACITY_BY 10
@@ -100,55 +97,6 @@ void wendigo_esp_status(WendigoApp *app) {
 void wendigo_version(WendigoApp *app) {
     char cmd[] = "v\n";
     wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
-}
-
-/** Manage the tagged/selected status of the specified wendigo_device
- *  Maintains selected_devices[] as needed
- */
-bool wendigo_set_device_selected(wendigo_device *device, bool selected) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_device_selected()");
-    /* NULL device check */
-    if (device == NULL) {
-        return false;
-    }
-    if (selected && !device->tagged) {
-        /* Add device to selected_devices[] */
-        if (selected_devices_capacity == selected_devices_count) {
-            /* Extend selected_devices[] */
-            wendigo_device **new_devices = realloc(selected_devices,
-                sizeof(wendigo_device *) * (selected_devices_capacity + 1));
-            if (new_devices == NULL) {
-                char *msg = malloc(sizeof(char) * 67);
-                if (msg != NULL) {
-                    snprintf(msg, 67, "Failed to expand selected_devices[] to hold %d wendigo_device*.",
-                        selected_devices_capacity + 1);
-                    wendigo_log(MSG_ERROR, msg);
-                    free(msg);
-                }
-                return false;
-            }
-            selected_devices = new_devices;
-            ++selected_devices_capacity;
-        }
-        selected_devices[selected_devices_count++] = device;
-        // TODO: Sort
-    } else if (device->tagged && !selected) {
-        /* Remove device from selected_devices[] - custom_device_index() will safely
-         * handle any NULLs */
-        /* Not using 16 bits because nobody's going to select 255 devices */
-        uint8_t index = (uint8_t)custom_device_index(device, selected_devices,
-                                                        selected_devices_count);
-        if (index < selected_devices_count) {
-            /* Shuffle forward all subsequent devices, replacing device at `index` */
-            for (++index; index < selected_devices_count; ++index) {
-                selected_devices[index - 1] = selected_devices[index];
-            }
-            selected_devices[selected_devices_count--] = NULL;
-        }
-    }
-    device->tagged = selected;
-    FURI_LOG_T(WENDIGO_TAG, "End wendigo_set_device_selected()");
-    return true;
 }
 
 /** Enable or disable Wendigo scanning on all interfaces, using app->interfaces
@@ -735,20 +683,12 @@ void wendigo_free_device(wendigo_device *dev) {
 }
 
 /** Deallocates all memory allocated to the device cache.
- * This function deallocates all elements of the device cache, devices[] and
- * selected_devices[]. These arrays are left in a coherent state, with the
- * arrays set to NULL and their count & capacity variables set to zero.
+ * This function deallocates all elements of the device cache, devices[].
+ * These arrays are left in a coherent state, with the arrays set to
+ * NULL and their count & capacity variables set to zero.
  */
 void wendigo_free_devices() {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_free_devices()");
-    /* Start by freeing selected_devices[] */
-    if (selected_devices_capacity > 0 && selected_devices != NULL) {
-        free(selected_devices); /* Elements will be freed when addressing
-                                   bt_devices[] */
-        selected_devices = NULL;
-        selected_devices_count = 0;
-        selected_devices_capacity = 0;
-    }
     /* For devices[] we also want to free device attributes and the devices
      * themselves */
     if (devices_capacity > 0 && devices != NULL) {

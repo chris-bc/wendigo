@@ -2,7 +2,7 @@ DONE * Add auth mode (find it in probe response)
 DONE * Change channel and RSSI back to integers
 DONE * Make SSID variable-length
 DONE * Update wendigo_wifi_ap and wendigo_wifi_sta to hold MACs, not object pointers
-* Add network_list[] to STA data model and packet
+DONE * Add network_list[] to STA data model and packet
 
 DONE * Refactor wendigo_device free/cleanup functions
 REMOVED * Fix interactive mode display bug by only updating lastSeen if the required period has elapsed - Kludgey, but it'll probably never be used anyway - And Flipper creates its own timestamp so it won't affect Flipper-Wendigo
@@ -11,3 +11,40 @@ DONE * Review ESP32 wifi parsers and ensure that a STA's AP and an AP's STA have
 DONE * Update display_wifi_ap_interactive
 DONE * Update parseBufferWifiAp()
 * Check whether 802.11 data packets can be sent between stations - Currently the parser assumes that a STA will only be sending a data packet to an AP
+
+* Turn buffer into a furi_string
+    * Flipper takes care of memory management
+    * Can append
+    * Can remove the first n chars
+* Then, on rx:
+    * Get buffer mutex
+    * Append bytes
+    * While there are complete packets (start < end && end < buffLen)
+        * Copy substring start..end to a new string
+        * Append the string to an array of packets
+        * Remove all bytes up to end of packet from buffer
+        * Call start_of_packet() and end_of_packet()
+    * Release buffer mutex
+    * Foreach packet in packets[]
+        * parsePacket()
+        * Free string
+* wendigo_add_device()
+    * Acquire device mutex when realloc()ing and when appending
+    * Release when devices[] has been set to the result of realloc(), and count has been incremented to avoid 2 devices being put in the same element
+
+furi_string_alloc()
+furi_string_free(theStr)
+const char *furi_string_get_cstr(theStr)
+furi_string_cat(str1, str2)
+furi_string_cat_str(str1, char *str2)
+furi_string_search(strPacket, strNeedle, startIdx)
+furi_string_search_str(strPacket, char *needle, startIdx)
+furi_string_left(theStr, nBytes)
+
+// Mutex - base.h thread.h
+FuriMutex *furi_mutex_alloc(FuriMutexType type) => FuriMutexTypeNormal, FuriMutexTypeRecursive
+furi_mutex_free(theMutex)
+FuriStatus furi_mutex_acquire(theMutex, uint32_t timeout) => 0xffffffff?
+FuriStatus furi_mutex_release(theMutex)
+FuriStatusOk is an important status
+FuriWaitForever is a good timeout
