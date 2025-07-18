@@ -59,14 +59,12 @@ char *radioShortNames[DEF_SCAN_COUNT] = { "HCI", "BLE", "WiFi AP", "WiFi STA", "
 char *radioFullNames[DEF_SCAN_COUNT] = { "Bluetooth Classic", "Bluetooth Low Energy", "WiFi Access Point", "WiFi Station", "Interactive Mode", "Tag Devices", "Focus Mode" };
 uint8_t nullMac[MAC_BYTES] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t broadcastMac[MAC_BYTES] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+/* Mutex to keep UART packets from being interleaved */
+SemaphoreHandle_t uartMutex;
 
 /* Device caches accessible across Wendigo */
 extern uint16_t devices_count;
 extern wendigo_device *devices;
-
-/* Concurrency management */
-bool wendigo_get_tx_lock(bool wait);
-void wendigo_release_tx_lock();
 
 /* Function declarations */
 esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount);

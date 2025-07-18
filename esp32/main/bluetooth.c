@@ -1,4 +1,8 @@
 #include "bluetooth.h"
+#include "common.h"
+#include "esp_err.h"
+#include "freertos/idf_additions.h"
+#include "portmacro.h"
 #include "uuids.c"
 
 #define REMOTE_SERVICE_UUID     0x00FF
@@ -183,9 +187,12 @@ esp_err_t display_gap_uart(wendigo_device *dev) {
     memcpy(packet + WENDIGO_OFFSET_BT_BDNAME + dev->radio.bluetooth.bdname_len +
         dev->radio.bluetooth.eir_len + cod_len, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
-    wendigo_get_tx_lock(true);
-    send_bytes(packet, packet_len);
-    wendigo_release_tx_lock();
+    if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
+        send_bytes(packet, packet_len);
+        xSemaphoreGive(uartMutex);
+    } else {
+        result = ESP_ERR_INVALID_STATE;
+    }
     free(packet);
     return result;
 }

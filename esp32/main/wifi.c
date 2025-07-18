@@ -1,4 +1,8 @@
 #include "wifi.h"
+#include "common.h"
+#include "esp_err.h"
+#include "freertos/idf_additions.h"
+#include "portmacro.h"
 
 /* Array of channels that are to be included in channel hopping.
    At startup this is initialised to include all supported channels. */
@@ -81,9 +85,12 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     }
     memcpy(packet + current_offset, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
-    wendigo_get_tx_lock(true);
-    send_bytes(packet, packet_len);
-    wendigo_release_tx_lock();
+    if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
+        send_bytes(packet, packet_len);
+        xSemaphoreGive(uartMutex);
+    } else {
+        result = ESP_ERR_INVALID_STATE;
+    }
     free(packet);
     return result;
 }
@@ -235,9 +242,12 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     /* Packet terminator */
     memcpy(packet + packetIdx, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
-    wendigo_get_tx_lock(true);
-    send_bytes(packet, packet_len);
-    wendigo_release_tx_lock();
+    if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
+        send_bytes(packet, packet_len);
+        xSemaphoreGive(uartMutex);
+    } else {
+        result = ESP_ERR_INVALID_STATE;
+    }
     free(packet);
     return result;
 }
@@ -1036,6 +1046,7 @@ bool wendigo_is_valid_channel(uint8_t channel) {
  * the packet consists of <Preamble><Channel Count><Channel bytes><Terminator>.
  */
 esp_err_t wendigo_get_channels() {
+    esp_err_t result = ESP_OK;
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         printf("%d channels included in WiFi channel hopping: ", channels_count);
         for (uint8_t i = 0; i < channels_count; ++i) {
@@ -1058,12 +1069,15 @@ esp_err_t wendigo_get_channels() {
         }
         memcpy(packet + WENDIGO_OFFSET_CHANNELS + channels_count, PACKET_TERM, PREAMBLE_LEN);
         /* Transmit the packet */
-        wendigo_get_tx_lock(true);
-        send_bytes(packet, packetLen);
-        wendigo_release_tx_lock();
+        if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
+            send_bytes(packet, packetLen);
+            xSemaphoreGive(uartMutex);
+        } else {
+            result = ESP_ERR_INVALID_STATE;
+        }
         free(packet);
     }
-    return ESP_OK;
+    return result;
 }
 
 /** Set the channels that are to be included in channel hopping.

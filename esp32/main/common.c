@@ -5,41 +5,6 @@ uint16_t devices_count = 0;
 uint16_t devices_capacity = 0;
 wendigo_device *devices;
 
-static bool uart_tx_lock = false;
-/** Obtain exclusive rights to transmit UART data.
- * When the version and status commands were implemented we began seeing interleaved packets,
- * as Bluetooth packets were sent at the same time as version/status packets. With the
- * addition of WiFi packets this has become more problematic, particularly because WiFi
- * packets reference other WiFi devices (Stations reference their AP and APs reference their
- * stations).
- * This is an imperfect semaphore implementation - Before transmitting a function should
- * obtain a transmit lock to ensure it will be the only function transmitting.
- * The `wait` argument specifies whether the caller will wait until the lock can be obtained
- * or wants an immediate response.
- * Returns true if the lock was successfully obtained, false otherwise.
- */
-bool wendigo_get_tx_lock(bool wait) {
-    if (wait) {
-        while (uart_tx_lock) {
-            vTaskDelay(1 / portTICK_PERIOD_MS); // Delay 1ms
-        }
-    }
-    if (!uart_tx_lock) {
-        uart_tx_lock = true;
-        return true;
-    }
-    if (wait) {
-        /* We nearly got a lock, but someone else beat us to it */
-        return wendigo_get_tx_lock(true);
-    }
-    return false;
-}
-
-/** Release the transmission semaphore */
-void wendigo_release_tx_lock() {
-    uart_tx_lock = false;
-}
-
 /** Locates a device with the MAC of the specified device in devices[] cache.
  * Returns a pointer to the object in devices[] if found, NULL otherwise.
  */
