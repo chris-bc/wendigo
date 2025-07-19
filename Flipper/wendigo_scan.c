@@ -1378,33 +1378,6 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     uint16_t packetLen;
     uint16_t startIdx = start_of_packet(buffer, bufferLen);
     uint16_t endIdx = end_of_packet(buffer, bufferLen);
-    while (endIdx < startIdx) {
-        /* A corrupted packet has an end sequence but not a start sequence - NULL it
-         * and find the next end sequence */
-        memset(buffer, 0, endIdx + 1);
-        endIdx = end_of_packet(buffer, bufferLen);
-        wendigo_log(MSG_DEBUG,
-            "Found a spurious packet terminator, trying again.");
-    }
-    /* Another instance of packet corruption (can probably be removed once
-     * concurrency is properly catered for) is a preamble, part of a packet,
-     * and then a preamble and packet. Is there a second preamble before the
-     * packet terminator? */
-     // TODO: Not sure why this infinite loops???
-    // uint16_t start2 = start_of_packet(buffer + startIdx + PREAMBLE_LEN,
-    //     bufferLen - startIdx - PREAMBLE_LEN + 1);
-    // while (start2 < endIdx) {
-    //     /* Found a second preamble. Use it as the actual packet
-    //      * and null earlier data. */
-    //     startIdx += start2 + PREAMBLE_LEN;
-    //     memset(buffer, 0, startIdx);
-    //     start2 = start_of_packet(buffer + startIdx + PREAMBLE_LEN,
-    //         bufferLen - startIdx - PREAMBLE_LEN + 1);
-    // }
-    /* To minimise the time we hold the mutex, instead of parsing packets in
-     * the following loop, collect the packets and parse them after we hand
-     * back the mutex.
-     */
     uint8_t **packets = NULL;
     uint16_t *packetSize = NULL;
     uint8_t packetsCount = 0;
@@ -1461,21 +1434,6 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
         /* Get the next start and end indices, ready for the next iteration */
         startIdx = start_of_packet(buffer, bufferLen);
         endIdx = end_of_packet(buffer, bufferLen);
-        /* If endIdx < startIdx, erase endIdx+1 bytes & find next terminator */
-        while (endIdx < startIdx) {
-            memset(buffer, 0, endIdx + 1);
-            endIdx = end_of_packet(buffer, bufferLen);
-        }
-        /* Is there a second start_of_packet() before endIdx? */
-        // start2 = start_of_packet(buffer + startIdx + PREAMBLE_LEN,
-        //     bufferLen - startIdx - PREAMBLE_LEN + 1);
-        // while (start2 < endIdx) {
-        //     /* Found a second preamble - Use it instead & null the previous */
-        //     startIdx += start2 + PREAMBLE_LEN;
-        //     memset(buffer, 0, startIdx);
-        //     start2 = start_of_packet(buffer + startIdx + PREAMBLE_LEN,
-        //         bufferLen - startIdx - PREAMBLE_LEN + 1);
-        // }
     }
     /* Have we been able to empty the buffer? */
     if (startIdx == bufferLen && endIdx == bufferLen) {
@@ -1494,7 +1452,6 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
             bufferLen = 0;
         }
     }
-
     /* Release the mutex and parse the packets */
     furi_mutex_release(app->bufferMutex);
     for (uint8_t i = 0; i < packetsCount; ++i) {
