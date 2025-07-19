@@ -1324,6 +1324,10 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     furi_assert(context);
     WendigoApp *app = context;
 
+    /* Get a mutex lock on the buffer */
+    // TODO: I'm assuming it's relatively safe to ignore the result here
+    furi_mutex_acquire(app->bufferMutex, FuriWaitForever);
+
     /* Extend the buffer if necessary */
     if (bufferLen + len >= bufferCap) {
         /* Extend it by the larger of len and BUFFER_INC_CAPACITY_BY bytes to avoid constant realloc()s */
@@ -1334,6 +1338,8 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
         if (newCapacity > BUFFER_MAX_SIZE) {
             // TODO: Come up with an alternate way to do this
             FURI_LOG_D(WENDIGO_TAG, "Buffer too large");
+            /* Release mutex before returning */
+            furi_mutex_release(app->bufferMutex);
             return;
             /* Remove increase_by bytes from beginning of buffer[] instead */
             uint8_t *new_start = buffer + increase_by;
@@ -1344,7 +1350,20 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
             uint8_t *newBuffer = realloc(buffer, sizeof(uint8_t *) * newCapacity); // Behaves like malloc() when buffer==NULL
             if (newBuffer == NULL) {
                 /* Out of memory */
-                // TODO: Panic
+                // Unable to expand UART buffer to %d bytes, abandoning rx.
+                char *strMsg = malloc(sizeof(char) * 59);
+                if (strMsg == NULL) {
+                    wendigo_log(MSG_ERROR,
+                        "Unable to allocate memory for UART buffer.");
+                } else {
+                    snprintf(strMsg, 59,
+                        "Unable to expand UART buffer to %d bytes, abandoning rx.",
+                        newCapacity);
+                    wendigo_log(MSG_ERROR, strMsg);
+                    free(strMsg);
+                }
+                /* Release buffer mutex */
+                furi_mutex_release(app->bufferMutex);
                 return;
             }
             buffer = newBuffer;
@@ -1361,32 +1380,93 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     uint16_t endIdx = end_of_packet(buffer, bufferLen);
     if (endIdx < startIdx) {
         /* A corrupted packet has an end sequence but not a start sequence - NULL it
-            and find the next end sequence */
+         * and find the next end sequence */
         memset(buffer, 0, endIdx + 1);
         endIdx = end_of_packet(buffer, bufferLen);
     }
+    /* Another instance of packet corruption (can probably be removed once
+     * concurrency is properly catered for) is a preamble, part of a packet,
+     * and then a preamble and packet. Is there a second preamble before the
+     * packet terminator? */
+    uint16_t start2 = start_of_packet(buffer + startIdx + PREAMBLE_LEN,
+        bufferLen - startIdx - PREAMBLE_LEN + 1);
+    if (start2 < endIdx) {
+        /* Found a second preamble. Use it as the actual packet
+         * and null earlier data. */
+        startIdx += start2 + PREAMBLE_LEN;
+        memset(buffer, 0, startIdx);
+    }
+    /* To minimise the time we hold the mutex, instead of parsing packets in
+     * the following loop, collect the packets and parse them after we hand
+     * back the mutex.
+     */
+    uint8_t **packets = NULL;
+    uint16_t *packetSize = NULL;
+    uint8_t packetsCount = 0;
     while (startIdx < endIdx && endIdx < bufferLen) {
         /* We have a complete packet - extract it for parsing */
         packetLen = endIdx - startIdx + 1;
         packet = buffer + startIdx;
-
-        parsePacket(app, packet, packetLen);
-
-        /* Remove this packet from the buffer and look for another */
-        memset(buffer + startIdx, 0, packetLen);
-        /* If startIdx > 0 all non-NULL bytes before startIdx are spurious - remove them */
-        if (startIdx > 0) {
-            FURI_LOG_D(WENDIGO_TAG, "startIdx %d, NULLING previous bytes\n",
-                startIdx);
-            memset(buffer, 0, startIdx);
+        /* Copy the packet into packets[] so we can deal with it later */
+        uint8_t **new_packets = realloc(packets, sizeof(uint8_t *) * (packetsCount + 1));
+        uint16_t *new_packetSize = realloc(packetSize, sizeof(uint16_t) * (packetsCount + 1));
+        if (new_packets == NULL || new_packetSize == NULL) {
+            wendigo_log_with_packet(MSG_ERROR,
+                "UART RX: Unable to allocate memory for packets cache.",
+                packet, packetLen);
+            if (new_packets != NULL) {
+                free(new_packets);
+            }
+            if (new_packetSize != NULL) {
+                free(new_packetSize);
+            }
+            /* Release mutex before returning */
+            furi_mutex_release(app->bufferMutex);
+            return;
         }
+        new_packetSize[packetsCount] = packetLen;
+        new_packets[packetsCount] = malloc(sizeof(uint8_t) * packetLen);
+        if (new_packets[packetsCount] == NULL) {
+            /* Bugger, free arrays and quit */
+            free(new_packets);
+            free(new_packetSize);
+            char *errorMsg = malloc(sizeof(char) * 57);
+            if (errorMsg == NULL) {
+                wendigo_log_with_packet(MSG_ERROR,
+                    "UART RX: Unable to allocate memory to cache packet.",
+                    packet, packetLen);
+            } else {
+                snprintf(errorMsg, 57,
+                    "UART RX: Unable to allocate %d bytes to cache packet.",
+                    packetLen);
+                wendigo_log_with_packet(MSG_ERROR, errorMsg, packet, packetLen);
+                free(errorMsg);
+            }
+            /* Release mutex before returning */
+            furi_mutex_release(app->bufferMutex);
+            return;
+        }
+        memcpy(new_packets[packetsCount], packet, packetLen);
+        packets = new_packets;
+        packetSize = new_packetSize;
+        ++packetsCount;
+
+//        parsePacket(app, packet, packetLen);
+
+        /* Remove this packet, and any preceding junk, from the buffer */
+        memset(buffer, 0, packetLen + startIdx);
         startIdx = start_of_packet(buffer, bufferLen);
         endIdx = end_of_packet(buffer, bufferLen);
+        /* If endIdx < startIdx, erase endIdx+1 bytes & find next terminator */
+        // TODO
+        /* Is there a second start_of_packet() before endIdx? */
+        // TODO
     }
     /* Have we been able to empty the buffer? */
     if (startIdx == bufferLen && endIdx == bufferLen) {
         /* Not having a start or end packet sequence is a start - Check for all NULL
-        * bytes in buffer */
+         * bytes in buffer */
+        // TODO: Improve on that by searching backwards through buffer to find something that can't be a preamble, and removing everything prior
         bool bytesFound = false;
         for (uint16_t i = 0; i < bufferLen && !bytesFound; ++i) {
             if (buffer[i] != 0) {
@@ -1398,6 +1478,17 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
                 "Buffer is empty, resetting bufferLen");
             bufferLen = 0;
         }
+    }
+
+    /* Release the mutex and parse the packets */
+    furi_mutex_release(app->bufferMutex);
+    for (uint8_t i = 0; i < packetsCount; ++i) {
+        parsePacket(app, packets[i], packetSize[i]);
+        free(packets[i]);
+    }
+    if (packetsCount > 0) {
+        free(packets);
+        free(packetSize);
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scan_handle_rx_data_cb()");
 }
