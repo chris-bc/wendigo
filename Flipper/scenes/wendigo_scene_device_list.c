@@ -54,13 +54,19 @@ uint16_t current_devices_count = 0;
 uint8_t current_devices_mask = DEVICE_ALL;
 
 /** Determine whether the specified device should be displayed, based on the
- * criteria provided in wendigo_set_current_devices()
+ * criteria provided in wendigo_set_current_devices().
+ * This function DOES NOT consider devices that may be displayed by the
+ * inclusion of the DEVICE_CUSTOM flag - it considers only dynamically-added
+ * devices.
  */
 bool wendigo_device_is_displayed(wendigo_device *dev) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_device_is_displayed()");
   if (dev == NULL) {
     wendigo_log(MSG_WARN, "wendigo_device_is_displayed(): dev is NULL");
     return false;
+  }
+  if ((current_devices_mask & DEVICE_CUSTOM) == DEVICE_CUSTOM) {
+    wendigo_log(MSG_WARN, "wendigo_device_is_displayed(): The current device mask includes DEVICE_CUSTOM, results from this function are inconclusive.");
   }
   bool display_selected = ((current_devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_device_is_displayed()");
@@ -82,11 +88,21 @@ bool wendigo_device_is_displayed(wendigo_device *dev) {
  * deviceMask: A bitmask of DeviceMask values. e.g. DEVICE_WIFI_AP |
  * DEVICE_WIFI_STA to display all WiFi devices; 0 to display all device types.
  * Returns the number of devices that meet the specified criteria.
+ * If DEVICE_CUSTOM is included as part of the device mask this function WILL
+ * NOT modify the contents of current_devices[], but will simply return the
+ * number of devices currently displayed.
  */
 uint16_t wendigo_set_current_devices(uint8_t deviceMask) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_current_devices()");
   if (deviceMask == 0) {
     deviceMask = DEVICE_ALL;
+  }
+  current_devices_mask = deviceMask;
+  /* If custom devices are being displayed there's nothing for this function to do */
+  if ((deviceMask & DEVICE_CUSTOM) == DEVICE_CUSTOM) {
+    FURI_LOG_T(WENDIGO_TAG,
+      "End wendigo_set_current_devices(): DEVICE_CUSTOM specified.");
+    return current_devices_count; // I'm pretty sure this is safe - correctly initialised as 0, then updated
   }
   bool display_selected = ((deviceMask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY);
   /* To ensure we only malloc the required memory, run an initial pass to count the number of devices */
@@ -115,7 +131,6 @@ uint16_t wendigo_set_current_devices(uint8_t deviceMask) {
     current_devices = new_devices;
   }
   current_devices_count = deviceCount;
-  current_devices_mask = deviceMask;
   /* Populate current_devices[] */
   uint16_t current_index = 0;
   for (uint16_t i = 0; i < devices_count && current_index < deviceCount; ++i) {
@@ -533,9 +548,9 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     variable_item_set_current_value_text(item->view,
                                         (item->tagged) ? "Untag" : "Tag");
     /* If the device is now untagged and we're viewing tagged devices only,
-     * remove the device from view */
+     * remove the device from view unless custom device view is enabled. */
     if (((current_devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY) &&
-        !item->tagged) {
+        !item->tagged && ((current_devices_mask & DEVICE_CUSTOM) != DEVICE_CUSTOM)) {
       /* Bugger - There's no method to remove an item from a variable_item_list */
       item->view = NULL; // TODO: Is this leaking memory? Can I free a VariableItem?
       wendigo_scene_device_list_redraw(app);
