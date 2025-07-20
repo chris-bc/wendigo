@@ -11,11 +11,8 @@ char *wendigo_popup_text = NULL; // I suspect the popup text is going out of
 
 /* Device caches */
 wendigo_device **devices = NULL;
-wendigo_device **selected_devices = NULL;
 uint16_t devices_count = 0;
-uint16_t selected_devices_count = 0;
 uint16_t devices_capacity = 0;
-uint16_t selected_devices_capacity = 0;
 
 /* How much will we increase bt_devices[] by when additional space is needed? */
 #define INC_DEVICE_CAPACITY_BY 10
@@ -102,55 +99,6 @@ void wendigo_version(WendigoApp *app) {
     wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
 }
 
-/** Manage the tagged/selected status of the specified wendigo_device
- *  Maintains selected_devices[] as needed
- */
-bool wendigo_set_device_selected(wendigo_device *device, bool selected) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_device_selected()");
-    /* NULL device check */
-    if (device == NULL) {
-        return false;
-    }
-    if (selected && !device->tagged) {
-        /* Add device to selected_devices[] */
-        if (selected_devices_capacity == selected_devices_count) {
-            /* Extend selected_devices[] */
-            wendigo_device **new_devices = realloc(selected_devices,
-                sizeof(wendigo_device *) * (selected_devices_capacity + 1));
-            if (new_devices == NULL) {
-                char *msg = malloc(sizeof(char) * 67);
-                if (msg != NULL) {
-                    snprintf(msg, sizeof(char) * 67, "Failed to expand selected_devices[] to hold %d wendigo_device*.",
-                        selected_devices_capacity + 1);
-                    wendigo_log(MSG_ERROR, msg);
-                    free(msg);
-                }
-                return false;
-            }
-            selected_devices = new_devices;
-            ++selected_devices_capacity;
-        }
-        selected_devices[selected_devices_count++] = device;
-        // TODO: Sort
-    } else if (device->tagged && !selected) {
-        /* Remove device from selected_devices[] - custom_device_index() will safely
-         * handle any NULLs */
-        /* Not using 16 bits because nobody's going to select 255 devices */
-        uint8_t index = (uint8_t)custom_device_index(device, selected_devices,
-                                                        selected_devices_count);
-        if (index < selected_devices_count) {
-            /* Shuffle forward all subsequent devices, replacing device at `index` */
-            for (++index; index < selected_devices_count; ++index) {
-                selected_devices[index - 1] = selected_devices[index];
-            }
-            selected_devices[selected_devices_count--] = NULL;
-        }
-    }
-    device->tagged = selected;
-    FURI_LOG_T(WENDIGO_TAG, "End wendigo_set_device_selected()");
-    return true;
-}
-
 /** Enable or disable Wendigo scanning on all interfaces, using app->interfaces
  *  to determine which radios should be enabled/disabled when starting to scan.
  *  This function is called by the UI handler (wendigo_scene_start) when scanning
@@ -233,7 +181,16 @@ uint16_t wendigo_index_of(uint8_t mac[MAC_BYTES], uint8_t **array, uint16_t arra
     uint16_t idx = 0;
     for (; idx < array_len && (array[idx] == NULL || memcmp(array[idx], mac, MAC_BYTES)); ++idx) { }
     return idx;
-} // TODO: this and device_index_* functions are also defined in ESP32-Wendigo, in common.c. Merge and move to wendigo_common_defs.c
+} // TODO: this, the following, and device_index_* functions are also defined in ESP32-Wendigo, in common.c. Merge and move to wendigo_common_defs.c
+
+uint8_t wendigo_index_of_string(char *str, char **array, uint8_t array_len) {
+    if (str == NULL || array == NULL || array_len == 0 || str[0] == '\0') {
+        return array_len;
+    }
+    uint8_t idx = 0;
+    for (; idx < array_len && (array[idx] == NULL || strncasecmp(str, array[idx], MAX_SSID_LEN)); ++idx) { }
+    return idx;
+}
 
 /** Called from parseBufferBluetooth(), this function updates the existing device
  *  `dev` with new attributes from `new_device`.
@@ -473,6 +430,35 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
     } else if (dev->scanType == SCAN_WIFI_STA) {
         new_device->radio.sta.channel = dev->radio.sta.channel;
         memcpy(new_device->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
+        /* Copy saved_networks[] to new_device */
+        if (dev->radio.sta.saved_networks_count > 0 &&
+                dev->radio.sta.saved_networks != NULL) {
+            new_device->radio.sta.saved_networks_count = dev->radio.sta.saved_networks_count;
+            new_device->radio.sta.saved_networks = malloc(sizeof(char *) *
+                dev->radio.sta.saved_networks_count);
+            if (new_device->radio.sta.saved_networks == NULL) {
+                new_device->radio.sta.saved_networks_count = 0;
+            } else {
+                uint8_t this_ssid_len;
+                for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                    if (dev->radio.sta.saved_networks[i] == NULL) {
+                        new_device->radio.sta.saved_networks[i] = NULL;
+                    } else {
+                        this_ssid_len = strlen(dev->radio.sta.saved_networks[i]);
+                        new_device->radio.sta.saved_networks[i] = malloc(
+                            sizeof(char) * (this_ssid_len + 1));
+                        if (new_device->radio.sta.saved_networks[i] != NULL) {
+                            strncpy(new_device->radio.sta.saved_networks[i],
+                                dev->radio.sta.saved_networks[i], this_ssid_len);
+                            new_device->radio.sta.saved_networks[i][this_ssid_len] = '\0';
+                        }
+                    }
+                }
+            }
+        } else {
+            new_device->radio.sta.saved_networks = NULL;
+            new_device->radio.sta.saved_networks_count = 0;
+        }
     }
 
     /* If the device list scene is currently displayed, add the device to the UI */
@@ -561,6 +547,57 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
         if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
             memcpy(target->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
         }
+        if (dev->radio.sta.saved_networks_count > 0 &&
+                dev->radio.sta.saved_networks != NULL) {
+            /* `dev` has saved networks, copy across any not already
+                in `target`.
+                First count the number of new SSIDs.
+            */
+            uint8_t target_idx;
+            uint8_t new_pnl_count = 0;
+            for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                target_idx = wendigo_index_of_string(
+                    dev->radio.sta.saved_networks[i],
+                    target->radio.sta.saved_networks,
+                    target->radio.sta.saved_networks_count);
+                if (target_idx == target->radio.sta.saved_networks_count &&
+                        dev->radio.sta.saved_networks[i] != NULL) {
+                    ++new_pnl_count;
+                }
+            }
+            if (new_pnl_count > 0) {
+                /* There are new SSIDs to add - realloc target */
+                new_pnl_count += target->radio.sta.saved_networks_count;
+                char **new_pnl = realloc(target->radio.sta.saved_networks,
+                    sizeof(char *) * new_pnl_count);
+                if (new_pnl != NULL) {
+                    /* Copy across new elements */
+                    uint8_t pnl_len;
+                    uint8_t pnl_idx = target->radio.sta.saved_networks_count;
+                    for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                        target_idx = wendigo_index_of_string(
+                            dev->radio.sta.saved_networks[i], new_pnl,
+                            target->radio.sta.saved_networks_count);
+                        if (target_idx == target->radio.sta.saved_networks_count &&
+                                dev->radio.sta.saved_networks[i] != NULL) {
+                            /* Copy dev[i] to target[pnl_idx] */
+                            pnl_len = strlen(dev->radio.sta.saved_networks[i]);
+                            new_pnl[pnl_idx] = malloc(sizeof(char) * (pnl_len + 1));
+                            if (new_pnl[pnl_idx] != NULL) {
+                                strncpy(new_pnl[pnl_idx],
+                                    dev->radio.sta.saved_networks[i], pnl_len);
+                                new_pnl[pnl_idx][pnl_len] = '\0';
+                                ++pnl_idx;
+                            }
+                        }
+                    }
+                    /* Hopefully pnl_idx == new_pnl_count. If not some mallocs
+                        have failed, but that's OK */
+                    target->radio.sta.saved_networks = new_pnl;
+                    target->radio.sta.saved_networks_count = pnl_idx;
+                } /* If we failed to malloc new_pnl don't do anything */
+            }
+        }
     }
     /* Update the device list if it's currently displayed */
     if (app->current_view == WendigoAppViewDeviceList) {
@@ -625,7 +662,18 @@ void wendigo_free_device(wendigo_device *dev) {
             dev->radio.ap.stations_count = 0;
         }
     } else if (dev->scanType == SCAN_WIFI_STA) {
-        /* Nothing to do */
+        /* Free preferred network list if there is one */
+        if (dev->radio.sta.saved_networks_count > 0 &&
+                dev->radio.sta.saved_networks != NULL) {
+            for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                if (dev->radio.sta.saved_networks[i] != NULL) {
+                    free(dev->radio.sta.saved_networks[i]);
+                }
+            }
+            free(dev->radio.sta.saved_networks);
+        }
+        dev->radio.sta.saved_networks = NULL;
+        dev->radio.sta.saved_networks_count = 0;
     } else {
         /* Nothing to do */
     }
@@ -635,20 +683,12 @@ void wendigo_free_device(wendigo_device *dev) {
 }
 
 /** Deallocates all memory allocated to the device cache.
- * This function deallocates all elements of the device cache, devices[] and
- * selected_devices[]. These arrays are left in a coherent state, with the
- * arrays set to NULL and their count & capacity variables set to zero.
+ * This function deallocates all elements of the device cache, devices[].
+ * These arrays are left in a coherent state, with the arrays set to
+ * NULL and their count & capacity variables set to zero.
  */
 void wendigo_free_devices() {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_free_devices()");
-    /* Start by freeing selected_devices[] */
-    if (selected_devices_capacity > 0 && selected_devices != NULL) {
-        free(selected_devices); /* Elements will be freed when addressing
-                                   bt_devices[] */
-        selected_devices = NULL;
-        selected_devices_count = 0;
-        selected_devices_capacity = 0;
-    }
     /* For devices[] we also want to free device attributes and the devices
      * themselves */
     if (devices_capacity > 0 && devices != NULL) {
@@ -711,7 +751,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app, uint8_t *packet, uint16_t packetL
     if (packetLen < (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN)) {
         char *msg = malloc(sizeof(char) * 98);
         if (msg != NULL) {
-            snprintf(msg, sizeof(char) * 98, "Bluetooth packet too short even before considering BDName, EIR and CoD. Expected %d, actual %d.",
+            snprintf(msg, 98, "Bluetooth packet too short even before considering BDName, EIR and CoD. Expected %d, actual %d.",
                                         (WENDIGO_OFFSET_BT_COD_LEN + PREAMBLE_LEN), packetLen);
             wendigo_log_with_packet(MSG_WARN, msg, packet, packetLen);
             free(msg);
@@ -797,7 +837,7 @@ uint16_t parseBufferBluetooth(WendigoApp *app, uint8_t *packet, uint16_t packetL
     if (app->is_scanning && memcmp(PACKET_TERM, packet + index, PREAMBLE_LEN)) {
         char *msg = malloc(sizeof(char) * 62);
         if (msg != NULL) {
-            snprintf(msg, sizeof(char) * 62,
+            snprintf(msg, 62,
                 "Bluetooth packet terminator expected at index %d, not found.",
                 index);
             wendigo_log_with_packet(MSG_WARN, msg, packet, packetLen);
@@ -827,7 +867,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     if (packetLen < expectedLen) {
         char *shortMsg = malloc(sizeof(char) * 56);
         if (shortMsg != NULL) {
-            snprintf(shortMsg, sizeof(char) * 56,
+            snprintf(shortMsg, 56,
                 "AP packet too short, expected %d actual %d. Skipping.",
                 expectedLen, packetLen);
             // Popup disabled while debugging device list wendigo_display_popup(app,
@@ -851,7 +891,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         */
         char *shortMsg = malloc(sizeof(char) * 77);
         if (shortMsg != NULL) {
-            snprintf(shortMsg, sizeof(char) * 77,
+            snprintf(shortMsg, 77,
                 "Packet's stations_count requires packet of size %d, actual %d. "
                 "Skipping.",
                 expectedLen, packetLen);
@@ -913,7 +953,7 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         char *popupMsg = malloc(sizeof(char) * ((3 * PREAMBLE_LEN) + 30));
         if (bytesFound != NULL && popupMsg != NULL) {
             bytes_to_string(packet + buffIndex, PREAMBLE_LEN, bytesFound);
-            snprintf(popupMsg, sizeof(char) * ((3 * PREAMBLE_LEN) + 30),
+            snprintf(popupMsg, (3 * PREAMBLE_LEN) + 30,
                 "Expected end of packet, found %s", bytesFound);
             popupMsg[3 * PREAMBLE_LEN + 29] = '\0';
             // Popup disabled while debugging device list wendigo_display_popup(app, "AP
@@ -947,12 +987,17 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
 
 uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferWifiSta()");
+    // TODO: Refactor packet length to uint16_t
+    /* This flag allows us to skip validation that the packet is the correct
+     * length. Used when the Preferred Network List can't be malloc()d, to
+     * allow the rest of the packet to be used. */
+    bool skip_validation = false;
     uint8_t expectedLen = WENDIGO_OFFSET_STA_AP_SSID + PREAMBLE_LEN;
     if (packetLen < expectedLen) {
         /* Packet is too short - Log the issue along with the current packet */
         char *shortMsg = malloc(sizeof(char) * 60);
         if (shortMsg != NULL) {
-            snprintf(shortMsg, sizeof(char) * 60,
+            snprintf(shortMsg, 60,
                 "STA packet too short: Expected %d, actual %d. Skipping...",
                 expectedLen, packetLen);
             wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
@@ -964,15 +1009,20 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
         FURI_LOG_T(WENDIGO_TAG, "End parseBufferWifiSta() - Short packet");
         return packetLen;
     }
-    /* Get ap_ssid_len to validate the full packet size */
+    /* Get ap_ssid_len and pnl_count to validate the full packet size */
     uint8_t ap_ssid_len;
+    uint8_t pnl_count;
     memcpy(&ap_ssid_len, packet + WENDIGO_OFFSET_STA_AP_SSID_LEN, sizeof(uint8_t));
     expectedLen += ap_ssid_len;
+    memcpy(&pnl_count, packet + WENDIGO_OFFSET_STA_PNL_COUNT, sizeof(uint8_t));
+    /* This still won't be the full packet length because each PNL has a 1-byte
+        length and a length-byte SSID */
+    expectedLen += pnl_count;
     if (packetLen < expectedLen) {
         /* Packet too short - Log and return */
         char *shortMsg = malloc(sizeof(char) * 57);
         if (shortMsg != NULL) {
-            snprintf(shortMsg, sizeof(char) * 57,
+            snprintf(shortMsg, 57,
                 "STA packet too short for SSID: Expected %d, actual %d.",
                 expectedLen, packetLen);
             wendigo_log_with_packet(MSG_ERROR, shortMsg, packet, packetLen);
@@ -987,6 +1037,7 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     }
     /* Initialise all pointers */
     dev->view = NULL;
+    dev->radio.sta.saved_networks = NULL;
     memcpy(dev->radio.sta.apMac, nullMac, MAC_BYTES);
     /* Temp variables for attributes that need to be transformed */
     uint8_t tagged;
@@ -1000,14 +1051,79 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     // sizeof(int64_t));
     memcpy(&tagged, packet + WENDIGO_OFFSET_WIFI_TAGGED, sizeof(uint8_t));
     dev->tagged = (tagged == 1);
+    dev->radio.sta.saved_networks_count = pnl_count;
     memcpy(dev->radio.sta.apMac, packet + WENDIGO_OFFSET_STA_AP_MAC, MAC_BYTES);
     char ap_ssid[MAX_SSID_LEN + 1];
     bzero(ap_ssid, MAX_SSID_LEN + 1);
     memcpy(ap_ssid, packet + WENDIGO_OFFSET_STA_AP_SSID, ap_ssid_len);
     ap_ssid[ap_ssid_len] = '\0';
-    /* Do I want to do anything with ap_ssid? */
-    /* We should find the packet terminator after the SSID */
-    if (memcmp(PACKET_TERM, packet + WENDIGO_OFFSET_STA_AP_SSID + ap_ssid_len, PREAMBLE_LEN)) {
+    /* Do I want to do anything with ap_ssid? Not right now... */
+    if (pnl_count > 0) {
+        /* Retrieve pnl_count saved networks */
+        dev->radio.sta.saved_networks = malloc(sizeof(char *) * pnl_count);
+        if (dev->radio.sta.saved_networks == NULL) {
+            /* Alert insufficient memory - But allow the device to be added
+             * anyway, just without its Preferred Network List. */
+            dev->radio.sta.saved_networks_count = 0;
+            skip_validation = true;
+            char *errMsg = malloc(sizeof(char) * 39);
+            if (errMsg == NULL) {
+                wendigo_log_with_packet(MSG_ERROR, "Can't allocate PNL.",
+                    packet, packetLen);
+            } else {
+                snprintf(errMsg, 39, "Failed to allocate %d bytes for PNL.",
+                    sizeof(char *) * pnl_count);
+                wendigo_log_with_packet(MSG_WARN, errMsg, packet, packetLen);
+                free(errMsg);
+            }
+        }
+    }
+    uint16_t packet_idx = WENDIGO_OFFSET_STA_AP_SSID + ap_ssid_len;
+    uint8_t pnl_idx = 0;
+    uint8_t this_pnl_len;
+    bool short_pkt = false;
+    while (pnl_idx < dev->radio.sta.saved_networks_count && !short_pkt) {
+        /* Ensure the packet is big enough */
+        if (packetLen > (packet_idx + PREAMBLE_LEN)) {
+            /* Get current SSID length */
+            memcpy(&this_pnl_len, packet + packet_idx, sizeof(uint8_t));
+            ++packet_idx;
+            /* Make sure the packet is big enough to contain the SSID */
+            if (packetLen > (packet_idx + this_pnl_len + PREAMBLE_LEN)) {
+                if (this_pnl_len == 0) {
+                    dev->radio.sta.saved_networks[pnl_idx] = NULL;
+                } else {
+                    dev->radio.sta.saved_networks[pnl_idx] = malloc(sizeof(char) *
+                        (this_pnl_len + 1));
+                    if (dev->radio.sta.saved_networks[pnl_idx] != NULL) {
+                        memcpy(dev->radio.sta.saved_networks[pnl_idx],
+                            packet + packet_idx, this_pnl_len);
+                    }
+                    packet_idx += this_pnl_len;
+                }
+                ++pnl_idx;
+            } else {
+                short_pkt = true;
+            }
+        } else {
+            short_pkt = true;
+        }
+    }
+    if (short_pkt) {
+        // TODO: Log error
+        if (pnl_idx > 0) {
+            for (uint8_t i = 0; i < pnl_idx; ++i) {
+                if (dev->radio.sta.saved_networks[i] != NULL) {
+                    free(dev->radio.sta.saved_networks[i]);
+                }
+            }
+        }
+        if (dev->radio.sta.saved_networks != NULL) {
+            free(dev->radio.sta.saved_networks);
+        }
+        dev->radio.sta.saved_networks_count = 0;
+    /* Otherwise we should find the packet terminator at packet_idx */
+    } else if (!skip_validation && memcmp(PACKET_TERM, packet + packet_idx, PREAMBLE_LEN)) {
         // Popup disabled while debugging device list        wendigo_display_popup(
         //            app, "STA Packet", "STA Packet terminator not found where
         //            expected.");
@@ -1109,7 +1225,7 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         if (attribute_name == NULL) {
             char *msg = malloc(sizeof(char) * 51);
             if (msg != NULL) {
-                snprintf(msg, sizeof(char) * 51,
+                snprintf(msg, 51,
                     "Failed to allocate %d bytes for status attribute.",
                     attribute_name_len + 1);
                 wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
@@ -1128,7 +1244,7 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         if (attribute_value == NULL) {
             char *msg = malloc(sizeof(char) * 50);
             if (msg != NULL) {
-                snprintf(msg, sizeof(char) * 50,
+                snprintf(msg, 50,
                     "Failed to allocate %d bytes for attribute value.",
                     attribute_value_len + 1);
                 wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
@@ -1208,6 +1324,10 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     furi_assert(context);
     WendigoApp *app = context;
 
+    /* Get a mutex lock on the buffer */
+    // TODO: I'm assuming it's relatively safe to ignore the result here
+    furi_mutex_acquire(app->bufferMutex, FuriWaitForever);
+
     /* Extend the buffer if necessary */
     if (bufferLen + len >= bufferCap) {
         /* Extend it by the larger of len and BUFFER_INC_CAPACITY_BY bytes to avoid constant realloc()s */
@@ -1218,6 +1338,8 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
         if (newCapacity > BUFFER_MAX_SIZE) {
             // TODO: Come up with an alternate way to do this
             FURI_LOG_D(WENDIGO_TAG, "Buffer too large");
+            /* Release mutex before returning */
+            furi_mutex_release(app->bufferMutex);
             return;
             /* Remove increase_by bytes from beginning of buffer[] instead */
             uint8_t *new_start = buffer + increase_by;
@@ -1228,7 +1350,20 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
             uint8_t *newBuffer = realloc(buffer, sizeof(uint8_t *) * newCapacity); // Behaves like malloc() when buffer==NULL
             if (newBuffer == NULL) {
                 /* Out of memory */
-                // TODO: Panic
+                // Unable to expand UART buffer to %d bytes, abandoning rx.
+                char *strMsg = malloc(sizeof(char) * 59);
+                if (strMsg == NULL) {
+                    wendigo_log(MSG_ERROR,
+                        "Unable to allocate memory for UART buffer.");
+                } else {
+                    snprintf(strMsg, 59,
+                        "Unable to expand UART buffer to %d bytes, abandoning rx.",
+                        newCapacity);
+                    wendigo_log(MSG_ERROR, strMsg);
+                    free(strMsg);
+                }
+                /* Release buffer mutex */
+                furi_mutex_release(app->bufferMutex);
                 return;
             }
             buffer = newBuffer;
@@ -1243,34 +1378,68 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     uint16_t packetLen;
     uint16_t startIdx = start_of_packet(buffer, bufferLen);
     uint16_t endIdx = end_of_packet(buffer, bufferLen);
-    if (endIdx < startIdx) {
-        /* A corrupted packet has an end sequence but not a start sequence - NULL it
-            and find the next end sequence */
-        memset(buffer, 0, endIdx + 1);
-        endIdx = end_of_packet(buffer, bufferLen);
-    }
+    uint8_t **packets = NULL;
+    uint16_t *packetSize = NULL;
+    uint8_t packetsCount = 0;
     while (startIdx < endIdx && endIdx < bufferLen) {
         /* We have a complete packet - extract it for parsing */
         packetLen = endIdx - startIdx + 1;
         packet = buffer + startIdx;
-
-        parsePacket(app, packet, packetLen);
-
-        /* Remove this packet from the buffer and look for another */
-        memset(buffer + startIdx, 0, packetLen);
-        /* If startIdx > 0 all non-NULL bytes before startIdx are spurious - remove them */
-        if (startIdx > 0) {
-            FURI_LOG_D(WENDIGO_TAG, "startIdx %d, NULLING previous bytes\n",
-                startIdx);
-            memset(buffer, 0, startIdx);
+        /* Copy the packet into packets[] so we can deal with it later */
+        uint8_t **new_packets = realloc(packets, sizeof(uint8_t *) * (packetsCount + 1));
+        uint16_t *new_packetSize = realloc(packetSize, sizeof(uint16_t) * (packetsCount + 1));
+        if (new_packets == NULL || new_packetSize == NULL) {
+            wendigo_log_with_packet(MSG_ERROR,
+                "UART RX: Unable to allocate memory for packets cache.",
+                packet, packetLen);
+            if (new_packets != NULL) {
+                free(new_packets);
+            }
+            if (new_packetSize != NULL) {
+                free(new_packetSize);
+            }
+            /* Release mutex before returning */
+            furi_mutex_release(app->bufferMutex);
+            return;
         }
+        new_packetSize[packetsCount] = packetLen;
+        new_packets[packetsCount] = malloc(sizeof(uint8_t) * packetLen);
+        if (new_packets[packetsCount] == NULL) {
+            /* Bugger, free arrays and quit */
+            free(new_packets); // TODO: Need to free the packets inside new_packets
+            free(new_packetSize);
+            char *errorMsg = malloc(sizeof(char) * 57);
+            if (errorMsg == NULL) {
+                wendigo_log_with_packet(MSG_ERROR,
+                    "UART RX: Unable to allocate memory to cache packet.",
+                    packet, packetLen);
+            } else {
+                snprintf(errorMsg, 57,
+                    "UART RX: Unable to allocate %d bytes to cache packet.",
+                    packetLen);
+                wendigo_log_with_packet(MSG_ERROR, errorMsg, packet, packetLen);
+                free(errorMsg);
+            }
+            /* Release mutex before returning */
+            furi_mutex_release(app->bufferMutex);
+            return;
+        }
+        memcpy(new_packets[packetsCount], packet, packetLen);
+        packets = new_packets;
+        packetSize = new_packetSize;
+        ++packetsCount;
+
+        /* Remove this packet, and any preceding junk, from the buffer */
+        memset(buffer, 0, packetLen + startIdx);
+        /* Get the next start and end indices, ready for the next iteration */
         startIdx = start_of_packet(buffer, bufferLen);
         endIdx = end_of_packet(buffer, bufferLen);
     }
     /* Have we been able to empty the buffer? */
     if (startIdx == bufferLen && endIdx == bufferLen) {
         /* Not having a start or end packet sequence is a start - Check for all NULL
-        * bytes in buffer */
+         * bytes in buffer */
+        // TODO: Improve on that by searching backwards through buffer to find something that can't be a preamble, and removing everything prior
         bool bytesFound = false;
         for (uint16_t i = 0; i < bufferLen && !bytesFound; ++i) {
             if (buffer[i] != 0) {
@@ -1282,6 +1451,17 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
                 "Buffer is empty, resetting bufferLen");
             bufferLen = 0;
         }
+    }
+    /* Release the mutex and parse the packets */
+    furi_mutex_release(app->bufferMutex);
+    for (uint8_t i = 0; i < packetsCount; ++i) {
+        wendigo_log_with_packet(MSG_DEBUG, "wendigo_scan_handle_rx_data() Parsing packet", packets[i], packetSize[i]);
+        parsePacket(app, packets[i], packetSize[i]);
+        free(packets[i]);
+    }
+    if (packetsCount > 0) {
+        free(packets);
+        free(packetSize);
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scan_handle_rx_data_cb()");
 }

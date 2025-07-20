@@ -9,6 +9,7 @@
 
 #include "wendigo.h"
 #include "common.h"
+#include "freertos/idf_additions.h"
 #include "wifi.h"
 #include "bluetooth.h"
 #include "status.h"
@@ -333,10 +334,14 @@ esp_err_t cmd_version(int argc, char **argv) {
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         ESP_LOGI(TAG, "%s", msg);
     } else {
-        wendigo_get_tx_lock(true); /* Wait for the talking stick */
-        send_bytes((uint8_t *)msg, strlen(msg) + 1);
-        send_end_of_packet();
-        wendigo_release_tx_lock();
+        /* Wait for the talking stick */
+        if (xSemaphoreTake(uartMutex, portMAX_DELAY) == pdTRUE) {
+            send_bytes((uint8_t *)msg, strlen(msg) + 1);
+            send_end_of_packet();
+            xSemaphoreGive(uartMutex);
+        } else {
+            // TODO: Log error
+        }
     }
     send_response(argv[0], NULL, MSG_OK);
     return ESP_OK;
@@ -540,7 +545,9 @@ void app_main(void)
     register_nvs();
 
     register_wendigo_commands();
-    wendigo_release_tx_lock(); // Ensure the semaphore is cleared on startup
+    
+    /* Create the UART mutex */
+    uartMutex = xSemaphoreCreateMutex();
 
     #if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
         esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();

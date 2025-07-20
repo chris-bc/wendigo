@@ -5,41 +5,6 @@ uint16_t devices_count = 0;
 uint16_t devices_capacity = 0;
 wendigo_device *devices;
 
-static bool uart_tx_lock = false;
-/** Obtain exclusive rights to transmit UART data.
- * When the version and status commands were implemented we began seeing interleaved packets,
- * as Bluetooth packets were sent at the same time as version/status packets. With the
- * addition of WiFi packets this has become more problematic, particularly because WiFi
- * packets reference other WiFi devices (Stations reference their AP and APs reference their
- * stations).
- * This is an imperfect semaphore implementation - Before transmitting a function should
- * obtain a transmit lock to ensure it will be the only function transmitting.
- * The `wait` argument specifies whether the caller will wait until the lock can be obtained
- * or wants an immediate response.
- * Returns true if the lock was successfully obtained, false otherwise.
- */
-bool wendigo_get_tx_lock(bool wait) {
-    if (wait) {
-        while (uart_tx_lock) {
-            vTaskDelay(1 / portTICK_PERIOD_MS); // Delay 1ms
-        }
-    }
-    if (!uart_tx_lock) {
-        uart_tx_lock = true;
-        return true;
-    }
-    if (wait) {
-        /* We nearly got a lock, but someone else beat us to it */
-        return wendigo_get_tx_lock(true);
-    }
-    return false;
-}
-
-/** Release the transmission semaphore */
-void wendigo_release_tx_lock() {
-    uart_tx_lock = false;
-}
-
 /** Locates a device with the MAC of the specified device in devices[] cache.
  * Returns a pointer to the object in devices[] if found, NULL otherwise.
  */
@@ -99,6 +64,16 @@ uint16_t wendigo_index_of(uint8_t mac[MAC_BYTES], uint8_t **array, uint16_t arra
     }
     uint16_t idx = 0;
     for (; idx < array_len && (array[idx] == NULL || memcmp(array[idx], mac, MAC_BYTES)); ++idx) { }
+    return idx;
+}
+
+uint8_t wendigo_index_of_string(char *str, char **array, uint8_t array_len) {
+    // TODO: Can I merge this with the above function?
+    if (str == NULL || array == NULL || array_len == 0 || str[0] == '\0') {
+        return array_len;
+    }
+    uint8_t idx = 0;
+    for (; idx < array_len && (array[idx] == NULL || strncasecmp(str, array[idx], MAX_SSID_LEN)); ++idx) { }
     return idx;
 }
 
@@ -170,7 +145,32 @@ esp_err_t add_device(wendigo_device *dev) {
                     }
                 }
             } else if (dev->scanType == SCAN_WIFI_STA) {
-                // No special cases
+                /* Copy dev->radio.sta.saved_networks[] */
+                if (dev->radio.sta.saved_networks_count == 0) {
+                    devices[devices_count].radio.sta.saved_networks = NULL;
+                } else {
+                    devices[devices_count].radio.sta.saved_networks = malloc(
+                        sizeof(char *) * dev->radio.sta.saved_networks_count);
+                    if (devices[devices_count].radio.sta.saved_networks == NULL) {
+                        devices[devices_count].radio.sta.saved_networks_count = 0;
+                        // TODO: Error message
+                    } else {
+                        /* We have the array, copy the SSIDs */
+                        uint8_t ssid_len;
+                        for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                            if (dev->radio.sta.saved_networks[i] != NULL) {
+                                ssid_len = strlen(dev->radio.sta.saved_networks[i]);
+                                devices[devices_count].radio.sta.saved_networks[i] = malloc(
+                                    sizeof(char) * (ssid_len + 1));
+                                if (devices[devices_count].radio.sta.saved_networks[i] != NULL) {
+                                    strncpy(devices[devices_count].radio.sta.saved_networks[i],
+                                        dev->radio.sta.saved_networks[i], ssid_len);
+                                    devices[devices_count].radio.sta.saved_networks[i][ssid_len] = '\0';
+                                }
+                            }
+                        }
+                    }
+                }
             }
             ++devices_count;
         }
@@ -263,6 +263,43 @@ esp_err_t add_device(wendigo_device *dev) {
         } else if (dev->scanType == SCAN_WIFI_STA) {
             existingDevice->radio.sta.channel = dev->radio.sta.channel;
             memcpy(existingDevice->radio.sta.apMac, dev->radio.sta.apMac, MAC_BYTES);
+            /* Add any SSIDs in saved_networks[] that aren't already there.
+               First, count the number of new devices. */
+            uint8_t new_networks = 0;
+            uint8_t ssid_idx;
+            for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                /* Is dev->radio.sta.saved_networks[i] in existingDevice->radio.sta.saved_networks? */
+                ssid_idx = wendigo_index_of_string(dev->radio.sta.saved_networks[i],
+                    existingDevice->radio.sta.saved_networks,
+                    existingDevice->radio.sta.saved_networks_count);
+                if (ssid_idx == existingDevice->radio.sta.saved_networks_count) {
+                    ++new_networks;
+                }
+            }
+            new_networks += existingDevice->radio.sta.saved_networks_count;
+            char **new_pnl = realloc(existingDevice->radio.sta.saved_networks, sizeof(char *) * new_networks);
+            if (new_pnl != NULL) {
+                /* Append new SSIDs from dev->radio.sta.saved_networks */
+                uint8_t current_network = existingDevice->radio.sta.saved_networks_count;
+                uint8_t ssid_len;
+                for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count &&
+                        current_network < new_networks; ++i) {
+                    ssid_idx = wendigo_index_of_string(dev->radio.sta.saved_networks[i],
+                        new_pnl, existingDevice->radio.sta.saved_networks_count);
+                    if (ssid_idx == existingDevice->radio.sta.saved_networks_count) {
+                        /* Append the SSID */
+                        ssid_len = strlen(dev->radio.sta.saved_networks[i]);
+                        new_pnl[current_network] = malloc(sizeof(char) * (ssid_len + 1));
+                        if (new_pnl[current_network] != NULL) {
+                            strncpy(new_pnl[current_network], dev->radio.sta.saved_networks[i], ssid_len);
+                            new_pnl[current_network][ssid_len] = '\0';
+                            ++current_network;
+                        }
+                    }
+                }
+                existingDevice->radio.sta.saved_networks = new_pnl;
+                existingDevice->radio.sta.saved_networks_count = new_networks;
+            }
         }
     }
     return result;
@@ -288,7 +325,16 @@ esp_err_t free_device(wendigo_device *dev) {
             dev->radio.ap.stations_count = 0;
         }
     } else if (dev->scanType == SCAN_WIFI_STA) {
-        /* Nothing to do */
+        if (dev->radio.sta.saved_networks_count > 0 && dev->radio.sta.saved_networks != NULL) {
+            for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+                if (dev->radio.sta.saved_networks[i] != NULL) {
+                    free(dev->radio.sta.saved_networks[i]);
+                }
+            }
+            free(dev->radio.sta.saved_networks);
+            dev->radio.sta.saved_networks = NULL;
+            dev->radio.sta.saved_networks_count = 0;
+        }
     }
     return ESP_OK;
 }

@@ -103,7 +103,8 @@ typedef enum {
     WendigoAppViewDeviceList,
     WendigoAppViewDeviceDetail,
     WendigoAppViewStatus,       /* This doesn't have a view but is used as a flag in app->current_view */
-    WendigoAppViewConsoleOutput, // TODO: Consider whether there's a better way to flag the status view
+    WendigoAppViewPNLList,      /* As above */
+    WendigoAppViewConsoleOutput, // TODO: Consider whether there's a better way to flag these views
     WendigoAppViewTextInput,
     WendigoAppViewHexInput,
     WendigoAppViewHelp,
@@ -146,6 +147,9 @@ struct WendigoApp {
     TextBox *text_box;
     TextInput *text_input;
     Wendigo_TextInput *hex_input;
+    /* Mutexes to manage access to buffer[] and devices[] */
+    FuriMutex *bufferMutex;
+    FuriMutex *devicesMutex;
 
     const char *selected_tx_string;
     bool is_command;

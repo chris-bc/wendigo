@@ -140,6 +140,10 @@ WendigoApp *wendigo_app_alloc() {
     wendigo_interface_init(app);
     app->is_scanning = false;
 
+    /* Initialise mutexes */
+    app->bufferMutex = furi_mutex_alloc(FuriMutexTypeNormal);
+    app->devicesMutex = furi_mutex_alloc(FuriMutexTypeNormal);
+
     app->widget = widget_alloc();
     view_dispatcher_add_view(
         app->view_dispatcher, WendigoAppViewHelp, widget_get_view(app->widget));
@@ -214,6 +218,9 @@ void wendigo_app_free(WendigoApp *app) {
     /* Free device cache and UART buffer */
     wendigo_free_uart_buffer();
     wendigo_free_devices();
+    /* Mutexes */
+    furi_mutex_free(app->bufferMutex);
+    furi_mutex_free(app->devicesMutex);
 
     wendigo_uart_free(app->uart);
 

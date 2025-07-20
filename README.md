@@ -306,8 +306,6 @@ Alternatively you can connect ESP32-Wendigo to any device with a serial console 
 
 This section is a running list of current priorities.
 
-* [ ] BUG: ESP32 returns an RSSI of -4 or 3854 for many devices. I think this is a particular packet type, resulting in an invalid initial value that is resolved by subsequent packets. Figure out why & fix.
-  * [ ] If I'm right about it being characteristic of a particular packet type the "fix" might just be detecting invalid RSSI and replacing with 0 or -127 (that's the minimum, right?)
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [ ] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped - Use a single menu option that changes its text, similar to Tag/Untag.
 * [X] Combined Bluetooth packet for BT Classic and LE devices
@@ -340,6 +338,16 @@ This section is a running list of current priorities.
     * [X] Move data model definitions into a common header file, included by both ESP32 and Flipper apps
     * [X] Standardise data model as a struct with common attributes, and a union of specialised structs.
   * [X] Channel hopping
+  * [ ] Capture a STA's Preferred Network List
+    * [X] Extract PNL SSID's from probe requests
+    * [X] Maintain PNL in data model
+    * [X] Transmit PNL in packet to Flipper-Wendigo
+    * [X] Parse PNL out of packet in Flipper-Wendigo
+    * [ ] Reconstruct PNL in Flipper-Wendigo's data model
+    * [X] Display PNL in device list
+      * [X] New STA option "%d SSIDs"
+      * [X] New var_item_list-based scene wendigo_scene_network_list
+      * [ ] Displays new scene
   * [ ] Support for 5GHz channels (ESP32-C5)
   * [X] Display different options in wendigo_scene_device_list
     * [X] For STA
@@ -363,7 +371,7 @@ This section is a running list of current priorities.
   * [ ] Flipper service data model
 * [ ] Settings
   * [ ] Retrieve and change MACs
-  * [ ] Enable/Disable channels
+  * [X] Enable/Disable channels
 * [ ] Display device details
   * [ ] Update details when device updated
   * [ ] Use canvas view so properties can be layed out to (hopefully) make everything visible without scrolling

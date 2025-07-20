@@ -1,4 +1,8 @@
 #include "wifi.h"
+#include "common.h"
+#include "esp_err.h"
+#include "freertos/idf_additions.h"
+#include "portmacro.h"
 
 /* Array of channels that are to be included in channel hopping.
    At startup this is initialised to include all supported channels. */
@@ -81,9 +85,12 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     }
     memcpy(packet + current_offset, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
-    wendigo_get_tx_lock(true);
-    send_bytes(packet, packet_len);
-    wendigo_release_tx_lock();
+    if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
+        send_bytes(packet, packet_len);
+        xSemaphoreGive(uartMutex);
+    } else {
+        result = ESP_ERR_INVALID_STATE;
+    }
     free(packet);
     return result;
 }
@@ -186,6 +193,14 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     }
     /* Assemble the packet so it can be sent all at once */
     uint8_t packet_len = WENDIGO_OFFSET_STA_AP_SSID + ssid_len + PREAMBLE_LEN;
+    /* Also account for the preferred network list, if it exists */
+    for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+        if (dev->radio.sta.saved_networks[i] != NULL) {
+            packet_len += strlen(dev->radio.sta.saved_networks[i]);
+        }
+        /* Account for the SSID_LEN byte - whether or not current SSID is NULL */
+        ++packet_len;
+    }
     uint8_t *packet = malloc(sizeof(uint8_t) * packet_len);
     if (packet == NULL) {
         return outOfMemory();
@@ -204,11 +219,35 @@ esp_err_t display_wifi_sta_uart(wendigo_device *dev) {
     if (ssid_len > 0) {
         memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID, ssid, ssid_len);
     }
-    memcpy(packet + WENDIGO_OFFSET_STA_AP_SSID + ssid_len, PACKET_TERM, PREAMBLE_LEN);
+    /* Send saved_networks_count */
+    memcpy(packet + WENDIGO_OFFSET_STA_PNL_COUNT, &(dev->radio.sta.saved_networks_count), sizeof(uint8_t));
+    /* Send saved_networks[] */
+    uint8_t packetIdx = WENDIGO_OFFSET_STA_AP_SSID + ssid_len;
+    uint8_t pnl_len;
+    for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+        if (dev->radio.sta.saved_networks[i] == NULL) {
+            pnl_len = 0;
+        } else {
+            pnl_len = strlen(dev->radio.sta.saved_networks[i]);
+        }
+        /* Add current SSID len */
+        memcpy(packet + packetIdx, &pnl_len, sizeof(uint8_t));
+        ++packetIdx;
+        /* Add current SSID */
+        if (pnl_len > 0) {
+            memcpy(packet + packetIdx, dev->radio.sta.saved_networks[i], pnl_len);
+            packetIdx += pnl_len;
+        }
+    }
+    /* Packet terminator */
+    memcpy(packet + packetIdx, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
-    wendigo_get_tx_lock(true);
-    send_bytes(packet, packet_len);
-    wendigo_release_tx_lock();
+    if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
+        send_bytes(packet, packet_len);
+        xSemaphoreGive(uartMutex);
+    } else {
+        result = ESP_ERR_INVALID_STATE;
+    }
     free(packet);
     return result;
 }
@@ -268,6 +307,26 @@ esp_err_t display_wifi_sta_interactive(wendigo_device *dev) {
         print_space(BANNER_WIDTH - strlen("AP Not Yet Found") - space_len - 6, false);
     }
     print_star(1, true);
+    /* Display saved networks */
+    print_star(1, false);
+    print_space(4, false);
+    printf("%3d saved networks collected.", dev->radio.sta.saved_networks_count);
+    print_space(BANNER_WIDTH - 35, false);
+    print_star(1, true);
+    if (dev->radio.sta.saved_networks_count > 0) {
+        /* Display each saved network */
+        uint8_t ssid_len;
+        for (uint8_t i = 0; i < dev->radio.sta.saved_networks_count; ++i) {
+            if (dev->radio.sta.saved_networks[i] != NULL) {
+                ssid_len = strlen(dev->radio.sta.saved_networks[i]);
+                print_star(1, false);
+                print_space(8, false);
+                printf("* %s", dev->radio.sta.saved_networks[i]);
+                print_space(BANNER_WIDTH - ssid_len - 12, false);
+                print_star(1, true);
+            }
+        }
+    }
     print_star(BANNER_WIDTH, true);
     return result;
 }
@@ -393,12 +452,43 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(dev->mac, payload + PROBE_SRCADDR_OFFSET, MAC_BYTES);
         dev->tagged = false;
+        dev->radio.sta.saved_networks_count = 0;
+        dev->radio.sta.saved_networks = NULL;
         memcpy(dev->radio.sta.apMac, nullMac, MAC_BYTES);
     }
     dev->scanType = SCAN_WIFI_STA;
     dev->rssi = rx_ctrl.rssi;
     dev->radio.sta.channel = rx_ctrl.channel;
-    // TODO: Add SSID to the STA's network list
+    uint8_t ssid_len;
+    char *ssid;
+    memcpy(&ssid_len, payload + PROBE_SSID_OFFSET - 1, sizeof(uint8_t));
+    if (ssid_len > 0) {
+        ssid = malloc(sizeof(char) * (ssid_len + 1));
+        if (ssid != NULL) {
+            memcpy(ssid, payload + PROBE_SSID_OFFSET, ssid_len);
+            ssid[ssid_len] = '\0';
+            uint8_t ssid_idx = wendigo_index_of_string(ssid,
+                dev->radio.sta.saved_networks, dev->radio.sta.saved_networks_count);
+            if (ssid_idx == dev->radio.sta.saved_networks_count) {
+                /* SSID not in STA's saved networks - Add it */
+                char **new_pnl = realloc(dev->radio.sta.saved_networks,
+                    sizeof(char *) * (dev->radio.sta.saved_networks_count + 1));
+                if (new_pnl != NULL) {
+                    new_pnl[dev->radio.sta.saved_networks_count] = malloc(sizeof(char) * (ssid_len + 1));
+                    if (new_pnl[dev->radio.sta.saved_networks_count] != NULL) {
+                        strncpy(new_pnl[dev->radio.sta.saved_networks_count],
+                            ssid, ssid_len);
+                        new_pnl[dev->radio.sta.saved_networks_count][ssid_len] = '\0';
+                        dev->radio.sta.saved_networks = new_pnl;
+                        ++(dev->radio.sta.saved_networks_count);
+                    }
+                }
+            } else {
+                free(ssid);
+                ssid = NULL;
+            }
+        }
+    }
 
     esp_err_t result = ESP_OK;
     if (creating) {
@@ -408,7 +498,7 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     }
     display_wifi_device(dev, creating);
     if (creating) {
-        free(dev);
+        free_device(dev);
     }
     return result;
 }
@@ -434,6 +524,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
             if (sta != NULL) {
                 memcpy(sta->mac, payload + PROBE_RESPONSE_DESTADDR_OFFSET, MAC_BYTES);
                 sta->tagged = false;
+                sta->radio.sta.saved_networks_count = 0;
+                sta->radio.sta.saved_networks = NULL;
                 memcpy(sta->radio.sta.apMac, nullMac, MAC_BYTES);
             }
         }
@@ -510,6 +602,8 @@ esp_err_t parse_rts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(sta->mac, payload + RTS_CTS_SRCADDR, MAC_BYTES);
         sta->tagged = false;
+        sta->radio.sta.saved_networks_count = 0;
+        sta->radio.sta.saved_networks = NULL;
         memcpy(sta->radio.sta.apMac, nullMac, MAC_BYTES);
     }
     sta->rssi = rx_ctrl.rssi;
@@ -602,6 +696,8 @@ esp_err_t parse_cts(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(sta->mac, payload + RTS_CTS_DESTADDR, MAC_BYTES);
         sta->tagged = false;
+        sta->radio.sta.saved_networks_count = 0;
+        sta->radio.sta.saved_networks = NULL;
         memcpy(sta->radio.sta.apMac, nullMac, MAC_BYTES);
     }
     sta->scanType = SCAN_WIFI_STA;
@@ -710,6 +806,8 @@ esp_err_t parse_deauth(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(sta->mac, payload + DEAUTH_DESTADDR_OFFSET, MAC_BYTES);
         sta->tagged = false;
+        sta->radio.sta.saved_networks_count = 0;
+        sta->radio.sta.saved_networks = NULL;
     }
     sta->scanType = SCAN_WIFI_STA;
     sta->radio.sta.channel = rx_ctrl.channel;
@@ -748,6 +846,8 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         }
         memcpy(sta->mac, payload + DEAUTH_SRCADDR_OFFSET, MAC_BYTES);
         sta->tagged = false;
+        sta->radio.sta.saved_networks_count = 0;
+        sta->radio.sta.saved_networks = NULL;
         memcpy(sta->radio.sta.apMac, nullMac, MAX_CANON);
     }
     sta->scanType = SCAN_WIFI_STA;
@@ -946,6 +1046,7 @@ bool wendigo_is_valid_channel(uint8_t channel) {
  * the packet consists of <Preamble><Channel Count><Channel bytes><Terminator>.
  */
 esp_err_t wendigo_get_channels() {
+    esp_err_t result = ESP_OK;
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         printf("%d channels included in WiFi channel hopping: ", channels_count);
         for (uint8_t i = 0; i < channels_count; ++i) {
@@ -968,12 +1069,15 @@ esp_err_t wendigo_get_channels() {
         }
         memcpy(packet + WENDIGO_OFFSET_CHANNELS + channels_count, PACKET_TERM, PREAMBLE_LEN);
         /* Transmit the packet */
-        wendigo_get_tx_lock(true);
-        send_bytes(packet, packetLen);
-        wendigo_release_tx_lock();
+        if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
+            send_bytes(packet, packetLen);
+            xSemaphoreGive(uartMutex);
+        } else {
+            result = ESP_ERR_INVALID_STATE;
+        }
         free(packet);
     }
-    return ESP_OK;
+    return result;
 }
 
 /** Set the channels that are to be included in channel hopping.

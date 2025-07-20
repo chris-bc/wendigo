@@ -1,5 +1,6 @@
 #include "status.h"
 #include "common.h"
+#include "portmacro.h"
 
 #define NAME_MAX_LEN   (uint8_t)35
 #define VAL_MAX_LEN    (uint8_t)20
@@ -58,7 +59,7 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
         explicit_bzero(attribute_values[i], VAL_MAX_LEN);
     }
 
-    strncpy(attribute_values[ATTR_VERSION], WENDIGO_VERSION, strlen(WENDIGO_VERSION));
+    strncpy(attribute_values[ATTR_VERSION], WENDIGO_VERSION, strlen(WENDIGO_VERSION) + 1);
     strncpy(attribute_values[ATTR_GITHUB], github, strlen(github));
     strncpy(attribute_values[ATTR_UUID_DICTIONARY], (uuidDictionarySupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
     strncpy(attribute_values[ATTR_BT_CLASSIC_SUPPORT], (btClassicSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
@@ -171,22 +172,23 @@ void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
                                 bool btBLESupported, bool wifiSupported) {
     initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
 
-    wendigo_get_tx_lock(true); /* Wait for the talking stick */
-    send_bytes(PREAMBLE_STATUS, PREAMBLE_LEN);
+    if (xSemaphoreTake(uartMutex, portMAX_DELAY)) { /* Wait for the talking stick */
+        send_bytes(PREAMBLE_STATUS, PREAMBLE_LEN);
 
-    uint8_t attr_count = ATTR_COUNT_MAX;
-    send_bytes(&attr_count, 1);
+        uint8_t attr_count = ATTR_COUNT_MAX;
+        send_bytes(&attr_count, 1);
 
-    /* Loop ATTR_COUNT_MAX times, sending elements from attribute_names[] and attribute_values[] */
-    uint8_t len;
-    for (uint8_t i = 0; i < ATTR_COUNT_MAX; ++i) {
-        len = strlen(attribute_names[i]);
-        send_bytes(&len, 1);
-        send_bytes((uint8_t *)(attribute_names[i]), len);
-        len = strlen(attribute_values[i]);
-        send_bytes(&len, 1);
-        send_bytes((uint8_t *)(attribute_values[i]), len);
+        /* Loop ATTR_COUNT_MAX times, sending elements from attribute_names[] and attribute_values[] */
+        uint8_t len;
+        for (uint8_t i = 0; i < ATTR_COUNT_MAX; ++i) {
+            len = strlen(attribute_names[i]);
+            send_bytes(&len, 1);
+            send_bytes((uint8_t *)(attribute_names[i]), len);
+            len = strlen(attribute_values[i]);
+            send_bytes(&len, 1);
+            send_bytes((uint8_t *)(attribute_values[i]), len);
+        }
+        send_end_of_packet();
+        xSemaphoreGive(uartMutex);
     }
-    send_end_of_packet();
-    wendigo_release_tx_lock();
 }
