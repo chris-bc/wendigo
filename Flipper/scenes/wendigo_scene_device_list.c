@@ -79,6 +79,51 @@ uint8_t stack_counter = 0;
 DeviceListInstance *stack;
 DeviceListInstance current_devices;
 
+/** Prepare current_devices for use. Provides initial values for the
+ * current_devices struct.
+ * `config` must be either NULL or a pointer to a DeviceListInstance
+ * that provides initial values for current_devices.
+ */
+void wendigo_scene_device_list_init(void *config) {
+  if (config == NULL) {
+    current_devices.devices = NULL;
+    current_devices.devices_count = 0;
+    current_devices.devices_mask = DEVICE_ALL;
+    current_devices.devices_msg[0] = '\0';
+    current_devices.view = WendigoAppViewDeviceList;
+  } else {
+    DeviceListInstance *cfg = (DeviceListInstance *)config;
+    current_devices.devices = cfg->devices;
+    current_devices.devices_count = cfg->devices_count;
+    current_devices.devices_mask = cfg->devices_mask;
+    strncpy(current_devices.devices_msg, cfg->devices_msg, sizeof(current_devices.devices_msg));
+    current_devices.view = cfg->view;
+  }
+}
+
+/** Clean up current_devices and stack in preparation for application exit. */
+void wendigo_scene_device_list_free() {
+  /* Clear current_devices */
+  if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
+    free(current_devices.devices);
+    current_devices.devices = NULL;
+    current_devices.devices_count = 0;
+  }
+  if (stack_counter > 0 && stack != NULL) {
+    /* Free components of the device stack */
+    for (uint8_t i = 0; i < stack_counter; ++i) {
+      if (stack[i].devices_count > 0 && stack[i].devices != NULL) {
+        free(stack[i].devices);
+        stack[i].devices = NULL;
+        stack[i].devices_count = 0;
+      }
+    }
+    free(stack);
+    stack = NULL;
+    stack_counter = 0;
+  }
+}
+
 /** Determine whether the specified device should be displayed, based on the
  * criteria provided in wendigo_set_current_devices().
  * This function DOES NOT consider devices that may be displayed by the

@@ -9,6 +9,10 @@
 /* UART rx callback for Console Output scene */
 extern void wendigo_console_output_handle_rx_data_cb(uint8_t *buf, size_t len, void *context);
 
+/* Initialiser and terminator for wendigo_scene_device_list.c */
+extern void wendigo_scene_device_list_init(void *config);
+extern void wendigo_scene_device_list_free();
+
 static bool wendigo_app_custom_event_callback(void *context, uint32_t event) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_custom_event_callback()");
     furi_assert(context);
@@ -178,6 +182,9 @@ WendigoApp *wendigo_app_alloc() {
     view_dispatcher_add_view(app->view_dispatcher, WendigoAppViewDeviceList,
         variable_item_list_get_view(app->devices_var_item_list));
     
+    /* Inittialise the DeviceListInstance struct used in device list */
+    wendigo_scene_device_list_init(NULL);
+    
     /* Initialise the last packet received time */
     app->last_packet = furi_hal_rtc_get_timestamp();
 
@@ -215,6 +222,8 @@ void wendigo_app_free(WendigoApp *app) {
     view_dispatcher_free(app->view_dispatcher);
     scene_manager_free(app->scene_manager);
 
+    /* Free device list scene's contents and stack */
+    wendigo_scene_device_list_free();
     /* Free device cache and UART buffer */
     wendigo_free_uart_buffer();
     wendigo_free_devices();
