@@ -945,20 +945,22 @@ void wendigo_scene_device_list_on_exit(void *context) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_exit()");
   WendigoApp *app = context;
   variable_item_list_reset(app->devices_var_item_list);
-  for (uint16_t i = 0; i < devices_count; ++i) {
-    devices[i]->view = NULL;
+  for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
+    current_devices.devices[i]->view = NULL;
   }
-  if (current_devices.devices != NULL) {
+  if (current_devices.devices != NULL && current_devices.devices_count > 0) {
     free(current_devices.devices);
     current_devices.devices = NULL;
     current_devices.devices_count = 0;
   }
   /* Pop the previous device list off the stack if there's one there */
   if (stack_counter > 0) {
-    current_devices = stack[stack_counter - 1];
+    /* Copy the DeviceListInstance, otherwise it'll be freed during use */
+    memcpy(&current_devices, &(stack[stack_counter - 1]), sizeof(DeviceListInstance));
     DeviceListInstance *stackAfterPop = realloc(stack, stack_counter - 1);
     if (stackAfterPop == NULL) {
-      // TODO error handling
+      wendigo_log(MSG_ERROR,
+        "Unable to shrink DeviceListInstance stack. Hoping for the best...");
     } else {
       --stack_counter;
       stack = stackAfterPop;
