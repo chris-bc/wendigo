@@ -59,7 +59,8 @@ typedef struct DeviceListInstance {
   uint16_t devices_count;
   uint8_t devices_mask;
   WendigoAppView view;
-  char devices_msg[MAX_SSID_LEN + 12]; // Space for "Clients of MAX_SSID_LEN"
+  char devices_msg[MAX_SSID_LEN + 18]; // Space for "Clients of MAX_SSID_LEN"
+  bool free_devices; // Do we need to free devices[] when we're done with it?
 } DeviceListInstance;
 
 /* Enacting nested copies of these scenes, without the luxury of treating them
@@ -91,6 +92,7 @@ void wendigo_scene_device_list_init(void *config) {
     current_devices.devices_mask = DEVICE_ALL;
     current_devices.devices_msg[0] = '\0';
     current_devices.view = WendigoAppViewDeviceList;
+    current_devices.free_devices = false;
   } else {
     DeviceListInstance *cfg = (DeviceListInstance *)config;
     current_devices.devices = cfg->devices;
@@ -98,24 +100,29 @@ void wendigo_scene_device_list_init(void *config) {
     current_devices.devices_mask = cfg->devices_mask;
     strncpy(current_devices.devices_msg, cfg->devices_msg, sizeof(current_devices.devices_msg));
     current_devices.view = cfg->view;
+    current_devices.free_devices = cfg->free_devices;
   }
 }
 
 /** Clean up current_devices and stack in preparation for application exit. */
 void wendigo_scene_device_list_free() {
   /* Clear current_devices */
-  if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
+  if (current_devices.devices_count > 0 && current_devices.devices != NULL &&
+      current_devices.free_devices) {
     free(current_devices.devices);
     current_devices.devices = NULL;
     current_devices.devices_count = 0;
+    current_devices.free_devices = false;
   }
   if (stack_counter > 0 && stack != NULL) {
     /* Free components of the device stack */
     for (uint8_t i = 0; i < stack_counter; ++i) {
-      if (stack[i].devices_count > 0 && stack[i].devices != NULL) {
+      if (stack[i].devices_count > 0 && stack[i].devices != NULL &&
+          stack[i].free_devices) {
         free(stack[i].devices);
         stack[i].devices = NULL;
         stack[i].devices_count = 0;
+        stack[i].free_devices = false;
       }
     }
     free(stack);
@@ -631,7 +638,103 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       WendigoOptionAPStaCount) || (item->scanType == SCAN_WIFI_STA &&
       variable_item_get_current_value_index(item->view) ==
       WendigoOptionSTAAP))) {
-    // TODO: Figure out how to set current_devices.devices[] to either the AP's STAs or the STA's AP
+    /* Push current_devices onto the call stack */
+    DeviceListInstance *new_stack = realloc(stack, sizeof(DeviceListInstance) * (stack_counter + 1));
+    if (new_stack == NULL) {
+      // TODO: Error handling
+      wendigo_log(MSG_ERROR,
+        "Unable to malloc() an additional DeviceListInstance.");
+      // TODO: Display error in popup
+      FURI_LOG_T(WENDIGO_TAG, "wendigo_scene_device_list_var_list_enter_callback() terminated early. Unable to malloc() additional DeviceListInstance.");
+      return;
+    } else {
+      memcpy(&(new_stack[stack_counter]), &current_devices, sizeof(DeviceListInstance));
+      stack = new_stack;
+      ++stack_counter;
+    }
+    /* Re-initialise current_devices */
+    current_devices.devices_mask = DEVICE_CUSTOM;
+    current_devices.view = WendigoAppViewDeviceList;
+    current_devices.free_devices = false;
+    current_devices.devices_count = 0;
+    current_devices.devices = NULL;
+    bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
+    char deviceName[MAX_SSID_LEN + 1];
+    bzero(deviceName, sizeof(deviceName));
+    if (item->scanType == SCAN_WIFI_AP) {
+      current_devices.view = WendigoAppViewAPSTAs;
+      current_devices.devices = malloc(sizeof(wendigo_device *) * item->radio.ap.stations_count);
+      if (current_devices.devices == NULL) {
+        // TODO: Decide whether the function can recover from this, aborts, or does something else
+        char *msg = malloc(sizeof(char) * 56);
+        if (msg == NULL) {
+          wendigo_log(MSG_ERROR,
+            "Unable to allocate memory to display AP's stations.");
+        } else {
+          snprintf(msg, 56,
+            "Unable to allocate %d bytes to display AP's stations.",
+            sizeof(wendigo_device *) * item->radio.ap.stations_count);
+          wendigo_log(MSG_ERROR, msg);
+          free(msg);
+        }
+        current_devices.devices_count = 0;
+      } else {
+        current_devices.free_devices = true;
+        /* Loop through item->radio.ap.stations, adding devices with the
+         * specified MACs if we can find them. */
+        uint16_t idx_src;
+        uint16_t idx_dest;
+        uint16_t idx_sta;
+        for (idx_src = 0, idx_dest = 0;
+            idx_src < item->radio.ap.stations_count; ++idx_src) {
+          idx_sta = device_index_from_mac(item->radio.ap.stations[idx_src]);
+          if (idx_sta < devices_count) {
+            /* The station exists in the cache - add it to devices[] */
+            current_devices.devices[idx_dest++] = devices[idx_sta];
+          }
+        }
+        /* If there were stations not in the cache, devices[] will have empty
+         * elements - if this occurs, shrink devices[]. */
+        if (idx_dest < item->radio.ap.stations_count) {
+          wendigo_device **tmp_devices = realloc(current_devices.devices, sizeof(wendigo_device *) * idx_dest);
+          if (tmp_devices != NULL) {
+            /* If realloc() worked, just set devices[] to tmp_devices[] */
+            current_devices.devices = tmp_devices;
+          }
+        }
+        /* Set devices_count whether or not we had to shrink devices[] */
+        current_devices.devices_count = idx_dest;
+      }
+      /* Set deviceName using SSID if we have it, otherwise MAC */
+      if (item->radio.ap.ssid[0] == '\0') {
+        bytes_to_string(item->mac, MAC_BYTES, deviceName);
+      } else {
+        strncpy(deviceName, item->radio.ap.ssid, sizeof(deviceName));
+      }
+      snprintf(current_devices.devices_msg,
+        sizeof(current_devices.devices_msg),
+        "Stations for %s", deviceName);
+    } else if (item->scanType == SCAN_WIFI_STA) {
+      current_devices.view = WendigoAppViewSTAAP;
+      /* Use MAC to refer to the device */
+      bytes_to_string(item->mac, MAC_BYTES, deviceName);
+      snprintf(current_devices.devices_msg,
+        sizeof(current_devices.devices_msg),
+        "Access Point for %s", deviceName);
+      /* Station will display one device if it has an AP, otherwise 0 */
+      if (memcmp(item->radio.sta.apMac, nullMac, MAC_BYTES)) {
+        /* We have a MAC. Find the wendigo_device* */
+        uint16_t apIdx = device_index_from_mac(item->radio.sta.apMac);
+        if (apIdx < devices_count) {
+          /* Found the AP in the device cache - Display just it */
+          current_devices.devices_count = 1;
+          current_devices.devices = &(devices[apIdx]);
+        }
+      }
+    } else {
+      wendigo_log(MSG_WARN,
+        "Logic error: Fell through switch() statement in wendigo_scene_device_list.c");
+    }
     view_dispatcher_send_custom_event(app->view_dispatcher,
       Wendigo_EventListDevices);
   } else if (item->view != NULL && item->scanType == SCAN_WIFI_STA &&
@@ -948,8 +1051,11 @@ void wendigo_scene_device_list_on_exit(void *context) {
   for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
     current_devices.devices[i]->view = NULL;
   }
+  /* Free current_devices.devices[] if necessary */
   if (current_devices.devices != NULL && current_devices.devices_count > 0) {
-    free(current_devices.devices);
+    if (current_devices.free_devices) {
+      free(current_devices.devices);
+    }
     current_devices.devices = NULL;
     current_devices.devices_count = 0;
   }
@@ -957,13 +1063,23 @@ void wendigo_scene_device_list_on_exit(void *context) {
   if (stack_counter > 0) {
     /* Copy the DeviceListInstance, otherwise it'll be freed during use */
     memcpy(&current_devices, &(stack[stack_counter - 1]), sizeof(DeviceListInstance));
-    DeviceListInstance *stackAfterPop = realloc(stack, stack_counter - 1);
-    if (stackAfterPop == NULL) {
-      wendigo_log(MSG_ERROR,
-        "Unable to shrink DeviceListInstance stack. Hoping for the best...");
+    /* We can't realloc() zero bytes so choose between free() and realloc() */
+    if (stack_counter > 1) {
+      DeviceListInstance *stackAfterPop = realloc(stack, stack_counter - 1);
+      if (stackAfterPop == NULL) {
+        wendigo_log(MSG_ERROR,
+          "Unable to shrink DeviceListInstance stack. Hoping for the best...");
+      } else {
+        --stack_counter;
+        stack = stackAfterPop;
+      }
     } else {
-      --stack_counter;
-      stack = stackAfterPop;
+      /* We're using the last stack element */
+      if (stack_counter == 1 && stack != NULL) {
+        free(stack);
+        stack = NULL;
+        stack_counter = 0;
+      }
     }
   }
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_on_exit()");
