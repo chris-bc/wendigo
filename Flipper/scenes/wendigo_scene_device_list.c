@@ -324,7 +324,7 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
 void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
   FURI_LOG_D(WENDIGO_TAG, "Start wendigo_scene_device_list_update()");
   /* This will also cater for a NULL dev */
-  if (!wendigo_device_is_displayed(dev)) {
+  if (!wendigo_device_is_displayed(dev)) { // TODO: This cannot be relied upon with DEVICE_CUSTOM
     return;
   }
   char *name;
@@ -481,9 +481,11 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     /* Invalid device type */
     return;
   }
+  // TODO: Shouldn't these be devices and devices_count, not current_devices members?
   uint16_t dev_idx = custom_device_index(dev, current_devices.devices, current_devices.devices_count);
   if (dev_idx == current_devices.devices_count) {
     /* Add a new item */
+    // TODO: Only if it's meant to be displayed, surely?
     dev->view = variable_item_list_add(
         app->devices_var_item_list, (name == NULL) ? "(Unknown)" : name,
         optionsCount, wendigo_scene_device_list_var_list_change_callback, app);
