@@ -649,7 +649,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       wendigo_log(MSG_ERROR,
         "Unable to malloc() an additional DeviceListInstance.");
       // TODO: Display error in popup
-      FURI_LOG_T(WENDIGO_TAG, "wendigo_scene_device_list_var_list_enter_callback() terminated early. Unable to malloc() additional DeviceListInstance.");
+      FURI_LOG_E(WENDIGO_TAG, "wendigo_scene_device_list_var_list_enter_callback() terminated early. Unable to malloc() additional DeviceListInstance.");
       return;
     } else {
       memcpy(&(new_stack[stack_counter]), &current_devices, sizeof(DeviceListInstance));
@@ -885,14 +885,14 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem *ite
  */
 void wendigo_scene_device_list_on_enter(void *context) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_enter()");
+  FURI_LOG_T(WENDIGO_TAG, "current_view: %d, devices_count: %d, devices_mask: %d, devices_msg: %s",
+    current_devices.view, current_devices.devices_count, current_devices.devices_mask,
+    current_devices.devices_msg);
   WendigoApp *app = context;
   app->current_view = current_devices.view;
 
   variable_item_list_set_enter_callback(app->devices_var_item_list,
     wendigo_scene_device_list_var_list_enter_callback, app);
-
-  // TODO: Customisations to support custom device list:
-  // Display heading for variable_item_list
 
   /* Reset and re-populate the list */
   wendigo_scene_device_list_redraw(app);
@@ -912,7 +912,7 @@ void wendigo_scene_device_list_on_enter(void *context) {
 
 bool wendigo_scene_device_list_on_event(void *context,
                                         SceneManagerEvent event) {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_event()");
+//  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_event()");
   WendigoApp *app = context;
   bool consumed = false;
 
@@ -1048,7 +1048,7 @@ bool wendigo_scene_device_list_on_event(void *context,
       }
     }
   }
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_on_event()");
+//  FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_on_event()");
   return consumed;
 }
 
@@ -1059,34 +1059,41 @@ void wendigo_scene_device_list_on_exit(void *context) {
   for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
     current_devices.devices[i]->view = NULL;
   }
-  /* Free current_devices.devices[] if necessary */
-  if (current_devices.devices != NULL && current_devices.devices_count > 0) {
-    if (current_devices.free_devices) {
-      free(current_devices.devices);
-    }
-    current_devices.devices = NULL;
-    current_devices.devices_count = 0;
-  }
-  /* Pop the previous device list off the stack if there's one there */
-  if (stack_counter > 0) {
-    /* Copy the DeviceListInstance, otherwise it'll be freed during use */
-    memcpy(&current_devices, &(stack[stack_counter - 1]), sizeof(DeviceListInstance));
-    /* We can't realloc() zero bytes so choose between free() and realloc() */
-    if (stack_counter > 1) {
-      DeviceListInstance *stackAfterPop = realloc(stack, stack_counter - 1);
-      if (stackAfterPop == NULL) {
-        wendigo_log(MSG_ERROR,
-          "Unable to shrink DeviceListInstance stack. Hoping for the best...");
-      } else {
-        --stack_counter;
-        stack = stackAfterPop;
+  if (current_devices.view == app->current_view) {
+    /* This condition is met when we are genuinely exiting this scene - when
+     * displaying a device list from another device list, such as displaying
+     * an AP's STAs, this function is called but we do not want to replace
+     * the current_devices we've just constructed with the stack that we've
+     * just pushed. */
+    /* Free current_devices.devices[] if necessary */
+    if (current_devices.devices != NULL && current_devices.devices_count > 0) {
+      if (current_devices.free_devices) {
+        free(current_devices.devices);
       }
-    } else {
-      /* We're using the last stack element */
-      if (stack_counter == 1 && stack != NULL) {
-        free(stack);
-        stack = NULL;
-        stack_counter = 0;
+      current_devices.devices = NULL;
+      current_devices.devices_count = 0;
+    }
+    /* Pop the previous device list off the stack if there's one there */
+    if (stack_counter > 0) {
+      /* Copy the DeviceListInstance, otherwise it'll be freed during use */
+      memcpy(&current_devices, &(stack[stack_counter - 1]), sizeof(DeviceListInstance));
+      /* We can't realloc() zero bytes so choose between free() and realloc() */
+      if (stack_counter > 1) {
+        DeviceListInstance *stackAfterPop = realloc(stack, stack_counter - 1);
+        if (stackAfterPop == NULL) {
+          wendigo_log(MSG_ERROR,
+            "Unable to shrink DeviceListInstance stack. Hoping for the best...");
+        } else {
+          --stack_counter;
+          stack = stackAfterPop;
+        }
+      } else {
+        /* We're using the last stack element */
+        if (stack_counter == 1 && stack != NULL) {
+          free(stack);
+          stack = NULL;
+          stack_counter = 0;
+        }
       }
     }
   }

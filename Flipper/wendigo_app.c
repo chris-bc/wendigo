@@ -30,7 +30,7 @@ static bool wendigo_app_back_event_callback(void *context) {
 }
 
 static void wendigo_app_tick_event_callback(void *context) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_tick_event_callback()");
+//    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_tick_event_callback()");
     furi_assert(context);
     WendigoApp *app = context;
     if (app->is_scanning) {
@@ -41,7 +41,7 @@ static void wendigo_app_tick_event_callback(void *context) {
         }
     }
     scene_manager_handle_tick_event(app->scene_manager);
-    FURI_LOG_T(WENDIGO_TAG, "End wendigo_app_tick_event_callback()");
+//    FURI_LOG_T(WENDIGO_TAG, "End wendigo_app_tick_event_callback()");
 }
 
 /* Generic handler for app->popup that restores the previous view */
