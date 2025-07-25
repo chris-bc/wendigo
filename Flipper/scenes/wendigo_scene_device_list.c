@@ -528,6 +528,10 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
   uint8_t options_index;
   bool free_item_str = false;
   wendigo_set_current_devices(current_devices.devices_mask);
+  /* Set header text for the list if specified */
+  variable_item_list_set_header(app->devices_var_item_list,
+    (current_devices.devices_msg[0] == '\0') ? NULL
+                                              : current_devices.devices_msg);
   for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
     /* Label with bdname if it's bluetooth & we have a name */
     if (current_devices.devices[i] != NULL && (current_devices.devices[i]->scanType == SCAN_HCI ||
