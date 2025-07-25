@@ -667,8 +667,10 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     bzero(deviceName, sizeof(deviceName));
     if (item->scanType == SCAN_WIFI_AP) {
       current_devices.view = WendigoAppViewAPSTAs;
-      current_devices.devices = malloc(sizeof(wendigo_device *) * item->radio.ap.stations_count);
-      if (current_devices.devices == NULL) {
+      if (item->radio.ap.stations_count > 0) {
+        current_devices.devices = malloc(sizeof(wendigo_device *) * item->radio.ap.stations_count);
+      }
+      if (item->radio.ap.stations_count > 0 && current_devices.devices == NULL) {
         // TODO: Decide whether the function can recover from this, aborts, or does something else
         char *msg = malloc(sizeof(char) * 56);
         if (msg == NULL) {
@@ -717,14 +719,14 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       }
       snprintf(current_devices.devices_msg,
         sizeof(current_devices.devices_msg),
-        "Stations for %s", deviceName);
+        "%s STAs", deviceName);
     } else if (item->scanType == SCAN_WIFI_STA) {
       current_devices.view = WendigoAppViewSTAAP;
       /* Use MAC to refer to the device */
       bytes_to_string(item->mac, MAC_BYTES, deviceName);
       snprintf(current_devices.devices_msg,
         sizeof(current_devices.devices_msg),
-        "Access Point for %s", deviceName);
+        "%s' AP", deviceName);
       /* Station will display one device if it has an AP, otherwise 0 */
       if (memcmp(item->radio.sta.apMac, nullMac, MAC_BYTES)) {
         /* We have a MAC. Find the wendigo_device* */
