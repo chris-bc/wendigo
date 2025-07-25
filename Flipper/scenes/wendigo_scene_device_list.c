@@ -920,7 +920,11 @@ bool wendigo_scene_device_list_on_event(void *context,
       scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceDetail);
       break;
     case Wendigo_EventListDevices:
-      // TODO: List an AP's STAs or a STA's AP
+      /* current_devices has been populated with relevant devices - all we
+       * need to do here is display them. */
+      scene_manager_set_scene_state(app->scene_manager, WendigoSceneDeviceList,
+                                    app->device_list_selected_menu_index);
+      scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceList);
       break;
     case Wendigo_EventListNetworks:
         scene_manager_set_scene_state(app->scene_manager, WendigoSceneDeviceList,
