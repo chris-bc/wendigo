@@ -12,7 +12,8 @@ static const WendigoItem items[START_MENU_ITEMS] = {
         "WiFi STA"}, 7, LIST_DEVICES, BOTH_MODES},
     {"Selected Devices", {"All", "Bluetooth", "WiFi", "BT Classic", "BLE",
         "WiFi AP", "WiFi STA"}, 7, LIST_SELECTED_DEVICES, BOTH_MODES},
-    {"Track Selected", {""}, 1, TRACK_DEVICES, TEXT_MODE},
+    {"Probed SSIDs", {""}, 1, PNL_LIST, TEXT_MODE},
+    {"UART Terminal", {""}, 1, UART_TERMINAL, TEXT_MODE},
     {"Help", {"About", "Version"}, 2, OPEN_HELP, TEXT_MODE},
 };
 
@@ -123,10 +124,15 @@ static void wendigo_scene_start_var_list_enter_callback(void *context, uint32_t 
             FURI_LOG_T(WENDIGO_TAG,
                 "End wendigo_scene_start_var_list_enter_callback(): Displaying selected device lists.");
             return;
-        case TRACK_DEVICES:
+        case UART_TERMINAL:
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
             FURI_LOG_T(WENDIGO_TAG,
                 "End wendigo_scene_start_var_list_enter_callback(): Displaying device tracking.");
+            return;
+        case PNL_LIST:
+            view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListNetworks);
+            FURI_LOG_T(WENDIGO_TAG,
+                "End wendigo_scene_start_var_list_enter_callback(): Displaying Preferred Network List.");
             return;
         case OPEN_HELP:
             switch (selected_option_index) {
@@ -287,6 +293,12 @@ bool wendigo_scene_start_on_event(void *context, SceneManagerEvent event) {
                     WendigoSceneStart, app->selected_menu_index);
                 scene_manager_next_scene(app->scene_manager,
                                         WendigoSceneStatus);
+                break;
+            case Wendigo_EventListNetworks:
+                scene_manager_set_scene_state(app->scene_manager,
+                    WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager,
+                                        WendigoScenePNLList);
                 break;
             default:
                 /* Do nothing */

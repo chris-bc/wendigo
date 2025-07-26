@@ -28,7 +28,7 @@
 /* How frequently should Flipper poll ESP32 when scanning to restart
    scanning in the event the device restarts (seconds)? */
 #define ESP32_POLL_INTERVAL      (3)
-#define START_MENU_ITEMS         (6)
+#define START_MENU_ITEMS         (7)
 #define SETUP_MENU_ITEMS         (4)
 #define SETUP_CHANNEL_MENU_ITEMS (14)
 
@@ -53,7 +53,8 @@ typedef enum {
     OPEN_SCAN,
     LIST_DEVICES,
     LIST_SELECTED_DEVICES,
-    TRACK_DEVICES,
+    PNL_LIST,
+    UART_TERMINAL,
     OPEN_MAC,
     OPEN_HELP
 } ActionType;
