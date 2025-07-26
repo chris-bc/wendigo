@@ -77,7 +77,7 @@
 * A WiFi station's Preferred Network List (PNL), commonly called "saved networks", are collected and displayed
   * Device list display for stations includes a new menu option ```N networks``` (where N is a number).
   * Select this to view a list of the SSIDs the station has sent probe requests for.
-  * Future enhancement: New menu option to view all probed networks, including a count of devices searching for each SSID.
+  * New menu option to view all probed networks, including a count of devices searching for each SSID.
 * Navigate from a WiFi Station to its AP by selecting the AP menu option and pushing ```OK```.
   * This is a new Device List display, but displaying only the AP
   * You can select and view attributes in the same way as the device list
