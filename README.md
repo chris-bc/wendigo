@@ -34,6 +34,12 @@
     <li>
       <a href="#about-the-project">About The Project</a>
     </li>
+    <li><a href="#whats-new">What's New</a>
+      <ul>
+        <li><a href="#whats-new-040">v0.4.0 (Pre-release)</a></li>
+        <li><a href="#whats-new-030">v0.3.0</a></li>
+      </ul>
+    </li>
     <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
@@ -54,9 +60,13 @@
   </ol>
 </details>
 
+<a id="whats-new"></a>
+
 ## What's New
 
-### v0.4.0
+<a id="whats-new-040"></a>
+
+### v0.4.0 (so far)
 
 * Introduced mutexes to manage concurrency during packet transimission and decoding
   * Concurrency issues - multiple threads sending or receiving packets at once - were the reason for packet corruption and all the headaches I've had trying to work around it.
@@ -77,7 +87,9 @@
   * A new Device List will be displayed containing the Stations of the selected AP
   * As above, this is a fully-functional device list.
 
-That just about wraps it up for 2.4GHz WiFi! The AP authentication mode is a joke and needs to be fixed, and there are some tweaks and quality-of-life improvements I'd like to make, but I should start thinking about the next feature to tackle. If anyone is reading this and wants to make a request I'm all ears - Bluetooth service discovery; sending beacon and deauth packets; displaying status information with the LED; 5GHz WiFi; MAC spoofing; detailed device view; sorting device list; ...
+That just about wraps it up for 2.4GHz WiFi! The AP authentication mode is a joke and needs to be fixed, and there are some tweaks and quality-of-life improvements I'd like to make, but I should start thinking about the next feature to tackle. If anyone is reading this and wants to make a request I'm all ears - Bluetooth service discovery; sending beacon and deauth packets; displaying status information with the LED; 5GHz WiFi; MAC spoofing; detailed device view; sorting the device list; ...
+
+<a id="whats-new-030"></a>
 
 ### v0.3.0
 

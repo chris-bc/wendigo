@@ -756,13 +756,6 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
         if (apIdx < devices_count) {
           /* Found the AP in the device cache - Display just it */
           current_devices.devices_count = 1;
-          // current_devices.devices = malloc(sizeof(wendigo_device *));
-          // if (current_devices.devices == NULL) {
-          //   // TODO alert and set to no devices
-          // } else {
-          //   current_devices.devices[0] = devices[apIdx]; // TODO: Reconsider if I need to malloc()
-          //   current_devices.free_devices = true;
-          // }
           current_devices.devices = &(devices[apIdx]);
         }
       }
