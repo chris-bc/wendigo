@@ -127,7 +127,7 @@ At a high level, these are Wendigo's features - Both implemented and planned:
 * [ ] Bluetooth service discovery
 * [ ] Bluetooth attribute read/write
 * [ ] Browse Bluetooth devices and their services & attributes
-* [ ] Browse WiFi networks, navigating from an Access Point to its connected Stations or from a Station to its Access Point
+* [X] Browse WiFi networks, navigating from an Access Point to its connected Stations or from a Station to its Access Point
 * [ ] Deauthenticate a device or all devices on a network
 * [ ] Collect a Station's (WiFi client - such as a phone) saved network list
   * [ ] Put this list into Wigle to get a good idea where the device's owner lives, works and plays

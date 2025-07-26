@@ -1,1 +1,116 @@
-build/compile_commands.json
+[
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_console_output.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_console_output.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_console_output.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_console_output.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_device_detail.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_device_detail.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_device_detail.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_device_detail.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_device_list.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_device_list.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_device_list.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_device_list.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_help.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_help.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_help.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_help.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_hex_input.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_hex_input.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_hex_input.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_hex_input.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_pnl_list.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_pnl_list.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_pnl_list.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_pnl_list.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_setup.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_setup.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_setup.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_setup.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_setup_channel.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_setup_channel.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_setup_channel.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_setup_channel.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_setup_mac.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_setup_mac.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_setup_mac.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_setup_mac.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_start.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_start.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_start.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_start.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_status.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_status.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_status.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_status.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_text_input.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_text_input.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/scenes/wendigo_scene_text_input.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/scenes/wendigo_scene_text_input.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/wendigo_app.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_app.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_app.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/wendigo_app.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/wendigo_common_defs.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_common_defs.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_common_defs.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/wendigo_common_defs.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/wendigo_hex_input.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_hex_input.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_hex_input.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/wendigo_hex_input.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/wendigo_scan.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_scan.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_scan.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/wendigo_scan.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/wendigo_text_input.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_text_input.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_text_input.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/wendigo_text_input.c.o"
+},
+{
+  "directory": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/build",
+  "command": "/usr/bin/cc  -I/scenes -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/applications/services/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/gui -I/home/chris/Documents/Microcontrollers/flipper/Momentum_Firmware/lib/scene -g -std=gnu11 -o CMakeFiles/wendigo_flipper.dir/wendigo_uart.c.o -c /home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_uart.c",
+  "file": "/home/chris/Documents/Microcontrollers/flipper/wendigo/Flipper/wendigo_uart.c",
+  "output": "CMakeFiles/wendigo_flipper.dir/wendigo_uart.c.o"
+}
+]

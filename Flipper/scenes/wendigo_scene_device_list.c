@@ -76,13 +76,19 @@ typedef struct DeviceListInstance {
  * in wendigo_scene_device_list_on_exit(), where the existing current_devices[]
  * is also freed. */
 uint8_t stack_counter = 0;
-DeviceListInstance *stack;
+DeviceListInstance *stack = NULL;
 DeviceListInstance current_devices;
 
 /** Prepare current_devices for use. Provides initial values for the
  * current_devices struct.
- * `config` must be either NULL or a pointer to a DeviceListInstance
- * that provides initial values for current_devices.
+ * `config` must be either NULL or a pointer to a DeviceListInstance that
+ * provides initial values for current_devices. canfig may be freed after
+ * calling - memory is allocated for  its devices if necessary - however
+ * the wendigo_device instances referenced by devices[] are expected to
+ * remain allocated for the duration of the scene.
+ * It is not necessary to call this function more than once. If you do this
+ * make sure you call wendigo_scene_device_list_free() before the second
+ * call, otherwise any memory allocated to devices[] will be leaked.
  */
 void wendigo_scene_device_list_init(void *config) {
   if (config == NULL) {
@@ -94,8 +100,28 @@ void wendigo_scene_device_list_init(void *config) {
     current_devices.free_devices = false;
   } else {
     DeviceListInstance *cfg = (DeviceListInstance *)config;
-    current_devices.devices = cfg->devices;
-    current_devices.devices_count = cfg->devices_count;
+    if (cfg->devices_count > 0 && cfg->devices != NULL) {
+      current_devices.devices = malloc(sizeof(wendigo_device *) * cfg->devices_count);
+      if (current_devices.devices == NULL) {
+        char *msg = malloc(sizeof(char) * 65);
+        if (msg == NULL) {
+          wendigo_log(MSG_ERROR, "Unable to allocate memory for DeviceListInstance initialiser.")
+        } else {
+          // Unable to allocate %d bytes for DeviceListInstance initialiser.
+          snprintf(msg, 65, "Unable to allocate %d bytes for DeviceListInstance initialiser.",
+            sizeof(wendigo_device *) * cfg->devices_count);
+          wendigo_log(MSG_ERROR, msg);
+          free(msg);
+        }
+        current_devices.devices_count = 0;
+      } else {
+        memcpy(current_devices.devices, cfg->devices, sizeof(wendigo_device *) * cfg->devices_count);
+        current_devices.devices_count = cfg->devices_count;
+      }
+    } else {
+      current_devices.devices = NULL;
+      current_devices.devices_count = 0;
+    }
     current_devices.devices_mask = cfg->devices_mask;
     strncpy(current_devices.devices_msg, cfg->devices_msg, sizeof(current_devices.devices_msg));
     current_devices.view = cfg->view;
@@ -1089,7 +1115,7 @@ void wendigo_scene_device_list_on_exit(void *context) {
       memcpy(&current_devices, &(stack[stack_counter - 1]), sizeof(DeviceListInstance));
       /* When we pop the final stack element realloc() will act like free()
        * and return NULL */
-      DeviceListInstance *stackAfterPop = realloc(stack, stack_counter - 1);
+      DeviceListInstance *stackAfterPop = realloc(stack, sizeof(DeviceListInstance) * (stack_counter - 1));
       if (stackAfterPop == NULL && stack_counter > 1) {
         wendigo_log(MSG_ERROR,
           "Unable to shrink DeviceListInstance stack. Hoping for the best...");
