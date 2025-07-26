@@ -506,11 +506,9 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     /* Invalid device type */
     return;
   }
-  // TODO: Shouldn't these be devices and devices_count, not current_devices members?
   uint16_t dev_idx = custom_device_index(dev, current_devices.devices, current_devices.devices_count);
   if (dev_idx == current_devices.devices_count) {
     /* Add a new item */
-    // TODO: Only if it's meant to be displayed, surely?
     dev->view = variable_item_list_add(
         app->devices_var_item_list, (name == NULL) ? "(Unknown)" : name,
         optionsCount, wendigo_scene_device_list_var_list_change_callback, app);
@@ -672,11 +670,8 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     /* Push current_devices onto the call stack */
     DeviceListInstance *new_stack = realloc(stack, sizeof(DeviceListInstance) * (stack_counter + 1));
     if (new_stack == NULL) {
-      // TODO: Error handling
-      wendigo_log(MSG_ERROR,
-        "Unable to malloc() an additional DeviceListInstance.");
-      // TODO: Display error in popup
-      FURI_LOG_E(WENDIGO_TAG, "wendigo_scene_device_list_var_list_enter_callback() terminated early. Unable to malloc() additional DeviceListInstance.");
+      wendigo_display_popup(app, "Insufficient Memory", "Unable to allocate an additional DeviceListInstance.");
+      wendigo_log(MSG_ERROR, "wendigo_scene_device_list_var_list_enter_callback() terminated early. Unable to malloc() additional DeviceListInstance.");
       return;
     } else {
       memcpy(&(new_stack[stack_counter]), &current_devices, sizeof(DeviceListInstance));
@@ -698,7 +693,6 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
         current_devices.devices = malloc(sizeof(wendigo_device *) * item->radio.ap.stations_count);
       }
       if (item->radio.ap.stations_count > 0 && current_devices.devices == NULL) {
-        // TODO: Decide whether the function can recover from this, aborts, or does something else
         char *msg = malloc(sizeof(char) * 56);
         if (msg == NULL) {
           wendigo_log(MSG_ERROR,
@@ -710,6 +704,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
           wendigo_log(MSG_ERROR, msg);
           free(msg);
         }
+        wendigo_display_popup(app, "Out of memory", "Unable to allocate memory for AP's stations.");
         current_devices.devices_count = 0;
       } else { /* There are no stations to display or malloc() succeeded */
         current_devices.free_devices = true; /* Don't forget to only free if stations_count > 0 as well */
@@ -761,13 +756,14 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
         if (apIdx < devices_count) {
           /* Found the AP in the device cache - Display just it */
           current_devices.devices_count = 1;
-          current_devices.devices = malloc(sizeof(wendigo_device *));
-          if (current_devices.devices == NULL) {
-            // TODO alert and set to no devices
-          } else {
-            current_devices.devices[0] = devices[apIdx]; // TODO: Reconsider if I need to malloc()
-            current_devices.free_devices = true;
-          }
+          // current_devices.devices = malloc(sizeof(wendigo_device *));
+          // if (current_devices.devices == NULL) {
+          //   // TODO alert and set to no devices
+          // } else {
+          //   current_devices.devices[0] = devices[apIdx]; // TODO: Reconsider if I need to malloc()
+          //   current_devices.free_devices = true;
+          // }
+          current_devices.devices = &(devices[apIdx]);
         }
       }
     } else {
@@ -1095,7 +1091,6 @@ void wendigo_scene_device_list_on_exit(void *context) {
     current_devices.devices[i]->view = NULL;
   }
   if (app->leaving_scene) {
-    // TODO: Was if (current_devices.view == app->current_view)
     /* This condition is met when we are genuinely exiting this scene - when
      * the back button has been pressed. When displaying a device list from
      * another device list, such as displaying an AP's STAs, this function is
