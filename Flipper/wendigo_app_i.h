@@ -104,6 +104,8 @@ typedef enum {
     WendigoAppViewDeviceDetail,
     WendigoAppViewStatus,       /* This doesn't have a view but is used as a flag in app->current_view */
     WendigoAppViewPNLList,      /* As above */
+    WendigoAppViewAPSTAs,       /* And this */
+    WendigoAppViewSTAAP,        /* Also */
     WendigoAppViewConsoleOutput, // TODO: Consider whether there's a better way to flag these views
     WendigoAppViewTextInput,
     WendigoAppViewHexInput,
@@ -120,7 +122,10 @@ struct WendigoApp {
     SceneManager *scene_manager;
     WendigoAppView current_view;
     bool is_scanning;
-
+    bool leaving_scene; /* Set to true when the back button is pressed to allow device list to be
+                         * used for a variety of purposes - device list, selected device list, and
+                         * navigating from device list to AP list to station list, etc.
+                         */
     Widget *widget;
     VariableItemList *var_item_list;
     VariableItemList *devices_var_item_list;
@@ -168,8 +173,3 @@ void wendigo_display_popup(WendigoApp *app, char *header, char*body);
 void wendigo_uart_set_binary_cb(Wendigo_Uart *uart);
 void wendigo_uart_set_console_cb(Wendigo_Uart *uart);
 void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes);
-
-/* Devices currently being displayed */
-extern wendigo_device **current_devices;
-extern uint16_t current_devices_count;
-extern uint8_t current_devices_mask;

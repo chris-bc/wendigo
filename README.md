@@ -34,6 +34,12 @@
     <li>
       <a href="#about-the-project">About The Project</a>
     </li>
+    <li><a href="#whats-new">What's New</a>
+      <ul>
+        <li><a href="#whats-new-040">v0.4.0 (Pre-release)</a></li>
+        <li><a href="#whats-new-030">v0.3.0</a></li>
+      </ul>
+    </li>
     <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
@@ -54,24 +60,71 @@
   </ol>
 </details>
 
+<a id="whats-new"></a>
+
 ## What's New
+
+<a id="whats-new-040"></a>
+
+### v0.4.0 (so far)
+
+* Introduced mutexes to manage concurrency during packet transimission and decoding
+  * Concurrency issues - multiple threads sending or receiving packets at once - were the reason for packet corruption and all the headaches I've had trying to work around it.
+  * New mutex to guarantee only a single ESP32-Wendigo thread can transmit a packet at a time
+  * New mutex to guarantee that a single thread will work on Flipper-Wendigo's UART buffer at a time
+  * I'd like to manage concurrency of Flipper-Wendigo's device cache as well, but want a less-restrictive approach than mutex or semaphore and it's been too many decades since I've done that so I'm a bit rusty :)
+  * This change has eliminated practically all instability of both apps - I've still made mistakes, but you have to look harder to find them!
+* A WiFi station's Preferred Network List (PNL), commonly called "saved networks", are collected and displayed
+  * Device list display for stations includes a new menu option ```N networks``` (where N is a number).
+  * Select this to view a list of the SSIDs the station has sent probe requests for.
+  * Future enhancement: New menu option to view all probed networks, including a count of devices searching for each SSID.
+* Navigate from a WiFi Station to its AP by selecting the AP menu option and pushing ```OK```.
+  * This is a new Device List display, but displaying only the AP
+  * You can select and view attributes in the same way as the device list
+    * You can even view the AP's stations, select the station you were previously looking at, view its AP, view the AP's stations, ...
+  * Use the ```back``` button to restore the previous view
+* Navigate from a WiFi Access Point to its Stations by selecting the menu option labelled ```N stations```.
+  * A new Device List will be displayed containing the Stations of the selected AP
+  * As above, this is a fully-functional device list.
+
+That just about wraps it up for 2.4GHz WiFi! The AP authentication mode is a joke and needs to be fixed, and there are some tweaks and quality-of-life improvements I'd like to make, but I should start thinking about the next feature to tackle. If anyone is reading this and wants to make a request I'm all ears - Bluetooth service discovery; sending beacon and deauth packets; displaying status information with the LED; 5GHz WiFi; MAC spoofing; detailed device view; sorting the device list; ...
+
+<a id="whats-new-030"></a>
 
 ### v0.3.0
 
-Finally, NULL pointer dereference exceptions while WiFi scanning with the device list
-active are fixed. It was down to calling two FZ API functions -
-```variable_item_set_item_label()``` and
-```variable_item_set_current_value_text()``` - see [Flipper/scenes/wendigo_scene_device_list.c](https://github.com/chris-bc/wendigo/blob/main/Flipper/scenes/wendigo_scene_device_list.c) for details.
-
-Wendigo now supports WiFi scanning. Without crashing all the time. Without
-crashing at all, in fact. I think. YMMV :) And the device list is now dynamic
-again, with items added/updated as they are discovered. To an extent at least.
-Due to the bug mentioned above, if a device is displaying its MAC in the list
-and a packet containing its name is received, its name **won't** be updated
-in the device list. If a changing option is displayed - elapsed time or
-RSSI - that value is no longer updated every time a packet for that device
-is received (it'll still be updated during tick events though - these
-explicitly cater for elapsed time and RSSI).
+* Work around bug in FZ API. See [source code](https://github.com/chris-bc/wendigo/blob/main/Flipper/scenes/wendigo_scene_device_list.c) for details
+* 2.4GHz WiFi scanning/sniffing - Decodes eight 802.11 packet types
+* Bluetooth Classic Discovery (requires device in pairing mode)
+* Bluetooth Low Energy discovery
+* Device list dynamically updates during scanning
+* Device List displays
+  * WiFi Access Points
+    * SSID if available, otherwise MAC
+    * RSSI
+    * Tag / Untag
+    * Device Type ("WiFi AP")
+    * Number of connected stations discovered
+    * Authentication Mode (Open, WPA, etc.)
+      * Currently buggy.
+    * Wireless channel
+    * Time since last seen
+  * WiFi Stations
+    * MAC
+    * RSSI
+    * Tag / Untag
+    * Device Type ("WiFi STA")
+    * Connected Access Point
+      * SSID if available, otherwise MAC
+    * Wireless channel
+    * Time since last seen
+  * Bluetooth Classic & Low Energy
+    * Device name if available, otherwise BDA (equivalent to MAC)
+    * RSSI
+    * Tag / Untag
+    * Device Type ("BT Classic" or "BLE")
+    * Bluetooth Class of Device ("Phone", "PC", "Wearable", etc.)
+    * Time since last seen
 
 If the 2.4GHz spectrum is busy I've found that the radio only supplies BLE
 packets - In my home I need to disable BLE in the ```Setup``` menu in order
@@ -79,16 +132,6 @@ to receive WiFi packets. Sorry about that - I don't think there's anything I
 can do, other than change the UI so it's no longer possible to run both WiFi
 and Bluetooth scanning concurrently. And I hate the idea of removing a
 feature.
-
-Next up is collecting a STAtion's Preferred Network List (PNL) - The set
-of SSIDs it's configured to automatically connect to. [There's a branch for
-that](https://github.com/chris-bc/wendigo/tree/collect-preferred-network-lists).
-If you put this list into a geolocation service such as Wigle you can
-get a good idea of where someone lives and works, the coffee shops they go
-to, etc. I find it spooky how transparent our personal lives are to anyone
-within a few hundred metres who cares to listen. And *maybe* sending them
-beacons, or setting up to serve probe responses (aka Mana). Possibly
-Bluetooth services.
 
 <a id="about-the-project"></a>
 
@@ -127,9 +170,9 @@ At a high level, these are Wendigo's features - Both implemented and planned:
 * [ ] Bluetooth service discovery
 * [ ] Bluetooth attribute read/write
 * [ ] Browse Bluetooth devices and their services & attributes
-* [ ] Browse WiFi networks, navigating from an Access Point to its connected Stations or from a Station to its Access Point
+* [X] Browse WiFi networks, navigating from an Access Point to its connected Stations or from a Station to its Access Point
 * [ ] Deauthenticate a device or all devices on a network
-* [ ] Collect a Station's (WiFi client - such as a phone) saved network list
+* [X] Collect a Station's (WiFi client - such as a phone) saved network list
   * [ ] Put this list into Wigle to get a good idea where the device's owner lives, works and plays
 * [ ] 5GHz WiFi channels ([requires ESP32-C5](https://www.aliexpress.com/item/1005009128201189.html))
 * [ ] Change Bluetooth BDA and WiFi MAC
@@ -338,16 +381,16 @@ This section is a running list of current priorities.
     * [X] Move data model definitions into a common header file, included by both ESP32 and Flipper apps
     * [X] Standardise data model as a struct with common attributes, and a union of specialised structs.
   * [X] Channel hopping
-  * [ ] Capture a STA's Preferred Network List
+  * [X] Capture a STA's Preferred Network List
     * [X] Extract PNL SSID's from probe requests
     * [X] Maintain PNL in data model
     * [X] Transmit PNL in packet to Flipper-Wendigo
     * [X] Parse PNL out of packet in Flipper-Wendigo
-    * [ ] Reconstruct PNL in Flipper-Wendigo's data model
+    * [X] Reconstruct PNL in Flipper-Wendigo's data model
     * [X] Display PNL in device list
       * [X] New STA option "%d SSIDs"
       * [X] New var_item_list-based scene wendigo_scene_network_list
-      * [ ] Displays new scene
+      * [X] Displays new scene
   * [ ] Support for 5GHz channels (ESP32-C5)
   * [X] Display different options in wendigo_scene_device_list
     * [X] For STA

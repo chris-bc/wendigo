@@ -48,13 +48,119 @@ enum wendigo_device_list_sta_options {
   WendigoOptionsSTACount
 };
 
-/** Devices currently being displayed */
-wendigo_device **current_devices = NULL;
-uint16_t current_devices_count = 0;
-uint8_t current_devices_mask = DEVICE_ALL;
+/* This scene can be nested any number of times (well, until the stack pointer
+ * overflows) to allow navigation, for example, from the device list to an
+ * AP to one of its stations. DeviceListInstance captures the components of
+ * this scene that differ between instances.
+ */
+typedef struct DeviceListInstance {
+  wendigo_device **devices;
+  uint16_t devices_count;
+  uint8_t devices_mask;
+  WendigoAppView view;
+  char devices_msg[MAX_SSID_LEN + 18]; // Space for "Clients of MAX_SSID_LEN"
+  bool free_devices; // Do we need to free devices[] when we're done with it?
+} DeviceListInstance;
+
+/* Enacting nested copies of these scenes, without the luxury of treating them
+ * as instances of a class, is achieved by managing an array of
+ * DeviceListInstances as a stack - pushing a new set of devices to the stack
+ * and initialising a new set of devices for display, or popping the last
+ * value off the stack and using them as the current devices to return to the
+ * previously-displayed device list.
+ * Implementation note: For consistency, current_devices is not pushed onto the
+ * stack, unless and until a new device list is being displayed. The idiom here
+ * is to push to the stack immediately before preparing a new instance of
+ * current_devices, such that everything is in place by the time
+ * wendigo_scene_device_list_on_enter() is called, and to pop from the stack
+ * in wendigo_scene_device_list_on_exit(), where the existing current_devices[]
+ * is also freed. */
+uint8_t stack_counter = 0;
+DeviceListInstance *stack = NULL;
+DeviceListInstance current_devices;
+
+/** Prepare current_devices for use. Provides initial values for the
+ * current_devices struct.
+ * `config` must be either NULL or a pointer to a DeviceListInstance that
+ * provides initial values for current_devices. canfig may be freed after
+ * calling - memory is allocated for  its devices if necessary - however
+ * the wendigo_device instances referenced by devices[] are expected to
+ * remain allocated for the duration of the scene.
+ * It is not necessary to call this function more than once. If you do this
+ * make sure you call wendigo_scene_device_list_free() before the second
+ * call, otherwise any memory allocated to devices[] will be leaked.
+ */
+void wendigo_scene_device_list_init(void *config) {
+  if (config == NULL) {
+    current_devices.devices = NULL;
+    current_devices.devices_count = 0;
+    current_devices.devices_mask = DEVICE_ALL;
+    current_devices.devices_msg[0] = '\0';
+    current_devices.view = WendigoAppViewDeviceList;
+    current_devices.free_devices = false;
+  } else {
+    DeviceListInstance *cfg = (DeviceListInstance *)config;
+    if (cfg->devices_count > 0 && cfg->devices != NULL) {
+      current_devices.devices = malloc(sizeof(wendigo_device *) * cfg->devices_count);
+      if (current_devices.devices == NULL) {
+        char *msg = malloc(sizeof(char) * 68);
+        if (msg == NULL) {
+          wendigo_log(MSG_ERROR, "Unable to allocate memory for DeviceListInstance initialiser.");
+        } else {
+          // Unable to allocate %d bytes for DeviceListInstance initialiser.
+          snprintf(msg, 68, "Unable to allocate %d bytes for DeviceListInstance initialiser.",
+            sizeof(wendigo_device *) * cfg->devices_count);
+          wendigo_log(MSG_ERROR, msg);
+          free(msg);
+        }
+        current_devices.devices_count = 0;
+      } else {
+        memcpy(current_devices.devices, cfg->devices, sizeof(wendigo_device *) * cfg->devices_count);
+        current_devices.devices_count = cfg->devices_count;
+      }
+    } else {
+      current_devices.devices = NULL;
+      current_devices.devices_count = 0;
+    }
+    current_devices.devices_mask = cfg->devices_mask;
+    strncpy(current_devices.devices_msg, cfg->devices_msg, sizeof(current_devices.devices_msg));
+    current_devices.view = cfg->view;
+    current_devices.free_devices = cfg->free_devices;
+  }
+}
+
+/** Clean up current_devices and stack in preparation for application exit. */
+void wendigo_scene_device_list_free() {
+  /* Clear current_devices */
+  if (current_devices.devices_count > 0 && current_devices.devices != NULL &&
+      current_devices.free_devices) {
+    free(current_devices.devices);
+    current_devices.devices = NULL;
+    current_devices.devices_count = 0;
+    current_devices.free_devices = false;
+  }
+  if (stack_counter > 0 && stack != NULL) {
+    /* Free components of the device stack */
+    for (uint8_t i = 0; i < stack_counter; ++i) {
+      if (stack[i].devices_count > 0 && stack[i].devices != NULL &&
+          stack[i].free_devices) {
+        free(stack[i].devices);
+        stack[i].devices = NULL;
+        stack[i].devices_count = 0;
+        stack[i].free_devices = false;
+      }
+    }
+    free(stack);
+    stack = NULL;
+    stack_counter = 0;
+  }
+}
 
 /** Determine whether the specified device should be displayed, based on the
- * criteria provided in wendigo_set_current_devices()
+ * criteria provided in wendigo_set_current_devices().
+ * This function DOES NOT consider devices that may be displayed by the
+ * inclusion of the DEVICE_CUSTOM flag - it considers only dynamically-added
+ * devices.
  */
 bool wendigo_device_is_displayed(wendigo_device *dev) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_device_is_displayed()");
@@ -62,19 +168,22 @@ bool wendigo_device_is_displayed(wendigo_device *dev) {
     wendigo_log(MSG_WARN, "wendigo_device_is_displayed(): dev is NULL");
     return false;
   }
-  bool display_selected = ((current_devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY);
+  if ((current_devices.devices_mask & DEVICE_CUSTOM) == DEVICE_CUSTOM) {
+    wendigo_log(MSG_WARN, "wendigo_device_is_displayed(): The current device mask includes DEVICE_CUSTOM, results from this function are inconclusive.");
+  }
+  bool display_selected = ((current_devices.devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_device_is_displayed()");
   return ((dev->scanType == SCAN_HCI &&
-          ((current_devices_mask & DEVICE_BT_CLASSIC) == DEVICE_BT_CLASSIC) &&
+          ((current_devices.devices_mask & DEVICE_BT_CLASSIC) == DEVICE_BT_CLASSIC) &&
             (!display_selected || dev->tagged)) ||
           (dev->scanType == SCAN_BLE &&
-            ((current_devices_mask & DEVICE_BT_LE) == DEVICE_BT_LE) &&
+            ((current_devices.devices_mask & DEVICE_BT_LE) == DEVICE_BT_LE) &&
             (!display_selected || dev->tagged)) ||
           (dev->scanType == SCAN_WIFI_AP &&
-            ((current_devices_mask & DEVICE_WIFI_AP) == DEVICE_WIFI_AP) &&
+            ((current_devices.devices_mask & DEVICE_WIFI_AP) == DEVICE_WIFI_AP) &&
             (!display_selected || dev->tagged)) ||
           (dev->scanType == SCAN_WIFI_STA &&
-            ((current_devices_mask & DEVICE_WIFI_STA) == DEVICE_WIFI_STA) &&
+            ((current_devices.devices_mask & DEVICE_WIFI_STA) == DEVICE_WIFI_STA) &&
             (!display_selected || dev->tagged)));
 }
 
@@ -82,11 +191,21 @@ bool wendigo_device_is_displayed(wendigo_device *dev) {
  * deviceMask: A bitmask of DeviceMask values. e.g. DEVICE_WIFI_AP |
  * DEVICE_WIFI_STA to display all WiFi devices; 0 to display all device types.
  * Returns the number of devices that meet the specified criteria.
+ * If DEVICE_CUSTOM is included as part of the device mask this function WILL
+ * NOT modify the contents of current_devices[], but will simply return the
+ * number of devices currently displayed.
  */
 uint16_t wendigo_set_current_devices(uint8_t deviceMask) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_current_devices()");
   if (deviceMask == 0) {
     deviceMask = DEVICE_ALL;
+  }
+  current_devices.devices_mask = deviceMask;
+  /* If custom devices are being displayed there's nothing for this function to do */
+  if ((deviceMask & DEVICE_CUSTOM) == DEVICE_CUSTOM) {
+    FURI_LOG_T(WENDIGO_TAG,
+      "End wendigo_set_current_devices(): DEVICE_CUSTOM specified.");
+    return current_devices.devices_count; // I'm pretty sure this is safe - correctly initialised as 0, then updated
   }
   bool display_selected = ((deviceMask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY);
   /* To ensure we only malloc the required memory, run an initial pass to count the number of devices */
@@ -108,15 +227,14 @@ uint16_t wendigo_set_current_devices(uint8_t deviceMask) {
     }
   }
   if (deviceCount > 0) {
-    wendigo_device **new_devices = realloc(current_devices, sizeof(wendigo_device *) * deviceCount);
+    wendigo_device **new_devices = realloc(current_devices.devices, sizeof(wendigo_device *) * deviceCount);
     if (new_devices == NULL) {
         return 0;
     }
-    current_devices = new_devices;
+    current_devices.devices = new_devices;
   }
-  current_devices_count = deviceCount;
-  current_devices_mask = deviceMask;
-  /* Populate current_devices[] */
+  current_devices.devices_count = deviceCount;
+  /* Populate current_devices.devices[] */
   uint16_t current_index = 0;
   for (uint16_t i = 0; i < devices_count && current_index < deviceCount; ++i) {
     if ((devices[i]->scanType == SCAN_HCI &&
@@ -131,7 +249,7 @@ uint16_t wendigo_set_current_devices(uint8_t deviceMask) {
           (devices[i]->scanType == SCAN_WIFI_STA &&
             ((deviceMask & DEVICE_WIFI_STA) == DEVICE_WIFI_STA) &&
             (!display_selected || devices[i]->tagged))) {
-      current_devices[current_index++] = devices[i];
+      current_devices.devices[current_index++] = devices[i];
     }
   }
   furi_assert(current_index == deviceCount);
@@ -198,21 +316,21 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_selected_device()");
   WendigoApp *app = variable_item_get_context(item);
 
-  if (app->device_list_selected_menu_index < current_devices_count) {
+  if (app->device_list_selected_menu_index < current_devices.devices_count) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_selected_device()");
-    return current_devices[app->device_list_selected_menu_index];
+    return current_devices.devices[app->device_list_selected_menu_index];
   }
   // TODO: Compare these methods - I'm tempted to remove the first approach
   // (which is why it now gets its own function)
   /* Instead of indexing into the array, see if we can find the device with a
    * reverse lookup from `item` */
   uint16_t idx = 0;
-  for (; idx < current_devices_count && current_devices[idx]->view != item;
+  for (; idx < current_devices.devices_count && current_devices.devices[idx]->view != item;
     ++idx) {
   }
-  if (idx < current_devices_count) {
+  if (idx < current_devices.devices_count) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_selected_device()");
-    return current_devices[idx];
+    return current_devices.devices[idx];
   }
   /* Device not found */
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_selected_device()");
@@ -231,7 +349,7 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
 void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
   FURI_LOG_D(WENDIGO_TAG, "Start wendigo_scene_device_list_update()");
   /* This will also cater for a NULL dev */
-  if (!wendigo_device_is_displayed(dev)) {
+  if (!wendigo_device_is_displayed(dev)) { // TODO: This cannot be relied upon with DEVICE_CUSTOM
     return;
   }
   char *name;
@@ -388,8 +506,8 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     /* Invalid device type */
     return;
   }
-  uint16_t dev_idx = custom_device_index(dev, current_devices, current_devices_count);
-  if (dev_idx == current_devices_count) {
+  uint16_t dev_idx = custom_device_index(dev, current_devices.devices, current_devices.devices_count);
+  if (dev_idx == current_devices.devices_count) {
     /* Add a new item */
     dev->view = variable_item_list_add(
         app->devices_var_item_list, (name == NULL) ? "(Unknown)" : name,
@@ -397,11 +515,11 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     /* And set selected option */
     variable_item_set_current_value_index(dev->view, optionIndex);
     variable_item_set_current_value_text(dev->view, optionValue);
-    /* Update current_devices[] to include the new device */
-    wendigo_device **new_devices = realloc(current_devices, sizeof(wendigo_device *) * (current_devices_count + 1));
+    /* Update current_devices.devices[] to include the new device */
+    wendigo_device **new_devices = realloc(current_devices.devices, sizeof(wendigo_device *) * (current_devices.devices_count + 1));
     if (new_devices != NULL) {
-      current_devices = new_devices;
-      current_devices[current_devices_count++] = dev;
+      current_devices.devices = new_devices;
+      current_devices.devices[current_devices.devices_count++] = dev;
     }
   } else {
     /* Update dev->view */
@@ -434,51 +552,55 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
   uint8_t options_count = 0;
   uint8_t options_index;
   bool free_item_str = false;
-  wendigo_set_current_devices(current_devices_mask);
-  for (uint16_t i = 0; i < current_devices_count; ++i) {
+  wendigo_set_current_devices(current_devices.devices_mask);
+  /* Set header text for the list if specified */
+  variable_item_list_set_header(app->devices_var_item_list,
+    (current_devices.devices_msg[0] == '\0') ? NULL
+                                              : current_devices.devices_msg);
+  for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
     /* Label with bdname if it's bluetooth & we have a name */
-    if (current_devices[i] != NULL && (current_devices[i]->scanType == SCAN_HCI ||
-          current_devices[i]->scanType == SCAN_BLE)) {
-      if (current_devices[i]->radio.bluetooth.bdname_len > 0 &&
-          current_devices[i]->radio.bluetooth.bdname != NULL) {
-        item_str = current_devices[i]->radio.bluetooth.bdname;
+    if (current_devices.devices[i] != NULL && (current_devices.devices[i]->scanType == SCAN_HCI ||
+          current_devices.devices[i]->scanType == SCAN_BLE)) {
+      if (current_devices.devices[i]->radio.bluetooth.bdname_len > 0 &&
+          current_devices.devices[i]->radio.bluetooth.bdname != NULL) {
+        item_str = current_devices.devices[i]->radio.bluetooth.bdname;
       } else {
         /* Use MAC */
         item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
         if (item_str != NULL) {
-          bytes_to_string(current_devices[i]->mac, MAC_BYTES, item_str);
+          bytes_to_string(current_devices.devices[i]->mac, MAC_BYTES, item_str);
         }
         free_item_str = true;
       }
       options_count = WendigoOptionsBTCount;
       options_index = WendigoOptionBTScanType;
       /* Label with SSID if it's an AP and we have an SSID */
-    } else if (current_devices[i] != NULL &&
-              current_devices[i]->scanType == SCAN_WIFI_AP) {
-      if (current_devices[i]->radio.ap.ssid[0] != '\0') {
-        item_str = current_devices[i]->radio.ap.ssid;
+    } else if (current_devices.devices[i] != NULL &&
+              current_devices.devices[i]->scanType == SCAN_WIFI_AP) {
+      if (current_devices.devices[i]->radio.ap.ssid[0] != '\0') {
+        item_str = current_devices.devices[i]->radio.ap.ssid;
       } else {
         /* Use MAC */
         item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
         if (item_str != NULL) {
-          bytes_to_string(current_devices[i]->mac, MAC_BYTES, item_str);
+          bytes_to_string(current_devices.devices[i]->mac, MAC_BYTES, item_str);
         }
         free_item_str = true;
       }
       options_count = WendigoOptionsAPCount;
       options_index = WendigoOptionAPScanType;
       /* Otherwise use the MAC/BDA */
-    } else if (current_devices[i] != NULL) {
+    } else if (current_devices.devices[i] != NULL) {
       item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
       if (item_str != NULL) {
-        bytes_to_string(current_devices[i]->mac, MAC_BYTES, item_str);
+        bytes_to_string(current_devices.devices[i]->mac, MAC_BYTES, item_str);
       }
       free_item_str = true;
       options_count = WendigoOptionsSTACount;
       options_index = WendigoOptionSTAScanType;
     }
-    if (current_devices[i] != NULL && item_str != NULL && options_count > 0) {
-      current_devices[i]->view = variable_item_list_add(
+    if (current_devices.devices[i] != NULL && item_str != NULL && options_count > 0) {
+      current_devices.devices[i]->view = variable_item_list_add(
           app->devices_var_item_list, item_str, options_count,
           wendigo_scene_device_list_var_list_change_callback, app);
     }
@@ -487,15 +609,15 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
       free(item_str);
     }
     /* Default to displaying scanType in options menu */
-    if (current_devices[i] != NULL && current_devices[i]->view != NULL) {
-      variable_item_set_current_value_index(current_devices[i]->view,
+    if (current_devices.devices[i] != NULL && current_devices.devices[i]->view != NULL) {
+      variable_item_set_current_value_index(current_devices.devices[i]->view,
                                             options_index);
-      variable_item_set_current_value_text(current_devices[i]->view,
-          (current_devices[i]->scanType == SCAN_HCI)        ? "BT Classic"
-          : (current_devices[i]->scanType == SCAN_BLE)      ? "BLE"
-          : (current_devices[i]->scanType == SCAN_WIFI_AP)  ? "WiFi AP"
-          : (current_devices[i]->scanType == SCAN_WIFI_STA) ? "WiFi STA"
-                                                            : "Unknown");
+      variable_item_set_current_value_text(current_devices.devices[i]->view,
+          (current_devices.devices[i]->scanType == SCAN_HCI)        ? "BT Classic"
+          : (current_devices.devices[i]->scanType == SCAN_BLE)      ? "BLE"
+          : (current_devices.devices[i]->scanType == SCAN_WIFI_AP)  ? "WiFi AP"
+          : (current_devices.devices[i]->scanType == SCAN_WIFI_STA) ? "WiFi STA"
+                                                                    : "Unknown");
     }
   }
   variable_item_list_set_selected_item(app->devices_var_item_list, 0);
@@ -508,9 +630,9 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
   furi_assert(context);
   WendigoApp *app = context;
 
-  furi_assert(index < current_devices_count);
+  furi_assert(index < current_devices.devices_count);
 
-  wendigo_device *item = current_devices[index];
+  wendigo_device *item = current_devices.devices[index];
   if (item == NULL) {
     return;
   }
@@ -533,9 +655,9 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     variable_item_set_current_value_text(item->view,
                                         (item->tagged) ? "Untag" : "Tag");
     /* If the device is now untagged and we're viewing tagged devices only,
-     * remove the device from view */
-    if (((current_devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY) &&
-        !item->tagged) {
+     * remove the device from view unless custom device view is enabled. */
+    if (((current_devices.devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY) &&
+        !item->tagged && ((current_devices.devices_mask & DEVICE_CUSTOM) != DEVICE_CUSTOM)) {
       /* Bugger - There's no method to remove an item from a variable_item_list */
       item->view = NULL; // TODO: Is this leaking memory? Can I free a VariableItem?
       wendigo_scene_device_list_redraw(app);
@@ -545,7 +667,102 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       WendigoOptionAPStaCount) || (item->scanType == SCAN_WIFI_STA &&
       variable_item_get_current_value_index(item->view) ==
       WendigoOptionSTAAP))) {
-    // TODO: Figure out how to set current_devices[] to either the AP's STAs or the STA's AP
+    /* Push current_devices onto the call stack */
+    DeviceListInstance *new_stack = realloc(stack, sizeof(DeviceListInstance) * (stack_counter + 1));
+    if (new_stack == NULL) {
+      wendigo_display_popup(app, "Insufficient Memory", "Unable to allocate an additional DeviceListInstance.");
+      wendigo_log(MSG_ERROR, "wendigo_scene_device_list_var_list_enter_callback() terminated early. Unable to malloc() additional DeviceListInstance.");
+      return;
+    } else {
+      memcpy(&(new_stack[stack_counter]), &current_devices, sizeof(DeviceListInstance));
+      stack = new_stack;
+      ++stack_counter;
+    }
+    /* Re-initialise current_devices */
+    current_devices.devices_mask = DEVICE_CUSTOM;
+    current_devices.view = WendigoAppViewDeviceList;
+    current_devices.free_devices = false;
+    current_devices.devices_count = 0;
+    current_devices.devices = NULL;
+    bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
+    char deviceName[MAX_SSID_LEN + 1];
+    bzero(deviceName, sizeof(deviceName));
+    if (item->scanType == SCAN_WIFI_AP) {
+      current_devices.view = WendigoAppViewAPSTAs;
+      if (item->radio.ap.stations_count > 0) {
+        current_devices.devices = malloc(sizeof(wendigo_device *) * item->radio.ap.stations_count);
+      }
+      if (item->radio.ap.stations_count > 0 && current_devices.devices == NULL) {
+        char *msg = malloc(sizeof(char) * 56);
+        if (msg == NULL) {
+          wendigo_log(MSG_ERROR,
+            "Unable to allocate memory to display AP's stations.");
+        } else {
+          snprintf(msg, 56,
+            "Unable to allocate %d bytes to display AP's stations.",
+            sizeof(wendigo_device *) * item->radio.ap.stations_count);
+          wendigo_log(MSG_ERROR, msg);
+          free(msg);
+        }
+        wendigo_display_popup(app, "Out of memory", "Unable to allocate memory for AP's stations.");
+        current_devices.devices_count = 0;
+      } else { /* There are no stations to display or malloc() succeeded */
+        current_devices.free_devices = true; /* Don't forget to only free if stations_count > 0 as well */
+        /* Loop through item->radio.ap.stations, adding devices with the
+         * specified MACs if we can find them. */
+        uint16_t idx_src;
+        uint16_t idx_dest;
+        uint16_t idx_sta;
+        for (idx_src = 0, idx_dest = 0;
+            idx_src < item->radio.ap.stations_count; ++idx_src) {
+          idx_sta = device_index_from_mac(item->radio.ap.stations[idx_src]);
+          if (idx_sta < devices_count) {
+            /* The station exists in the cache - add it to current_devices */
+            current_devices.devices[idx_dest++] = devices[idx_sta];
+          }
+        }
+        /* If there were stations not in the cache, current_devices will have empty
+         * elements - if this occurs, shrink current_devices.devices[]. */
+        if (idx_dest < item->radio.ap.stations_count) {
+          wendigo_device **tmp_devices = realloc(current_devices.devices, sizeof(wendigo_device *) * idx_dest);
+          if (tmp_devices != NULL) {
+            /* If realloc() worked, just set devices[] to tmp_devices[] */
+            current_devices.devices = tmp_devices;
+          }
+        }
+        /* Set devices_count whether or not we had to shrink devices[] */
+        current_devices.devices_count = idx_dest;
+      }
+      /* Set deviceName using SSID if we have it, otherwise MAC */
+      if (item->radio.ap.ssid[0] == '\0') {
+        bytes_to_string(item->mac, MAC_BYTES, deviceName);
+      } else {
+        strncpy(deviceName, item->radio.ap.ssid, sizeof(deviceName));
+      }
+      snprintf(current_devices.devices_msg,
+        sizeof(current_devices.devices_msg),
+        "%s STAs", deviceName);
+    } else if (item->scanType == SCAN_WIFI_STA) {
+      current_devices.view = WendigoAppViewSTAAP;
+      /* Use MAC to refer to the device */
+      bytes_to_string(item->mac, MAC_BYTES, deviceName);
+      snprintf(current_devices.devices_msg,
+        sizeof(current_devices.devices_msg),
+        "%s' AP", deviceName);
+      /* Station will display one device if it has an AP, otherwise 0 */
+      if (memcmp(item->radio.sta.apMac, nullMac, MAC_BYTES)) {
+        /* We have a MAC. Find the wendigo_device* */
+        uint16_t apIdx = device_index_from_mac(item->radio.sta.apMac);
+        if (apIdx < devices_count) {
+          /* Found the AP in the device cache - Display just it */
+          current_devices.devices_count = 1;
+          current_devices.devices = &(devices[apIdx]);
+        }
+      }
+    } else {
+      wendigo_log(MSG_WARN,
+        "Logic error: Fell through switch() statement in wendigo_scene_device_list.c");
+    }
     view_dispatcher_send_custom_event(app->view_dispatcher,
       Wendigo_EventListDevices);
   } else if (item->view != NULL && item->scanType == SCAN_WIFI_STA &&
@@ -578,7 +795,7 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem *ite
 
   if (menu_item != NULL) {
     uint8_t option_index = variable_item_get_current_value_index(item);
-    furi_assert(option_index < current_devices_count);
+    furi_assert(option_index < current_devices.devices_count);
     /* Update the current option label */
     char tempStr[MAX_SSID_LEN + 1];
     bzero(tempStr, MAX_SSID_LEN + 1);
@@ -692,8 +909,11 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem *ite
  */
 void wendigo_scene_device_list_on_enter(void *context) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_enter()");
+  FURI_LOG_T(WENDIGO_TAG, "current_view: %d, devices_count: %d, devices_mask: %d, devices_msg: %s",
+    current_devices.view, current_devices.devices_count, current_devices.devices_mask,
+    current_devices.devices_msg);
   WendigoApp *app = context;
-  app->current_view = WendigoAppViewDeviceList;
+  app->current_view = current_devices.view;
 
   variable_item_list_set_enter_callback(app->devices_var_item_list,
     wendigo_scene_device_list_var_list_enter_callback, app);
@@ -706,7 +926,7 @@ void wendigo_scene_device_list_on_enter(void *context) {
    * bounds, unless we've moved from all devices to a subset. */
   uint8_t selected_item = scene_manager_get_scene_state(app->scene_manager,
                                                         WendigoSceneDeviceList);
-  if (selected_item >= current_devices_count) {
+  if (selected_item >= current_devices.devices_count) {
     selected_item = 0;
   }
   variable_item_list_set_selected_item(app->devices_var_item_list, selected_item);
@@ -716,7 +936,7 @@ void wendigo_scene_device_list_on_enter(void *context) {
 
 bool wendigo_scene_device_list_on_event(void *context,
                                         SceneManagerEvent event) {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_event()");
+//  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_event()");
   WendigoApp *app = context;
   bool consumed = false;
 
@@ -728,7 +948,11 @@ bool wendigo_scene_device_list_on_event(void *context,
       scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceDetail);
       break;
     case Wendigo_EventListDevices:
-      // TODO: List an AP's STAs or a STA's AP
+      /* current_devices has been populated with relevant devices - all we
+       * need to do here is display them. */
+      scene_manager_set_scene_state(app->scene_manager, WendigoSceneDeviceList,
+                                    app->device_list_selected_menu_index);
+      scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceList);
       break;
     case Wendigo_EventListNetworks:
         scene_manager_set_scene_state(app->scene_manager, WendigoSceneDeviceList,
@@ -759,71 +983,71 @@ bool wendigo_scene_device_list_on_event(void *context,
      */
     char optionValue[MAX_SSID_LEN + 1];
     uint32_t now = furi_hal_rtc_get_timestamp();
-    for (uint16_t i = 0; i < current_devices_count; ++i) {
-      if (current_devices != NULL && current_devices[i] != NULL &&
-          current_devices[i]->view != NULL) {
+    for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
+      if (current_devices.devices != NULL && current_devices.devices[i] != NULL &&
+          current_devices.devices[i]->view != NULL) {
         bzero(optionValue, MAX_SSID_LEN + 1);
-        if (((current_devices[i]->scanType == SCAN_HCI ||
-            current_devices[i]->scanType == SCAN_BLE) &&
-            variable_item_get_current_value_index(current_devices[i]->view) ==
+        if (((current_devices.devices[i]->scanType == SCAN_HCI ||
+            current_devices.devices[i]->scanType == SCAN_BLE) &&
+            variable_item_get_current_value_index(current_devices.devices[i]->view) ==
                 WendigoOptionBTLastSeen) ||
-            (current_devices[i]->scanType == SCAN_WIFI_AP &&
-            variable_item_get_current_value_index(current_devices[i]->view) ==
+            (current_devices.devices[i]->scanType == SCAN_WIFI_AP &&
+            variable_item_get_current_value_index(current_devices.devices[i]->view) ==
                 WendigoOptionAPLastSeen) ||
-            (current_devices[i]->scanType == SCAN_WIFI_STA &&
-            variable_item_get_current_value_index(current_devices[i]->view) ==
+            (current_devices.devices[i]->scanType == SCAN_WIFI_STA &&
+            variable_item_get_current_value_index(current_devices.devices[i]->view) ==
                 WendigoOptionSTALastSeen)) {
           /* Update lastSeen for this device */
-          _elapsedTime(&(current_devices[i]->lastSeen), &now, optionValue,
+          _elapsedTime(&(current_devices.devices[i]->lastSeen), &now, optionValue,
                       sizeof(optionValue));
-        } else if (app->is_scanning && (((current_devices[i]->scanType ==
-            SCAN_HCI || current_devices[i]->scanType == SCAN_BLE) &&
-            variable_item_get_current_value_index(current_devices[i]->view) ==
-            WendigoOptionBTRSSI) || (current_devices[i]->scanType ==
+        } else if (app->is_scanning && (((current_devices.devices[i]->scanType ==
+            SCAN_HCI || current_devices.devices[i]->scanType == SCAN_BLE) &&
+            variable_item_get_current_value_index(current_devices.devices[i]->view) ==
+            WendigoOptionBTRSSI) || (current_devices.devices[i]->scanType ==
             SCAN_WIFI_AP && variable_item_get_current_value_index(
-              current_devices[i]->view) == WendigoOptionAPRSSI) ||
-            (current_devices[i]->scanType == SCAN_WIFI_STA &&
-            variable_item_get_current_value_index(current_devices[i]->view) ==
+              current_devices.devices[i]->view) == WendigoOptionAPRSSI) ||
+            (current_devices.devices[i]->scanType == SCAN_WIFI_STA &&
+            variable_item_get_current_value_index(current_devices.devices[i]->view) ==
             WendigoOptionSTARSSI))) {
           /* Update RSSI for the current device */
           snprintf(optionValue, sizeof(optionValue), "%d dB",
-            current_devices[i]->rssi);
-        } else if (app->is_scanning && current_devices[i]->scanType ==
+            current_devices.devices[i]->rssi);
+        } else if (app->is_scanning && current_devices.devices[i]->scanType ==
             SCAN_WIFI_AP && variable_item_get_current_value_index(
-              current_devices[i]->view) == WendigoOptionAPStaCount) {
+              current_devices.devices[i]->view) == WendigoOptionAPStaCount) {
           /* Update stations_count for the current device */
           snprintf(optionValue, sizeof(optionValue), "%d Stations",
-              current_devices[i]->radio.ap.stations_count);
-        } else if (app->is_scanning && current_devices[i]->scanType ==
+              current_devices.devices[i]->radio.ap.stations_count);
+        } else if (app->is_scanning && current_devices.devices[i]->scanType ==
             SCAN_WIFI_AP && variable_item_get_current_value_index(
-              current_devices[i]->view) == WendigoOptionAPAuthMode) {
+              current_devices.devices[i]->view) == WendigoOptionAPAuthMode) {
           /* Update authMode for the current device */
-          uint8_t mode = current_devices[i]->radio.ap.authmode;
+          uint8_t mode = current_devices.devices[i]->radio.ap.authmode;
           if (mode > WIFI_AUTH_MAX) {
             mode = WIFI_AUTH_MAX;
           }
           snprintf(optionValue, sizeof(optionValue), "%s",
             wifi_auth_mode_strings[mode]);
-        } else if (app->is_scanning && current_devices[i]->scanType ==
+        } else if (app->is_scanning && current_devices.devices[i]->scanType ==
             SCAN_WIFI_STA && variable_item_get_current_value_index(
-              current_devices[i]->view) == WendigoOptionSTASavedNetworks) {
+              current_devices.devices[i]->view) == WendigoOptionSTASavedNetworks) {
           /* Update saved_networks_count for the current device */
           snprintf(optionValue, sizeof(optionValue), "%d Networks",
-            current_devices[i]->radio.sta.saved_networks_count);
-        } else if (app->is_scanning && current_devices[i]->scanType ==
+            current_devices.devices[i]->radio.sta.saved_networks_count);
+        } else if (app->is_scanning && current_devices.devices[i]->scanType ==
             SCAN_WIFI_STA && variable_item_get_current_value_index(
-              current_devices[i]->view) == WendigoOptionSTAAP) {
+              current_devices.devices[i]->view) == WendigoOptionSTAAP) {
           /* Update displayed AP for the current device */
-          if (memcmp(current_devices[i]->radio.sta.apMac, nullMac, MAC_BYTES)) {
+          if (memcmp(current_devices.devices[i]->radio.sta.apMac, nullMac, MAC_BYTES)) {
             /* AP has a MAC - Do we have the AP in the cache? */
             uint16_t apIdx = device_index_from_mac(
-              current_devices[i]->radio.sta.apMac);
+              current_devices.devices[i]->radio.sta.apMac);
             if (apIdx == devices_count || devices == NULL ||
                 devices[apIdx] == NULL || devices[apIdx]->scanType !=
                 SCAN_WIFI_AP || devices[apIdx]->radio.ap.ssid[0] == '\0') {
               /* Either we don't have the AP in the cache or we don't have an
                * SSID for the AP - Display the MAC */
-              bytes_to_string(current_devices[i]->radio.sta.apMac, MAC_BYTES,
+              bytes_to_string(current_devices.devices[i]->radio.sta.apMac, MAC_BYTES,
                 optionValue);
             } else {
               /* We have an SSID for the AP */
@@ -842,13 +1066,13 @@ bool wendigo_scene_device_list_on_event(void *context,
            * if that helps. */
           // TODO: There's no way to get the current value text. Right...
           /* We've updated the current device's selected option */
-          variable_item_set_current_value_text(current_devices[i]->view,
+          variable_item_set_current_value_text(current_devices.devices[i]->view,
                                               optionValue);
         }
       }
     }
   }
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_on_event()");
+//  FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_on_event()");
   return consumed;
 }
 
@@ -856,13 +1080,39 @@ void wendigo_scene_device_list_on_exit(void *context) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_exit()");
   WendigoApp *app = context;
   variable_item_list_reset(app->devices_var_item_list);
-  for (uint16_t i = 0; i < devices_count; ++i) {
-    devices[i]->view = NULL;
+  for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
+    current_devices.devices[i]->view = NULL;
   }
-  if (current_devices != NULL) {
-    free(current_devices);
-    current_devices = NULL;
-    current_devices_count = 0;
+  if (app->leaving_scene) {
+    /* This condition is met when we are genuinely exiting this scene - when
+     * the back button has been pressed. When displaying a device list from
+     * another device list, such as displaying an AP's STAs, this function is
+     * called but we do not want to replace the current_devices we've just
+     * constructed with the stack element we've just pushed. */
+    /* Free current_devices.devices[] if necessary */
+    if (current_devices.devices != NULL && current_devices.devices_count > 0) {
+      if (current_devices.free_devices) {
+        free(current_devices.devices);
+      }
+      current_devices.devices = NULL;
+      current_devices.devices_count = 0;
+    }
+    /* Pop the previous device list off the stack if there's one there */
+    if (stack_counter > 0) {
+      /* Copy the DeviceListInstance, otherwise it'll be freed during use */
+      memcpy(&current_devices, &(stack[stack_counter - 1]), sizeof(DeviceListInstance));
+      /* When we pop the final stack element realloc() will act like free()
+       * and return NULL */
+      DeviceListInstance *stackAfterPop = realloc(stack, sizeof(DeviceListInstance) * (stack_counter - 1));
+      if (stackAfterPop == NULL && stack_counter > 1) {
+        wendigo_log(MSG_ERROR,
+          "Unable to shrink DeviceListInstance stack. Hoping for the best...");
+      } else {
+        stack = stackAfterPop;
+      }
+      --stack_counter;
+    }
+    app->leaving_scene = false;
   }
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_on_exit()");
 }

@@ -1058,6 +1058,7 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     memcpy(ap_ssid, packet + WENDIGO_OFFSET_STA_AP_SSID, ap_ssid_len);
     ap_ssid[ap_ssid_len] = '\0';
     /* Do I want to do anything with ap_ssid? Not right now... */
+    FURI_LOG_D("parseBufferWifiSta()", "STA %02x:%02x:%02x:%02x:%02x:%02x has a PNL of %d", dev->mac[0], dev->mac[1], dev->mac[2], dev->mac[3], dev->mac[4], dev->mac[5], pnl_count);
     if (pnl_count > 0) {
         /* Retrieve pnl_count saved networks */
         dev->radio.sta.saved_networks = malloc(sizeof(char *) * pnl_count);
@@ -1084,12 +1085,12 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     bool short_pkt = false;
     while (pnl_idx < dev->radio.sta.saved_networks_count && !short_pkt) {
         /* Ensure the packet is big enough */
-        if (packetLen > (packet_idx + PREAMBLE_LEN)) {
+        if (packetLen >= (packet_idx + PREAMBLE_LEN)) {
             /* Get current SSID length */
             memcpy(&this_pnl_len, packet + packet_idx, sizeof(uint8_t));
             ++packet_idx;
             /* Make sure the packet is big enough to contain the SSID */
-            if (packetLen > (packet_idx + this_pnl_len + PREAMBLE_LEN)) {
+            if (packetLen >= (packet_idx + this_pnl_len + PREAMBLE_LEN)) {
                 if (this_pnl_len == 0) {
                     dev->radio.sta.saved_networks[pnl_idx] = NULL;
                 } else {
@@ -1098,19 +1099,37 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
                     if (dev->radio.sta.saved_networks[pnl_idx] != NULL) {
                         memcpy(dev->radio.sta.saved_networks[pnl_idx],
                             packet + packet_idx, this_pnl_len);
+                        FURI_LOG_D("parseBufferWifiSta()", "Retrieved STA %02x:%02x:%02x:%02x:%02x:%02x PNL %d: %s", dev->mac[0], dev->mac[1], dev->mac[2], dev->mac[3], dev->mac[4], dev->mac[5], pnl_idx, dev->radio.sta.saved_networks[pnl_idx]);
                     }
                     packet_idx += this_pnl_len;
                 }
                 ++pnl_idx;
-            } else {
+            } else { // packetLen < (packet_idx + this_pnl_len + PREAMBLE_LEN)
+                char *shortMsg = malloc(sizeof(char) * 103);
+                if (shortMsg == NULL) {
+                    wendigo_log_with_packet(MSG_DEBUG, "Packet too short for specified PNL length.", packet, packetLen);
+                } else {
+                    snprintf(shortMsg, 103, "Packet too short: packetLen (%d) <= (packet_idx (%d) + this_pnl_len (%d) + PREAMBLE_LEN (%d)).", packetLen, packet_idx, this_pnl_len, PREAMBLE_LEN);
+                    wendigo_log_with_packet(MSG_DEBUG, shortMsg, packet, packetLen);
+                    free(shortMsg);
+                }
                 short_pkt = true;
             }
-        } else {
+        } else { // packetLen < (packet_idx + PREAMBLE_LEN)
+            char *shortMsg = malloc(sizeof(char) * 73);
+            if (shortMsg == NULL) {
+                wendigo_log_with_packet(MSG_DEBUG, "Packet too short to search for a PNL.", packet, packetLen);
+            } else {
+                snprintf(shortMsg, 73, "Packet too short to contain another PNL. pnl_idx: %d packet_idx: %d.", pnl_idx, packet_idx);
+                wendigo_log_with_packet(MSG_DEBUG, shortMsg, packet, packetLen);
+                free(shortMsg);
+            }
             short_pkt = true;
         }
     }
     if (short_pkt) {
         // TODO: Log error
+        wendigo_log(MSG_ERROR, "STA packet too short to extract PNL.");
         if (pnl_idx > 0) {
             for (uint8_t i = 0; i < pnl_idx; ++i) {
                 if (dev->radio.sta.saved_networks[i] != NULL) {
@@ -1283,7 +1302,7 @@ void parsePacket(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     app->last_packet = furi_hal_rtc_get_timestamp();
 
     /* Development: Dump packet for inspection */
-    wendigo_log_with_packet(MSG_DEBUG, "parsePacket() received packet", packet, packetLen);
+    //wendigo_log_with_packet(MSG_DEBUG, "parsePacket() received packet", packet, packetLen);
 
     if (packetLen < (2 * PREAMBLE_LEN)) {
         wendigo_log_with_packet(MSG_WARN, "parsePacket(): Packet too short:", packet, packetLen);
@@ -1447,15 +1466,15 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
             }
         }
         if (!bytesFound) {
-            FURI_LOG_D("wendigo_scan_handle_rx_data_cb()",
-                "Buffer is empty, resetting bufferLen");
+            // FURI_LOG_D("wendigo_scan_handle_rx_data_cb()",
+            //     "Buffer is empty, resetting bufferLen");
             bufferLen = 0;
         }
     }
     /* Release the mutex and parse the packets */
     furi_mutex_release(app->bufferMutex);
     for (uint8_t i = 0; i < packetsCount; ++i) {
-        wendigo_log_with_packet(MSG_DEBUG, "wendigo_scan_handle_rx_data() Parsing packet", packets[i], packetSize[i]);
+        //wendigo_log_with_packet(MSG_DEBUG, "wendigo_scan_handle_rx_data() Parsing packet", packets[i], packetSize[i]);
         parsePacket(app, packets[i], packetSize[i]);
         free(packets[i]);
     }

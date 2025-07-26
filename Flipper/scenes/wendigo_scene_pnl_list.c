@@ -27,7 +27,10 @@ void wendigo_scene_pnl_list_redraw(WendigoApp *app) {
         variable_item_set_current_value_text(item, "");
         return;
     }
-    // TODO
+    /* Display the MAC as the list header. Shame we can't make this text smaller. */
+    char macStr[MAC_STRLEN + 1];
+    bytes_to_string(current_device->mac, MAC_BYTES, macStr);
+    variable_item_list_set_header(var_item_list, macStr);
     for (uint8_t i = 0; i < current_device->radio.sta.saved_networks_count; ++i) {
         if (current_device->radio.sta.saved_networks[i] != NULL) {
             item = variable_item_list_add(var_item_list,
