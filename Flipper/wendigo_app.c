@@ -25,6 +25,7 @@ static bool wendigo_app_back_event_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_back_event_callback()");
     furi_assert(context);
     WendigoApp *app = context;
+    app->leaving_scene = true;
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_app_back_event_callback()");
     return scene_manager_handle_back_event(app->scene_manager);
 }
@@ -182,8 +183,9 @@ WendigoApp *wendigo_app_alloc() {
     view_dispatcher_add_view(app->view_dispatcher, WendigoAppViewDeviceList,
         variable_item_list_get_view(app->devices_var_item_list));
     
-    /* Inittialise the DeviceListInstance struct used in device list */
+    /* Initialise the DeviceListInstance struct used in device list */
     wendigo_scene_device_list_init(NULL);
+    app->leaving_scene = false;
     
     /* Initialise the last packet received time */
     app->last_packet = furi_hal_rtc_get_timestamp();

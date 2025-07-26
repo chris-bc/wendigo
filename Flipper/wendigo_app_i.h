@@ -122,7 +122,10 @@ struct WendigoApp {
     SceneManager *scene_manager;
     WendigoAppView current_view;
     bool is_scanning;
-
+    bool leaving_scene; /* Set to true when the back button is pressed to allow device list to be
+                         * used for a variety of purposes - device list, selected device list, and
+                         * navigating from device list to AP list to station list, etc.
+                         */
     Widget *widget;
     VariableItemList *var_item_list;
     VariableItemList *devices_var_item_list;

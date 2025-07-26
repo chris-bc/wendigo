@@ -54,7 +54,6 @@ enum wendigo_device_list_sta_options {
  * this scene that differ between instances.
  */
 typedef struct DeviceListInstance {
-  // TODO: I can't initialise the members in a struct declaration - Need to build in initialisation (view to DeviceList, devices to NULL, mask to DEVICE_ALL, count to 0)
   wendigo_device **devices;
   uint16_t devices_count;
   uint8_t devices_mask;
@@ -686,8 +685,8 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
           free(msg);
         }
         current_devices.devices_count = 0;
-      } else {
-        current_devices.free_devices = true;
+      } else { /* There are no stations to display or malloc() succeeded */
+        current_devices.free_devices = true; /* Don't forget to only free if stations_count > 0 as well */
         /* Loop through item->radio.ap.stations, adding devices with the
          * specified MACs if we can find them. */
         uint16_t idx_src;
@@ -697,12 +696,12 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
             idx_src < item->radio.ap.stations_count; ++idx_src) {
           idx_sta = device_index_from_mac(item->radio.ap.stations[idx_src]);
           if (idx_sta < devices_count) {
-            /* The station exists in the cache - add it to devices[] */
+            /* The station exists in the cache - add it to current_devices */
             current_devices.devices[idx_dest++] = devices[idx_sta];
           }
         }
-        /* If there were stations not in the cache, devices[] will have empty
-         * elements - if this occurs, shrink devices[]. */
+        /* If there were stations not in the cache, current_devices will have empty
+         * elements - if this occurs, shrink current_devices.devices[]. */
         if (idx_dest < item->radio.ap.stations_count) {
           wendigo_device **tmp_devices = realloc(current_devices.devices, sizeof(wendigo_device *) * idx_dest);
           if (tmp_devices != NULL) {
@@ -736,7 +735,13 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
         if (apIdx < devices_count) {
           /* Found the AP in the device cache - Display just it */
           current_devices.devices_count = 1;
-          current_devices.devices = &(devices[apIdx]);
+          current_devices.devices = malloc(sizeof(wendigo_device *));
+          if (current_devices.devices == NULL) {
+            // TODO alert and set to no devices
+          } else {
+            current_devices.devices[0] = devices[apIdx]; // TODO: Reconsider if I need to malloc()
+            current_devices.free_devices = true;
+          }
         }
       }
     } else {
@@ -1063,12 +1068,13 @@ void wendigo_scene_device_list_on_exit(void *context) {
   for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
     current_devices.devices[i]->view = NULL;
   }
-  if (current_devices.view == app->current_view) {
+  if (app->leaving_scene) {
+    // TODO: Was if (current_devices.view == app->current_view)
     /* This condition is met when we are genuinely exiting this scene - when
-     * displaying a device list from another device list, such as displaying
-     * an AP's STAs, this function is called but we do not want to replace
-     * the current_devices we've just constructed with the stack that we've
-     * just pushed. */
+     * the back button has been pressed. When displaying a device list from
+     * another device list, such as displaying an AP's STAs, this function is
+     * called but we do not want to replace the current_devices we've just
+     * constructed with the stack element we've just pushed. */
     /* Free current_devices.devices[] if necessary */
     if (current_devices.devices != NULL && current_devices.devices_count > 0) {
       if (current_devices.free_devices) {
@@ -1081,25 +1087,18 @@ void wendigo_scene_device_list_on_exit(void *context) {
     if (stack_counter > 0) {
       /* Copy the DeviceListInstance, otherwise it'll be freed during use */
       memcpy(&current_devices, &(stack[stack_counter - 1]), sizeof(DeviceListInstance));
-      /* We can't realloc() zero bytes so choose between free() and realloc() */
-      if (stack_counter > 1) {
-        DeviceListInstance *stackAfterPop = realloc(stack, stack_counter - 1);
-        if (stackAfterPop == NULL) {
-          wendigo_log(MSG_ERROR,
-            "Unable to shrink DeviceListInstance stack. Hoping for the best...");
-        } else {
-          --stack_counter;
-          stack = stackAfterPop;
-        }
+      /* When we pop the final stack element realloc() will act like free()
+       * and return NULL */
+      DeviceListInstance *stackAfterPop = realloc(stack, stack_counter - 1);
+      if (stackAfterPop == NULL && stack_counter > 1) {
+        wendigo_log(MSG_ERROR,
+          "Unable to shrink DeviceListInstance stack. Hoping for the best...");
       } else {
-        /* We're using the last stack element */
-        if (stack_counter == 1 && stack != NULL) {
-          free(stack);
-          stack = NULL;
-          stack_counter = 0;
-        }
+        stack = stackAfterPop;
       }
+      --stack_counter;
     }
+    app->leaving_scene = false;
   }
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_on_exit()");
 }
