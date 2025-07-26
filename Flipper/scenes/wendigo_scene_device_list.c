@@ -103,12 +103,12 @@ void wendigo_scene_device_list_init(void *config) {
     if (cfg->devices_count > 0 && cfg->devices != NULL) {
       current_devices.devices = malloc(sizeof(wendigo_device *) * cfg->devices_count);
       if (current_devices.devices == NULL) {
-        char *msg = malloc(sizeof(char) * 65);
+        char *msg = malloc(sizeof(char) * 68);
         if (msg == NULL) {
-          wendigo_log(MSG_ERROR, "Unable to allocate memory for DeviceListInstance initialiser.")
+          wendigo_log(MSG_ERROR, "Unable to allocate memory for DeviceListInstance initialiser.");
         } else {
           // Unable to allocate %d bytes for DeviceListInstance initialiser.
-          snprintf(msg, 65, "Unable to allocate %d bytes for DeviceListInstance initialiser.",
+          snprintf(msg, 68, "Unable to allocate %d bytes for DeviceListInstance initialiser.",
             sizeof(wendigo_device *) * cfg->devices_count);
           wendigo_log(MSG_ERROR, msg);
           free(msg);
