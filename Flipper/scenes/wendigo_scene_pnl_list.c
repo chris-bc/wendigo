@@ -121,6 +121,24 @@ uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***re
     return networks;
 }
 
+/** Process the device cache (devices[]) and generate PreferredNetwork instances
+ * that map all identified networks to the wendigo_device instances that have
+ * probed for them.
+ * networks[] and networks_count are updated by this function.
+ */
+uint8_t map_ssids_to_devices(WendigoApp *app) {
+    if (networks_count > 0 && networks != NULL) {
+        // TODO: Refactor function to update, rather than replace, networks[]
+        free(networks);
+        networks = NULL;
+        networks_count = 0;
+    }
+    // TODO: Consider whether a mutex is needed over devices[]
+
+    return networks_count;
+}
+
+// TODO: May not actually need this function?
 uint16_t get_all_networks(WendigoApp *app) {
     char **networks;
     int16_t count = 0;
