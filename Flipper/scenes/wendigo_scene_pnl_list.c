@@ -133,7 +133,16 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
         networks = NULL;
         networks_count = 0;
     }
-    // TODO: Consider whether a mutex is needed over devices[]
+    // TODO: Consider whether a mutex is needed over networks[]
+
+    uint8_t networks_capacity = 0;
+    // foreach elem in devices[]
+    // get networks count
+    // realloc networks[] to ensure won't run out of space (dev.networks_count - (networks_capacity - networks_count))
+    // foreach SSID
+    // if exists, append current device
+    // otherwise create PreferredNetwork element
+    // after everything else, realloc networks[] to remove any spare capacity
 
     return networks_count;
 }
