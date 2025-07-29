@@ -1,7 +1,18 @@
 #include "../wendigo_app_i.h"
 #include "../wendigo_scan.h"
 
+/** PreferredNetwork is used to allow us to browse from SSID to devices
+ * that have probed for that SSID.
+ */
+typedef struct PreferredNetwork {
+    ssid[MAX_SSID_LEN + 1];
+    uint8_t device_count;
+    wendigo_device **devices;
+} PreferredNetwork;
+
 wendigo_device *current_device = NULL;
+PreferredNetwork *networks = NULL;
+uint8_t networks_count = 0;
 
 void wendigo_scene_pnl_list_set_device(wendigo_device *dev) {
     current_device = dev;
@@ -10,6 +21,38 @@ void wendigo_scene_pnl_list_set_device(wendigo_device *dev) {
 
 wendigo_device *wendigo_scene_pnl_list_get_device() {
     return current_device;
+}
+
+/** Search networks[] for a PreferredNetwork with the specified SSID.
+ * Returns the index of the PreferredNetwork, or networks_count if not
+ * found.
+ * SSID must be a null-terminated string.
+ */
+uint8_t index_of_pnl(char *ssid) {
+    if (ssid == NULL || strlen(ssid) == 0 || networks == NULL || networks_count == 0) {
+        return 0;
+    }
+    uint8_t idx;
+    uint8_t compareLen = MAX_SSID_LEN;
+    if (strlen(ssid) < compareLen) {
+        compareLen = strlen(ssid);
+    }
+    for (idx = 0; idx < networks_count && strncmp(ssid, networks[idx].ssid, compareLen); ++idx) { }
+    return idx;
+}
+
+/** Find the PreferredNetwork element of networks[] containing the
+ * specified SSID. Returns a reference to the element of networks[]
+ * or NULL if not found;
+ * SSID must be a null-terminated string.
+ */
+PreferredNetwork *pnl_for_ssid(char *ssid) {
+    PreferredNetwork *result = NULL;
+    uint8_t idx = index_of_pnl(ssid);
+    if (idx < networks_count) {
+        result = networks[idx];
+    }
+    return result;
 }
 
 /** Returns the number of networks the specified STA has probed for */
