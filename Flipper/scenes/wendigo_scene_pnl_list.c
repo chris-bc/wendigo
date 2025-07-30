@@ -5,7 +5,7 @@
  * that have probed for that SSID.
  */
 typedef struct PreferredNetwork {
-    ssid[MAX_SSID_LEN + 1];
+    char ssid[MAX_SSID_LEN + 1];
     uint8_t device_count;
     wendigo_device **devices;
 } PreferredNetwork;
@@ -50,7 +50,7 @@ PreferredNetwork *pnl_for_ssid(char *ssid) {
     PreferredNetwork *result = NULL;
     uint8_t idx = index_of_pnl(ssid);
     if (idx < networks_count) {
-        result = networks[idx];
+        result = &(networks[idx]);
     }
     return result;
 }
@@ -136,14 +136,52 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
     // TODO: Consider whether a mutex is needed over networks[]
 
     uint8_t networks_capacity = 0;
-    // foreach elem in devices[]
-    // get networks count
-    // realloc networks[] to ensure won't run out of space (dev.networks_count - (networks_capacity - networks_count))
-    // foreach SSID
-    // if exists, append current device
-    // otherwise create PreferredNetwork element
-    // after everything else, realloc networks[] to remove any spare capacity
-
+    uint8_t this_count;
+    PreferredNetwork *new_networks;
+    /* Loop over each device */
+    for (uint16_t i = 0; i < devices_count; ++i) {
+        if (devices == NULL || devices[i] == NULL || devices[i]->scanType != SCAN_WIFI_STA ||
+                devices[i]->radio.sta.saved_networks == NULL) {
+            this_count = 0;
+        } else {
+            this_count = devices[i]->radio.sta.saved_networks_count;
+        }
+        /* Make sure networks[] is large enough to include this_count additional nets */
+        if (networks_count + this_count > networks_capacity) {
+            new_networks = realloc(networks, sizeof(PreferredNetwork) * (networks_count + this_count));
+            if (new_networks == NULL) {
+                /* Too annoying to continue on - log and alert error, then clean up and exit */
+                wendigo_log(MSG_ERROR, "Unable to allocate PreferredNetwork elements.");
+                wendigo_display_popup(app, "Insufficient memory", "Unable to allocate PreferredNetwork elements.");
+                if (networks_capacity > 0) {
+                    // TODO: Better NULL checking
+                    free(networks);
+                    networks = NULL;
+                    networks_count = 0;
+                }
+                return 0;
+            }
+            networks_capacity = networks_count + this_count;
+            networks = new_networks;
+        }
+        /* Check each saved network for devices[i] */
+        for (uint8_t j = 0; j < this_count; ++j) {
+            // if SSID devices[i]->radio.sta.saved_networks[j] not in networks[]
+            //      Append a new PreferredNetwork
+            // Append devices[i] to SSID's PreferredNetwork
+        }
+    }
+    if (networks_capacity > networks_count) {
+        new_networks = realloc(networks, sizeof(PreferredNetwork) * networks_count);
+        if (new_networks == NULL) {
+            /* This condition will (should) never be true */
+            wendigo_log(MSG_ERROR, "Unable to shrink networks[] to remove spare capacity.");
+            /* Don't fret too much - although should probably bzero() new capacity so NULL checks will work */
+            // TODO
+        } else {
+            networks = new_networks;
+        }
+    }
     return networks_count;
 }
 
