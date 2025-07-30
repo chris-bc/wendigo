@@ -166,9 +166,31 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
         }
         /* Check each saved network for devices[i] */
         for (uint8_t j = 0; j < this_count; ++j) {
-            // if SSID devices[i]->radio.sta.saved_networks[j] not in networks[]
-            //      Append a new PreferredNetwork
-            // Append devices[i] to SSID's PreferredNetwork
+            new_networks = pnl_for_ssid(devices[i]->radio.sta.saved_networks[j]);
+            if (new_networks == NULL) {
+                // TODO Should we test for non-NULL SSID and devices in networks[networks_count]?
+                strncpy(networks[networks_count].ssid, devices[i]->radio.sta.saved_networks[j],
+                    strlen(devices[i]->radio.sta.saved_networks[j]));
+                new_networks = &(networks[networks_count++]);
+            }
+            /* Is devices[i] in new_networks->devices? */
+            uint8_t devIdx;
+            // TODO: Should I just compare pointer addresses instead of MAC?
+            for (devIdx = 0; devIdx < new_networks->device_count &&
+                (new_networks->devices[devIdx] == NULL ||
+                    memcmp(new_networks->devices[devIdx]->mac, devices[i]->mac, MAC_BYTES));
+                ++devIdx) { }
+            if (devIdx == new_networks->device_count) {
+                /* Append devices[i] to new_networks->device_count */
+                wendigo_device **new_devices = realloc(new_networks->devices,
+                    sizeof(wendigo_device *) * (new_networks->device_count + 1));
+                if (new_devices == NULL) {
+                    // TODO Panic
+                } else {
+                    // TODO: Append devices[i]
+                }
+            }
+            // TODO: Append devices[i] to SSID's PreferredNetwork
         }
     }
     if (networks_capacity > networks_count) {
