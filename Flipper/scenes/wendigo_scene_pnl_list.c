@@ -185,12 +185,22 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
                 wendigo_device **new_devices = realloc(new_networks->devices,
                     sizeof(wendigo_device *) * (new_networks->device_count + 1));
                 if (new_devices == NULL) {
-                    // TODO Panic
+                    char *msg = malloc(sizeof(char) * (85 + MAX_SSID_LEN + MAC_STRLEN));
+                    if (msg == NULL) {
+                        wendigo_log(MSG_ERROR, "Unable to allocate memory to store an additional device in a PreferredNetwork.");
+                    } else {
+                        char staMac[MAC_STRLEN + 1];
+                        bytes_to_string(devices[i]->mac, MAC_BYTES, staMac);
+                        snprintf(msg, 85 + MAX_SSID_LEN + MAC_STRLEN,
+                            "Unable to allocate an additional %d bytes to %s's PreferredNetwork element for STA %s.",
+                            sizeof(wendigo_device *), new_networks->ssid, staMac);
+                        wendigo_log(MSG_ERROR, msg);
+                        free(msg);
+                    }
                 } else {
                     // TODO: Append devices[i]
                 }
             }
-            // TODO: Append devices[i] to SSID's PreferredNetwork
         }
     }
     if (networks_capacity > networks_count) {
