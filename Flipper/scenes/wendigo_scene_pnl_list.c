@@ -198,7 +198,9 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
                         free(msg);
                     }
                 } else {
-                    // TODO: Append devices[i]
+                    /* Append devices[i] */
+                    new_devices[new_networks->device_count++] = devices[i];
+                    new_networks->devices = new_devices;
                 }
             }
         }
