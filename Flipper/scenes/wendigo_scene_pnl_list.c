@@ -23,7 +23,18 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
         return;
     }
     /* Display a device list for networks[index].devices */
-    // TODO
+    DeviceListInstance *deviceList = malloc(sizeof(DeviceListInstance));
+    if (deviceList == NULL) {
+        // TODO: panic and return
+    }
+    strncpy(deviceList->devices_msg, networks[index].ssid, MAX_SSID_LEN + 1);
+    deviceList->devices_mask = DEVICE_CUSTOM;
+    deviceList->view = WendigoAppViewPNLDeviceList;
+    deviceList->devices = networks[index].devices;
+    deviceList->devices_count = networks[index].device_count;
+    // TODO set DeviceList's current_devices to deviceList
+    // Create new device list set_current_devices (refactor existing to devices_mask)
+    // TODO: save selected item index, display scene
     UNUSED(context);
     UNUSED(index);
 }

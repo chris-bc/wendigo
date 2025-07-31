@@ -48,20 +48,6 @@ enum wendigo_device_list_sta_options {
   WendigoOptionsSTACount
 };
 
-/* This scene can be nested any number of times (well, until the stack pointer
- * overflows) to allow navigation, for example, from the device list to an
- * AP to one of its stations. DeviceListInstance captures the components of
- * this scene that differ between instances.
- */
-typedef struct DeviceListInstance {
-  wendigo_device **devices;
-  uint16_t devices_count;
-  uint8_t devices_mask;
-  WendigoAppView view;
-  char devices_msg[MAX_SSID_LEN + 18]; // Space for "Clients of MAX_SSID_LEN"
-  bool free_devices; // Do we need to free devices[] when we're done with it?
-} DeviceListInstance;
-
 /* Enacting nested copies of these scenes, without the luxury of treating them
  * as instances of a class, is achieved by managing an array of
  * DeviceListInstances as a stack - pushing a new set of devices to the stack
