@@ -22,21 +22,34 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
         /* Displaying PNL for a single device - no need for this function */
         return;
     }
-    /* Display a device list for networks[index].devices */
-    DeviceListInstance *deviceList = malloc(sizeof(DeviceListInstance));
-    if (deviceList == NULL) {
-        // TODO: panic and return
+    WendigoApp *app = (WendigoApp *)context;
+    if (index >= networks_count) {
+        /* Index out of bounds - Panic and quit */
+        char *msg = malloc(sizeof(char) * 115);
+        if (msg == NULL) {
+            wendigo_log(MSG_ERROR, "wendigo_scene_pnl_list_var_list_enter_callback() called with index out of bounds.");
+            wendigo_display_popup(app, "Index out of bounds",
+                "wendigo_scene_pnl_list_var_list_enter_callback() called with index out of bounds.");
+        } else {
+            snprintf(msg, 115,
+                "wendigo_scene_pnl_list_var_list_enter_callback(): Called with index %ld which is out of bounds of networks[%d].",
+                index, networks_count);
+            wendigo_log(MSG_ERROR, msg);
+            wendigo_display_popup(app, "Index out of bounds", msg);
+            free(msg);
+        }
+        return;
     }
-    strncpy(deviceList->devices_msg, networks[index].ssid, MAX_SSID_LEN + 1);
-    deviceList->devices_mask = DEVICE_CUSTOM;
-    deviceList->view = WendigoAppViewPNLDeviceList;
-    deviceList->devices = networks[index].devices;
-    deviceList->devices_count = networks[index].device_count;
+    /* Display a device list for networks[index].devices */
+    DeviceListInstance deviceList;
+    strncpy(deviceList.devices_msg, networks[index].ssid, MAX_SSID_LEN + 1);
+    deviceList.devices_mask = DEVICE_CUSTOM;
+    deviceList.view = WendigoAppViewPNLDeviceList;
+    deviceList.devices = networks[index].devices;
+    deviceList.devices_count = networks[index].device_count;
     // TODO set DeviceList's current_devices to deviceList
     // Create new device list set_current_devices (refactor existing to devices_mask)
     // TODO: save selected item index, display scene
-    UNUSED(context);
-    UNUSED(index);
 }
 
 /** Search networks[] for a PreferredNetwork with the specified SSID.
