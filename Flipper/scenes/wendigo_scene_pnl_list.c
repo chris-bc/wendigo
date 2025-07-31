@@ -14,13 +14,18 @@ wendigo_device *current_device = NULL;
 PreferredNetwork *networks = NULL;
 uint8_t networks_count = 0;
 
-void wendigo_scene_pnl_list_set_device(wendigo_device *dev) {
-    current_device = dev;
-    // TODO: if (app->current_view == WendigoAppViewPNLList) redraw() - Need to get context (WendigoApp *)
-}
-
-wendigo_device *wendigo_scene_pnl_list_get_device() {
-    return current_device;
+/** When displaying all probeid networks this function handles the display of
+ * a device list when an SSID is selected.
+ */
+static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32_t index) {
+    if (current_device != NULL && current_device->scanType == SCAN_WIFI_STA) {
+        /* Displaying PNL for a single device - no need for this function */
+        return;
+    }
+    /* Display a device list for networks[index].devices */
+    // TODO
+    UNUSED(context);
+    UNUSED(index);
 }
 
 /** Search networks[] for a PreferredNetwork with the specified SSID.
@@ -63,62 +68,6 @@ uint8_t count_networks_for_device(wendigo_device *dev) {
         return 0;
     }
     return dev->radio.sta.saved_networks_count;
-}
-
-/** Retrieve the SSIDs that the specified device has sent probes for.
- * SSIDs will be stored in ***result, which must be an UNINITIALISED pointer.
- * This function will allocate memory for the pointer array and for each
- * char[], the caller is responsible for freeing this memory when it's no
- * longer needed.
- * To be clear, char ***result means you should declare a char **variable,
- * which is an array of strings. When calling the function you use
- *              get_networks_for_device(dev, &variable);
- * That allows this function to modify the memory where your local
- * char **variable is stored - meaning I can allocate enough pointers to
- * hold the SSIDs.
- * Returns the number of SSIDs in results.
- */
-uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***result) {
-    uint8_t networks = count_networks_for_device(dev);
-    if (networks == 0) {
-        return 0;
-    }
-    /* Allocate memory for the caller's char **result */
-    char **res = malloc(sizeof(char *) * networks);
-    *result = res;
-    if (res == NULL) {
-        char *msg = malloc(sizeof(char) * 48);
-        if (msg == NULL) {
-            wendigo_display_popup(app, "Insufficient memory", "Unable to allocate memory for preferred network list.");
-            wendigo_log(MSG_ERROR, "Unable to allocate memory for device's PNL.");
-        } else {
-            snprintf(msg, 48, "Unable to allocate %d bytes for device's PNL.", sizeof(char) * networks);
-            wendigo_log(MSG_ERROR, msg);
-            wendigo_display_popup(app, "Insufficient memory", msg);
-            free(msg);
-        }
-        return 0;
-    }
-    for (uint8_t i = 0; i < networks; ++i) {
-        if (dev->radio.sta.saved_networks[i] == NULL ||
-                strlen(dev->radio.sta.saved_networks[i]) == 0) {
-            res[i] = malloc(sizeof(char) * (strlen(dev->radio.sta.saved_networks[i]) + 1));
-            if (res[i] == NULL) {
-                // Failed to allocate %d bytes for a probed SSID.  49
-                char *msg = malloc(sizeof(char) * 55);
-                if (msg == NULL) {
-                    wendigo_log(MSG_ERROR, "Failed to allocate memory for a probed network.");
-                } else {
-                    snprintf(msg, 55, "Failed to allocate %d bytes for a probed SSID.", strlen(dev->radio.sta.saved_networks[i]) + 1);
-                    wendigo_log(MSG_ERROR, msg);
-                    free(msg);
-                }
-            } else {
-                strncpy(res[i], dev->radio.sta.saved_networks[i], strlen(dev->radio.sta.saved_networks[i]) + 1);
-            }
-        }
-    }
-    return networks;
 }
 
 /** Process the device cache (devices[]) and generate PreferredNetwork instances
@@ -219,6 +168,141 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
     return networks_count;
 }
 
+void wendigo_scene_pnl_list_redraw_sta(WendigoApp *app) {
+    VariableItemList *var_item_list = app->var_item_list;
+
+    if (current_device == NULL || current_device->scanType != SCAN_WIFI_STA) {
+        return;
+    }
+    VariableItem *item;
+    if (current_device->radio.sta.saved_networks_count == 0 ||
+            current_device->radio.sta.saved_networks == NULL) {
+        item = variable_item_list_add(var_item_list, "No networks found", 1,
+            NULL, app);
+        variable_item_set_current_value_index(item, 0);
+        variable_item_set_current_value_text(item, "");
+        return;
+    }
+    /* Display the MAC as the list header. Shame we can't make this text smaller. */
+    char macStr[MAC_STRLEN + 1];
+    bytes_to_string(current_device->mac, MAC_BYTES, macStr);
+    variable_item_list_set_header(var_item_list, macStr);
+    for (uint8_t i = 0; i < current_device->radio.sta.saved_networks_count; ++i) {
+        if (current_device->radio.sta.saved_networks[i] != NULL) {
+            item = variable_item_list_add(var_item_list,
+                current_device->radio.sta.saved_networks[i], 1, NULL, app);
+            variable_item_set_current_value_index(item, 0);
+            variable_item_set_current_value_text(item, "");
+        }
+    }
+}
+
+void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
+    /* Initialise or update networks[] prior to display */
+    map_ssids_to_devices(app);
+    VariableItem *item;
+    if (networks_count == 0 || networks == NULL) {
+        item = variable_item_list_add(app->var_item_list, "No networks found",
+            1, NULL, app);
+        variable_item_set_current_value_index(item, 0);
+        variable_item_set_current_value_text(item, "");
+        return;
+    }
+    /* Set the list header */
+    variable_item_list_set_header(app->var_item_list, "Probed Networks");
+    /* And enter callback */
+    variable_item_list_set_enter_callback(app->devices_var_item_list,
+        wendigo_scene_pnl_list_var_list_enter_callback, app);
+    
+    /* Display networks[] */
+    for (uint8_t idx = 0; idx < networks_count; ++idx) {
+        /* Add networks[idx].ssid with option networks[idx].device_count */
+        char countStr[9];
+        snprintf(countStr, sizeof(countStr), "%d STA%s", networks[idx].device_count,
+            (networks[idx].device_count == 1) ? "" : "s");
+        item = variable_item_list_add(app->var_item_list, networks[idx].ssid,
+            1, NULL, app);
+        variable_item_set_current_value_index(item, 0);
+        variable_item_set_current_value_text(item, countStr);
+    }
+}
+
+void wendigo_scene_pnl_list_redraw(WendigoApp *app) {
+    variable_item_list_reset(app->var_item_list);
+    if (current_device != NULL && current_device->scanType == SCAN_WIFI_STA) {
+        return wendigo_scene_pnl_list_redraw_sta(app);
+    }
+    return wendigo_scene_pnl_list_redraw_all_devices(app);
+}
+
+void wendigo_scene_pnl_list_set_device(wendigo_device *dev, WendigoApp *app) {
+    current_device = dev;
+    /* Redraw the list if this scene is active */
+    if (app->current_view == WendigoAppViewPNLList) {
+        return wendigo_scene_pnl_list_redraw(app);
+    }
+}
+
+wendigo_device *wendigo_scene_pnl_list_get_device() {
+    return current_device;
+}
+
+/** Retrieve the SSIDs that the specified device has sent probes for.
+ * SSIDs will be stored in ***result, which must be an UNINITIALISED pointer.
+ * This function will allocate memory for the pointer array and for each
+ * char[], the caller is responsible for freeing this memory when it's no
+ * longer needed.
+ * To be clear, char ***result means you should declare a char **variable,
+ * which is an array of strings. When calling the function you use
+ *              get_networks_for_device(dev, &variable);
+ * That allows this function to modify the memory where your local
+ * char **variable is stored - meaning I can allocate enough pointers to
+ * hold the SSIDs.
+ * Returns the number of SSIDs in results.
+ */
+uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***result) {
+    uint8_t networks = count_networks_for_device(dev);
+    if (networks == 0) {
+        return 0;
+    }
+    /* Allocate memory for the caller's char **result */
+    char **res = malloc(sizeof(char *) * networks);
+    *result = res;
+    if (res == NULL) {
+        char *msg = malloc(sizeof(char) * 48);
+        if (msg == NULL) {
+            wendigo_display_popup(app, "Insufficient memory", "Unable to allocate memory for preferred network list.");
+            wendigo_log(MSG_ERROR, "Unable to allocate memory for device's PNL.");
+        } else {
+            snprintf(msg, 48, "Unable to allocate %d bytes for device's PNL.", sizeof(char) * networks);
+            wendigo_log(MSG_ERROR, msg);
+            wendigo_display_popup(app, "Insufficient memory", msg);
+            free(msg);
+        }
+        return 0;
+    }
+    for (uint8_t i = 0; i < networks; ++i) {
+        if (dev->radio.sta.saved_networks[i] == NULL ||
+                strlen(dev->radio.sta.saved_networks[i]) == 0) {
+            res[i] = malloc(sizeof(char) * (strlen(dev->radio.sta.saved_networks[i]) + 1));
+            if (res[i] == NULL) {
+                // Failed to allocate %d bytes for a probed SSID.  49
+                char *msg = malloc(sizeof(char) * 55);
+                if (msg == NULL) {
+                    wendigo_log(MSG_ERROR, "Failed to allocate memory for a probed network.");
+                } else {
+                    snprintf(msg, 55, "Failed to allocate %d bytes for a probed SSID.", strlen(dev->radio.sta.saved_networks[i]) + 1);
+                    wendigo_log(MSG_ERROR, msg);
+                    free(msg);
+                }
+            } else {
+                strncpy(res[i], dev->radio.sta.saved_networks[i], strlen(dev->radio.sta.saved_networks[i]) + 1);
+            }
+        }
+    }
+    return networks;
+}
+
 // TODO: May not actually need this function?
 uint16_t get_all_networks(WendigoApp *app) {
     char **networks;
@@ -254,36 +338,6 @@ uint16_t get_all_networks(WendigoApp *app) {
         }
     }
     return 0;
-}
-
-void wendigo_scene_pnl_list_redraw(WendigoApp *app) {
-    VariableItemList *var_item_list = app->var_item_list;
-    variable_item_list_reset(var_item_list);
-
-    if (current_device == NULL || current_device->scanType != SCAN_WIFI_STA) {
-        return;
-    }
-    VariableItem *item;
-    if (current_device->radio.sta.saved_networks_count == 0 ||
-            current_device->radio.sta.saved_networks == NULL) {
-        item = variable_item_list_add(var_item_list, "No networks found", 1,
-            NULL, app);
-        variable_item_set_current_value_index(item, 0);
-        variable_item_set_current_value_text(item, "");
-        return;
-    }
-    /* Display the MAC as the list header. Shame we can't make this text smaller. */
-    char macStr[MAC_STRLEN + 1];
-    bytes_to_string(current_device->mac, MAC_BYTES, macStr);
-    variable_item_list_set_header(var_item_list, macStr);
-    for (uint8_t i = 0; i < current_device->radio.sta.saved_networks_count; ++i) {
-        if (current_device->radio.sta.saved_networks[i] != NULL) {
-            item = variable_item_list_add(var_item_list,
-                current_device->radio.sta.saved_networks[i], 1, NULL, app);
-            variable_item_set_current_value_index(item, 0);
-            variable_item_set_current_value_text(item, "");
-        }
-    }
 }
 
 /** Scene initialisation.

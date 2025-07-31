@@ -3,7 +3,7 @@
 /** Public method from wendigo_scene_device_detail.c */
 extern void wendigo_scene_device_detail_set_device(wendigo_device *d);
 /** Public method from wendigo_scene_pnl_list.c */
-extern void wendigo_scene_pnl_list_set_device(wendigo_device *d);
+extern void wendigo_scene_pnl_list_set_device(wendigo_device *d, WendigoApp *app);
 /** Internal method - I don't wan't to move all calling functions below it */
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem *item);
 
@@ -769,7 +769,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       variable_item_get_current_value_index(item->view) ==
         WendigoOptionSTASavedNetworks) {
     /* Tell the scene which device we're interested in */
-    wendigo_scene_pnl_list_set_device(item);
+    wendigo_scene_pnl_list_set_device(item, app);
     view_dispatcher_send_custom_event(app->view_dispatcher,
       Wendigo_EventListNetworks);
   } else {
