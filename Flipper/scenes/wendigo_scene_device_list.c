@@ -143,7 +143,7 @@ void wendigo_scene_device_list_free() {
 }
 
 /** Determine whether the specified device should be displayed, based on the
- * criteria provided in wendigo_set_current_devices_mask().
+ * criteria provided in wendigo_scene_device_list_set_current_devices_mask().
  * This function DOES NOT consider devices that may be displayed by the
  * inclusion of the DEVICE_CUSTOM flag - it considers only dynamically-added
  * devices.
@@ -177,7 +177,7 @@ bool wendigo_device_is_displayed(wendigo_device *dev) {
  * devices may be freed after calling this function as its contents are copied
  * into current_devices.
  */
-void wendigo_set_current_devices(DeviceListInstance *deviceList) {
+void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceList) {
   if (deviceList == NULL) {
     /* Re-initialise current_devices */
     current_devices.view = WendigoAppViewDeviceList;
@@ -230,8 +230,8 @@ void wendigo_set_current_devices(DeviceListInstance *deviceList) {
  * NOT modify the contents of current_devices[], but will simply return the
  * number of devices currently displayed.
  */
-uint16_t wendigo_set_current_devices_mask(uint8_t deviceMask) {
-  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_current_devices_mask()");
+uint16_t wendigo_scene_device_list_set_current_devices_mask(uint8_t deviceMask) {
+  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_set_current_devices_mask()");
   if (deviceMask == 0) {
     deviceMask = DEVICE_ALL;
   }
@@ -239,7 +239,7 @@ uint16_t wendigo_set_current_devices_mask(uint8_t deviceMask) {
   /* If custom devices are being displayed there's nothing for this function to do */
   if ((deviceMask & DEVICE_CUSTOM) == DEVICE_CUSTOM) {
     FURI_LOG_T(WENDIGO_TAG,
-      "End wendigo_set_current_devices_mask(): DEVICE_CUSTOM specified.");
+      "End wendigo_scene_device_list_set_current_devices_mask(): DEVICE_CUSTOM specified.");
     return current_devices.devices_count; // I'm pretty sure this is safe - correctly initialised as 0, then updated
   }
   bool display_selected = ((deviceMask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY);
@@ -288,7 +288,7 @@ uint16_t wendigo_set_current_devices_mask(uint8_t deviceMask) {
     }
   }
   furi_assert(current_index == deviceCount);
-  FURI_LOG_T(WENDIGO_TAG, "End wendigo_set_current_devices_mask()");
+  FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_set_current_devices_mask()");
   return deviceCount;
 }
 
@@ -587,7 +587,7 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
   uint8_t options_count = 0;
   uint8_t options_index;
   bool free_item_str = false;
-  wendigo_set_current_devices_mask(current_devices.devices_mask);
+  wendigo_scene_device_list_set_current_devices_mask(current_devices.devices_mask);
   /* Set header text for the list if specified */
   variable_item_list_set_header(app->devices_var_item_list,
     (current_devices.devices_msg[0] == '\0') ? NULL
