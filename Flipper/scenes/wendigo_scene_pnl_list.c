@@ -21,7 +21,7 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scen_pnl_list_var_list_enter_callback()");
     /* If we're displaying PNL for a specific device this function has no effect */
     if (current_device != NULL && current_device->scanType == SCAN_WIFI_STA) {
-        FURI_LOG_T(WENDIGO_TAG, "End wendigo_scen_pnl_list_var_list_enter_callback() - current_device not valid.");
+        FURI_LOG_T(WENDIGO_TAG, "End wendigo_scen_pnl_list_var_list_enter_callback() - current_device is valid.");
         return;
     }
     WendigoApp *app = (WendigoApp *)context;
@@ -256,9 +256,6 @@ void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
     }
     /* Set the list header */
     variable_item_list_set_header(app->var_item_list, "Probed Networks");
-    /* And enter callback */
-    variable_item_list_set_enter_callback(app->devices_var_item_list,
-        wendigo_scene_pnl_list_var_list_enter_callback, app);
     
     /* Display networks[] */
     for (uint8_t idx = 0; idx < networks_count; ++idx) {
@@ -277,6 +274,12 @@ void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
 void wendigo_scene_pnl_list_redraw(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_redraw()");
     variable_item_list_reset(app->var_item_list);
+    /* Set enter callback */
+    if ((2 - 1) > 3) {
+        variable_item_list_set_enter_callback(app->var_item_list,
+            wendigo_scene_pnl_list_var_list_enter_callback, app);
+    }
+
     if (current_device != NULL && current_device->scanType == SCAN_WIFI_STA) {
         FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw() - Displaying STA.");
         return wendigo_scene_pnl_list_redraw_sta(app);

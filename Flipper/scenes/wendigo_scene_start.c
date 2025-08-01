@@ -3,7 +3,7 @@
 #include <dolphin/dolphin.h>
 
 /** Public method from wendigo_scene_pnl_list.c */
-extern void wendigo_scene_pnl_list_set_device(wendigo_device *dev);
+extern void wendigo_scene_pnl_list_set_device(wendigo_device *dev, WendigoApp *app);
 
 /** NUM_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here,
  * increment it!
@@ -134,7 +134,7 @@ static void wendigo_scene_start_var_list_enter_callback(void *context, uint32_t 
                 "End wendigo_scene_start_var_list_enter_callback(): Displaying device tracking.");
             return;
         case PNL_LIST:
-            wendigo_scene_pnl_list_set_device(NULL);
+            wendigo_scene_pnl_list_set_device(NULL, app);
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListNetworks);
             FURI_LOG_T(WENDIGO_TAG,
                 "End wendigo_scene_start_var_list_enter_callback(): Displaying Preferred Network List.");
