@@ -8,6 +8,7 @@ extern void wendigo_scene_status_add_attribute(WendigoApp *app, char *name, char
 extern void wendigo_scene_status_finish_layout(WendigoApp *app);
 extern void wendigo_scene_status_begin_layout(WendigoApp *app);
 extern uint16_t wendigo_set_current_devices_mask(uint8_t deviceMask);
+extern void wendigo_set_current_devices(DeviceListInstance *devices);
 
 /* Device caches - Declared extern to get around header spaghetti */
 extern wendigo_device **devices;

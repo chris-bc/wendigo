@@ -116,13 +116,13 @@ static void wendigo_scene_start_var_list_enter_callback(void *context, uint32_t 
             break;
         case LIST_DEVICES:
             /* Find selected option to determine device mask */
-            wendigo_set_current_devices(wendigo_device_mask(selected_option_index));
+            wendigo_set_current_devices_mask(wendigo_device_mask(selected_option_index));
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
             FURI_LOG_T(WENDIGO_TAG,
                 "End wendigo_scene_start_var_list_enter_callback(): Displaying device list.");
             return;
         case LIST_SELECTED_DEVICES:
-            wendigo_set_current_devices(wendigo_device_mask(selected_option_index) | DEVICE_SELECTED_ONLY);
+            wendigo_set_current_devices_mask(wendigo_device_mask(selected_option_index) | DEVICE_SELECTED_ONLY);
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
             FURI_LOG_T(WENDIGO_TAG,
                 "End wendigo_scene_start_var_list_enter_callback(): Displaying selected device lists.");

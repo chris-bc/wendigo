@@ -173,6 +173,12 @@ bool wendigo_device_is_displayed(wendigo_device *dev) {
             (!display_selected || dev->tagged)));
 }
 
+/** Replace the contents of current_devices with the specified DeviceListInstance */
+void wendigo_set_current_devices(DeviceListInstance *devices) {
+  // TODO
+  UNUSED(devices);
+}
+
 /** Restrict displayed devices based on the specified filters
  * deviceMask: A bitmask of DeviceMask values. e.g. DEVICE_WIFI_AP |
  * DEVICE_WIFI_STA to display all WiFi devices; 0 to display all device types.
