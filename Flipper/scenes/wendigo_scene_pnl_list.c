@@ -18,8 +18,10 @@ uint8_t networks_count = 0;
  * a device list when an SSID is selected.
  */
 static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32_t index) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scen_pnl_list_var_list_enter_callback()");
     /* If we're displaying PNL for a specific device this function has no effect */
     if (current_device != NULL && current_device->scanType == SCAN_WIFI_STA) {
+        FURI_LOG_T(WENDIGO_TAG, "End wendigo_scen_pnl_list_var_list_enter_callback() - current_device not valid.");
         return;
     }
     WendigoApp *app = (WendigoApp *)context;
@@ -38,6 +40,7 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
             wendigo_display_popup(app, "Index out of bounds", msg);
             free(msg);
         }
+        FURI_LOG_T(WENDIGO_TAG, "End wendigo_scen_pnl_list_var_list_enter_callback() - index out of bounds.");
         return;
     }
     /* Display a device list for networks[index].devices */
@@ -51,6 +54,7 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
     /* Save selected menu item index so it can be restored later */
     scene_manager_set_scene_state(app->scene_manager, WendigoScenePNLList, index);
     scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceList);
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scen_pnl_list_var_list_enter_callback()");
 }
 
 /** Search networks[] for a PreferredNetwork with the specified SSID.
@@ -59,7 +63,9 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
  * SSID must be a null-terminated string.
  */
 uint8_t index_of_pnl(char *ssid) {
+    FURI_LOG_T(WENDIGO_TAG, "Start index_of_pnl()");
     if (ssid == NULL || strlen(ssid) == 0 || networks == NULL || networks_count == 0) {
+        FURI_LOG_T(WENDIGO_TAG, "End index_of_pnl() - Invalid arguments.");
         return 0;
     }
     uint8_t idx;
@@ -68,6 +74,7 @@ uint8_t index_of_pnl(char *ssid) {
         compareLen = strlen(ssid);
     }
     for (idx = 0; idx < networks_count && strncmp(ssid, networks[idx].ssid, compareLen); ++idx) { }
+    FURI_LOG_T(WENDIGO_TAG, "End index_of_pnl()");
     return idx;
 }
 
@@ -77,21 +84,26 @@ uint8_t index_of_pnl(char *ssid) {
  * SSID must be a null-terminated string.
  */
 PreferredNetwork *pnl_for_ssid(char *ssid) {
+    FURI_LOG_T(WENDIGO_TAG, "Start pnl_for_ssid()");
     PreferredNetwork *result = NULL;
     uint8_t idx = index_of_pnl(ssid);
     if (idx < networks_count) {
         result = &(networks[idx]);
     }
+    FURI_LOG_T(WENDIGO_TAG, "End pnl_for_ssid()");
     return result;
 }
 
 /** Returns the number of networks the specified STA has probed for */
 uint8_t count_networks_for_device(wendigo_device *dev) {
+    FURI_LOG_T(WENDIGO_TAG, "Start count_networks_for_device()");
     if (dev == NULL || dev->scanType != SCAN_WIFI_STA ||
             dev->radio.sta.saved_networks_count == 0 ||
             dev->radio.sta.saved_networks == NULL) {
+        FURI_LOG_T(WENDIGO_TAG, "End count_networks_for_device() - No networks.");
         return 0;
     }
+    FURI_LOG_T(WENDIGO_TAG, "End count_networks_for_device()");
     return dev->radio.sta.saved_networks_count;
 }
 
@@ -101,6 +113,7 @@ uint8_t count_networks_for_device(wendigo_device *dev) {
  * networks[] and networks_count are updated by this function.
  */
 uint8_t map_ssids_to_devices(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start map_ssids_to_devices()");
     if (networks_count > 0 && networks != NULL) {
         // TODO: Refactor function to update, rather than replace, networks[]
         free(networks);
@@ -133,6 +146,7 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
                     networks = NULL;
                     networks_count = 0;
                 }
+                FURI_LOG_T(WENDIGO_TAG, "End map_ssids_to_devices() - Unable to resize networks[].");
                 return 0;
             }
             networks_capacity = networks_count + this_count;
@@ -190,13 +204,16 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
             networks = new_networks;
         }
     }
+    FURI_LOG_T(WENDIGO_TAG, "End map_ssids_to_devices()");
     return networks_count;
 }
 
 void wendigo_scene_pnl_list_redraw_sta(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_redraw_sta()");
     VariableItemList *var_item_list = app->var_item_list;
 
     if (current_device == NULL || current_device->scanType != SCAN_WIFI_STA) {
+        FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw_sta() - Invalid current_device.");
         return;
     }
     VariableItem *item;
@@ -206,6 +223,7 @@ void wendigo_scene_pnl_list_redraw_sta(WendigoApp *app) {
             NULL, app);
         variable_item_set_current_value_index(item, 0);
         variable_item_set_current_value_text(item, "");
+        FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw_sta() - No networks to display.");
         return;
     }
     /* Display the MAC as the list header. Shame we can't make this text smaller. */
@@ -220,9 +238,11 @@ void wendigo_scene_pnl_list_redraw_sta(WendigoApp *app) {
             variable_item_set_current_value_text(item, "");
         }
     }
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw_sta()");
 }
 
 void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_redraw_all_devices()");
     /* Initialise or update networks[] prior to display */
     map_ssids_to_devices(app);
     VariableItem *item;
@@ -231,6 +251,7 @@ void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
             1, NULL, app);
         variable_item_set_current_value_index(item, 0);
         variable_item_set_current_value_text(item, "");
+        FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw_all_devices() - No networks to display.");
         return;
     }
     /* Set the list header */
@@ -250,25 +271,33 @@ void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
         variable_item_set_current_value_index(item, 0);
         variable_item_set_current_value_text(item, countStr);
     }
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw_all_devices()");
 }
 
 void wendigo_scene_pnl_list_redraw(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_redraw()");
     variable_item_list_reset(app->var_item_list);
     if (current_device != NULL && current_device->scanType == SCAN_WIFI_STA) {
+        FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw() - Displaying STA.");
         return wendigo_scene_pnl_list_redraw_sta(app);
     }
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw() - Displaying all devices.");
     return wendigo_scene_pnl_list_redraw_all_devices(app);
 }
 
 void wendigo_scene_pnl_list_set_device(wendigo_device *dev, WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_set_device()");
     current_device = dev;
     /* Redraw the list if this scene is active */
     if (app->current_view == WendigoAppViewPNLList) {
+        FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_set_device() - Redrawing.");
         return wendigo_scene_pnl_list_redraw(app);
     }
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_set_device()");
 }
 
 wendigo_device *wendigo_scene_pnl_list_get_device() {
+    FURI_LOG_T(WENDIGO_TAG, "Start+End wendigo_scene_pnl_list_get_device()");
     return current_device;
 }
 
@@ -286,8 +315,10 @@ wendigo_device *wendigo_scene_pnl_list_get_device() {
  * Returns the number of SSIDs in results.
  */
 uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***result) {
+    FURI_LOG_T(WENDIGO_TAG, "Start get_networks_for_device()");
     uint8_t networks = count_networks_for_device(dev);
     if (networks == 0) {
+        FURI_LOG_T(WENDIGO_TAG, "End get_networks_for_device() - No networks.");
         return 0;
     }
     /* Allocate memory for the caller's char **result */
@@ -304,6 +335,7 @@ uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***re
             wendigo_display_popup(app, "Insufficient memory", msg);
             free(msg);
         }
+        FURI_LOG_T(WENDIGO_TAG, "End get_networks_for_device() - Unable to initialise results array.");
         return 0;
     }
     for (uint8_t i = 0; i < networks; ++i) {
@@ -325,12 +357,14 @@ uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***re
             }
         }
     }
+    FURI_LOG_T(WENDIGO_TAG, "End get_networks_for_device()");
     return networks;
 }
 
 // TODO: May not actually need this function?
 uint16_t get_all_networks(WendigoApp *app) {
-    char **networks;
+    FURI_LOG_T(WENDIGO_TAG, "Start get_all_networks()");
+    char **nets;
     int16_t count = 0;
     /* First find the size of our array */
     for (uint16_t i = 0; i < devices_count; ++i) {
@@ -338,8 +372,8 @@ uint16_t get_all_networks(WendigoApp *app) {
             count += count_networks_for_device(devices[i]);
         }
     }
-    networks = malloc(sizeof(char *) * count);
-    if (networks == NULL) {
+    nets = malloc(sizeof(char *) * count);
+    if (nets == NULL) {
         char *msg = malloc(sizeof(char) * 44);
         if (msg == NULL) {
             wendigo_log(MSG_ERROR, "Failed to allocate memory to stringify PNLs.");
@@ -348,6 +382,7 @@ uint16_t get_all_networks(WendigoApp *app) {
             wendigo_log(MSG_ERROR, msg);
             free(msg);
         }
+        FURI_LOG_T(WENDIGO_TAG, "End get_all_networks() - Can't allocate SSID array.");
         return 0;
     }
     /* Call get_networks_for_device() on each device and concatenate their results */
@@ -357,11 +392,12 @@ uint16_t get_all_networks(WendigoApp *app) {
         if (devices != NULL && devices[i] != NULL && devices[i]->scanType == SCAN_WIFI_STA) {
             dev_count = get_networks_for_device(app, devices[i], &dev_nets);
             if (dev_count > 0 && dev_nets != NULL) {
-                /* Copy dev_nets into networks */
-                // TODO Maintain an index into networks[].
+                /* Copy dev_nets into nets */
+                // TODO Maintain an index into nets[].
             }
         }
     }
+    FURI_LOG_T(WENDIGO_TAG, "End get_all_networks()");
     return 0;
 }
 
@@ -416,4 +452,5 @@ void wendigo_scene_pnl_list_free() {
     }
     networks_count = 0;
     networks = NULL;
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_free()");
 }
