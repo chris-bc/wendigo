@@ -18,8 +18,8 @@ uint8_t networks_count = 0;
  * a device list when an SSID is selected.
  */
 static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32_t index) {
+    /* If we're displaying PNL for a specific device this function has no effect */
     if (current_device != NULL && current_device->scanType == SCAN_WIFI_STA) {
-        /* Displaying PNL for a single device - no need for this function */
         return;
     }
     WendigoApp *app = (WendigoApp *)context;
@@ -48,7 +48,9 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
     deviceList.devices = networks[index].devices;
     deviceList.devices_count = networks[index].device_count;
     wendigo_scene_device_list_set_current_devices(&deviceList);
-    // TODO: save selected item index, display scene
+    /* Save selected menu item index so it can be restored later */
+    scene_manager_set_scene_state(app->scene_manager, WendigoScenePNLList, index);
+    scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceList);
 }
 
 /** Search networks[] for a PreferredNetwork with the specified SSID.
@@ -371,10 +373,13 @@ void wendigo_scene_pnl_list_on_enter(void *context) {
 
     wendigo_scene_pnl_list_redraw(app);
 
-    // TODO: Restore selected item if it's there
-
-    view_dispatcher_switch_to_view(app->view_dispatcher,
-                                    WendigoAppViewVarItemList);
+    /* Restore selected menu item if it's there */
+    uint8_t selected_item = scene_manager_get_scene_state(app->scene_manager, WendigoScenePNLList);
+    if (selected_item >= networks_count) {
+        selected_item = 0;
+    }
+    variable_item_list_set_selected_item(app->var_item_list, selected_item);
+    view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewVarItemList);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_on_enter()");
 }
 
@@ -391,4 +396,24 @@ void wendigo_scene_pnl_list_on_exit(void *context) {
     WendigoApp *app = context;
     variable_item_list_reset(app->var_item_list);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_on_exit()");
+}
+
+void wendigo_scene_pnl_list_free() {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_free()");
+    if (networks_count > 0 && networks != NULL) {
+        for (uint8_t i = 0; i < networks_count; ++i) {
+            if (networks[i].device_count > 0 && networks[i].devices != NULL) {
+                /* Free networks[i].devices - a wendigo_device** - but don't
+                 * free the individual wendigo_device elements. networks[i].devices
+                 * should contain pointers to the master device cache devices[].
+                 */
+                free(networks[i].devices);
+                networks[i].devices = NULL;
+                networks[i].device_count = 0;
+            }
+        }
+        free(networks);
+    }
+    networks_count = 0;
+    networks = NULL;
 }

@@ -12,6 +12,8 @@ extern void wendigo_console_output_handle_rx_data_cb(uint8_t *buf, size_t len, v
 /* Initialiser and terminator for wendigo_scene_device_list.c */
 extern void wendigo_scene_device_list_init(void *config);
 extern void wendigo_scene_device_list_free();
+/* Cleanup function for wendigo_scene_pnl_list.c */
+extern void wendigo_scene_pnl_list_free();
 
 static bool wendigo_app_custom_event_callback(void *context, uint32_t event) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_custom_event_callback()");
@@ -226,6 +228,8 @@ void wendigo_app_free(WendigoApp *app) {
 
     /* Free device list scene's contents and stack */
     wendigo_scene_device_list_free();
+    /* Free preferred network list scene's device cache */
+    wendigo_scene_pnl_list_free();
     /* Free device cache and UART buffer */
     wendigo_free_uart_buffer();
     wendigo_free_devices();
