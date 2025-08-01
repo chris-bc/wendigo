@@ -47,8 +47,7 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
     deviceList.view = WendigoAppViewPNLDeviceList;
     deviceList.devices = networks[index].devices;
     deviceList.devices_count = networks[index].device_count;
-    // TODO set DeviceList's current_devices to deviceList
-    // Create new device list set_current_devices (refactor existing to devices_mask)
+    wendigo_scene_device_list_set_current_devices(&deviceList);
     // TODO: save selected item index, display scene
 }
 
@@ -364,14 +363,15 @@ uint16_t get_all_networks(WendigoApp *app) {
     return 0;
 }
 
-/** Scene initialisation.
- */
+/** Scene initialisation. */
 void wendigo_scene_pnl_list_on_enter(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_on_enter()");
     WendigoApp *app = context;
     app->current_view = WendigoAppViewPNLList;
 
     wendigo_scene_pnl_list_redraw(app);
+
+    // TODO: Restore selected item if it's there
 
     view_dispatcher_switch_to_view(app->view_dispatcher,
                                     WendigoAppViewVarItemList);
