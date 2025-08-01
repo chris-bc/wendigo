@@ -437,6 +437,8 @@ void wendigo_scene_pnl_list_on_exit(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_on_exit()");
     WendigoApp *app = context;
     variable_item_list_reset(app->var_item_list);
+    /* If we hit the back button in this scene, set current_device to NULL */
+    wendigo_scene_pnl_list_set_device(NULL, app);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_on_exit()");
 }
 
