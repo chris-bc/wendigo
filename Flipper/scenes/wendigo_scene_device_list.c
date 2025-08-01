@@ -111,7 +111,7 @@ void wendigo_scene_device_list_init(void *config) {
     current_devices.devices_mask = cfg->devices_mask;
     strncpy(current_devices.devices_msg, cfg->devices_msg, sizeof(current_devices.devices_msg));
     current_devices.view = cfg->view;
-    current_devices.free_devices = cfg->free_devices;
+    current_devices.free_devices = true; /* Because we malloc()d devices[] */
   }
 }
 
@@ -182,6 +182,7 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
     /* Re-initialise current_devices */
     current_devices.view = WendigoAppViewDeviceList;
     current_devices.devices_mask = DEVICE_ALL;
+    current_devices.free_devices = false;
     bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
     if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
       free(current_devices.devices);

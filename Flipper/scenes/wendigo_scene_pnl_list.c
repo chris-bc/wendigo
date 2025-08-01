@@ -47,6 +47,7 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
     DeviceListInstance deviceList;
     strncpy(deviceList.devices_msg, networks[index].ssid, MAX_SSID_LEN + 1);
     deviceList.devices_mask = DEVICE_CUSTOM;
+    deviceList.free_devices = false;
     deviceList.view = WendigoAppViewPNLDeviceList;
     deviceList.devices = networks[index].devices;
     deviceList.devices_count = networks[index].device_count;
