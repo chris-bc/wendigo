@@ -159,6 +159,8 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
                 // TODO Should we test for non-NULL SSID and devices in networks[networks_count]?
                 strncpy(networks[networks_count].ssid, devices[i]->radio.sta.saved_networks[j],
                     strlen(devices[i]->radio.sta.saved_networks[j]));
+                networks[networks_count].device_count = 0;
+                networks[networks_count].devices = NULL;
                 new_networks = &(networks[networks_count++]);
             }
             /* Is devices[i] in new_networks->devices? */
@@ -169,7 +171,7 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
                     memcmp(new_networks->devices[devIdx]->mac, devices[i]->mac, MAC_BYTES));
                 ++devIdx) { }
             if (devIdx == new_networks->device_count) {
-                /* Append devices[i] to new_networks->device_count */
+                /* Append devices[i] to new_networks->devices */
                 wendigo_device **new_devices = realloc(new_networks->devices,
                     sizeof(wendigo_device *) * (new_networks->device_count + 1));
                 if (new_devices == NULL) {
@@ -258,9 +260,9 @@ void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
     variable_item_list_set_header(app->var_item_list, "Probed Networks");
     
     /* Display networks[] */
+    char countStr[9];
     for (uint8_t idx = 0; idx < networks_count; ++idx) {
         /* Add networks[idx].ssid with option networks[idx].device_count */
-        char countStr[9];
         snprintf(countStr, sizeof(countStr), "%d STA%s", networks[idx].device_count,
             (networks[idx].device_count == 1) ? "" : "s");
         item = variable_item_list_add(app->var_item_list, networks[idx].ssid,
@@ -273,13 +275,6 @@ void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
 
 void wendigo_scene_pnl_list_redraw(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_redraw()");
-    variable_item_list_reset(app->var_item_list);
-    /* Set enter callback */
-    if ((2 - 1) > 3) {
-        variable_item_list_set_enter_callback(app->var_item_list,
-            wendigo_scene_pnl_list_var_list_enter_callback, app);
-    }
-
     if (current_device != NULL && current_device->scanType == SCAN_WIFI_STA) {
         FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw() - Displaying STA.");
         return wendigo_scene_pnl_list_redraw_sta(app);
@@ -409,6 +404,10 @@ void wendigo_scene_pnl_list_on_enter(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_on_enter()");
     WendigoApp *app = context;
     app->current_view = WendigoAppViewPNLList;
+    variable_item_list_reset(app->var_item_list);
+    /* Set enter callback */
+    variable_item_list_set_enter_callback(app->var_item_list,
+        wendigo_scene_pnl_list_var_list_enter_callback, app);
 
     wendigo_scene_pnl_list_redraw(app);
 
@@ -424,10 +423,13 @@ void wendigo_scene_pnl_list_on_enter(void *context) {
 
 /** We have no need to respond to events */
 bool wendigo_scene_pnl_list_on_event(void *context, SceneManagerEvent event) {
-    FURI_LOG_T(WENDIGO_TAG, "Start+End wendigo_scene_pnl_list_on_event()");
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_on_event()");
+    bool consumed = false;
+    if (event.type == SceneManagerEventTypeTick) {
+        consumed = true;
+    }
     UNUSED(context);
-    UNUSED(event);
-    return false;
+    return consumed;
 }
 
 void wendigo_scene_pnl_list_on_exit(void *context) {
