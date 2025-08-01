@@ -17,7 +17,7 @@
 
 #include "wendigo_common_defs.h"
 
-#define WENDIGO_VERSION "0.3.0"
+#define WENDIGO_VERSION "0.4.0"
 
 /* Macro to mark a variable as unused to prevent compiler warnings */
 #ifndef UNUSED
