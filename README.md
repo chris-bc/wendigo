@@ -78,6 +78,7 @@
   * Device list display for stations includes a new menu option ```N networks``` (where N is a number).
   * Select this to view a list of the SSIDs the station has sent probe requests for.
   * New menu option to view all probed networks, including a count of devices searching for each SSID.
+    * From this view, selecting an SSID will display all stations that probed for that SSID.
 * Navigate from a WiFi Station to its AP by selecting the AP menu option and pushing ```OK```.
   * This is a new Device List display, but displaying only the AP
   * You can select and view attributes in the same way as the device list
@@ -172,8 +173,9 @@ At a high level, these are Wendigo's features - Both implemented and planned:
 * [ ] Browse Bluetooth devices and their services & attributes
 * [X] Browse WiFi networks, navigating from an Access Point to its connected Stations or from a Station to its Access Point
 * [ ] Deauthenticate a device or all devices on a network
-* [X] Collect a Station's (WiFi client - such as a phone) saved network list
-  * [ ] Put this list into Wigle to get a good idea where the device's owner lives, works and plays
+* [X] Collect & display a Station's (WiFi client - such as a phone) saved network list
+* Put this list into Wigle to get a good idea where the device's owner lives, works and plays
+* [X] Display all networks that probes were received for and support browsing from probed SSIDs to the Stations that probed for them.
 * [ ] 5GHz WiFi channels ([requires ESP32-C5](https://www.aliexpress.com/item/1005009128201189.html))
 * [ ] Change Bluetooth BDA and WiFi MAC
 * [ ] Use Flipper Zero's LED to indicate events
@@ -391,6 +393,9 @@ This section is a running list of current priorities.
       * [X] New STA option "%d SSIDs"
       * [X] New var_item_list-based scene wendigo_scene_network_list
       * [X] Displays new scene
+    * [X] Display preferred networks from all devices in a single view
+      * [X] Display the number of devices probing for each SSID
+      * [X] Display all devices that have probed for a particular SSID
   * [ ] Support for 5GHz channels (ESP32-C5)
   * [X] Display different options in wendigo_scene_device_list
     * [X] For STA
