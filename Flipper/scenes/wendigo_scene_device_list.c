@@ -173,10 +173,53 @@ bool wendigo_device_is_displayed(wendigo_device *dev) {
             (!display_selected || dev->tagged)));
 }
 
-/** Replace the contents of current_devices with the specified DeviceListInstance */
-void wendigo_set_current_devices(DeviceListInstance *devices) {
-  // TODO
-  UNUSED(devices);
+/** Replace the contents of current_devices with the specified DeviceListInstance.
+ * devices may be freed after calling this function as its contents are copied
+ * into current_devices.
+ */
+void wendigo_set_current_devices(DeviceListInstance *deviceList) {
+  if (deviceList == NULL) {
+    /* Re-initialise current_devices */
+    current_devices.view = WendigoAppViewDeviceList;
+    current_devices.devices_mask = DEVICE_ALL;
+    bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
+    if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
+      free(current_devices.devices);
+    }
+    current_devices.devices = NULL;
+    current_devices.devices_count = 0;
+    return;
+  }
+  // TODO: Do I need a mutex over current_devices?
+  wendigo_device **new_devices = realloc(current_devices.devices,
+    sizeof(wendigo_device *) * deviceList->devices_count);
+  if (new_devices == NULL && deviceList->devices_count > 0) {
+    /* Log error but proceed if unable to allocate memory for device array */
+    char *msg = malloc(sizeof(char) * 49);
+    if (msg == NULL) {
+      wendigo_log(MSG_ERROR, "Failed to allocate memory to store Device List.");
+    } else {
+      snprintf(msg, 49, "Failed to allocate %d bytes for Device List.",
+        sizeof(wendigo_device *) * deviceList->devices_count);
+      wendigo_log(MSG_ERROR, msg);
+      free(msg);
+    }
+    /* If we can't resize current_devices.devices[] correctly then free it
+     * so that no devices are displayed. */
+    if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
+      current_devices.devices_count = 0;
+      free(current_devices.devices);
+      current_devices.devices = NULL;
+    }
+  } else {
+    /* Copy across deviceList->devices[] */
+    memcpy(new_devices, deviceList->devices, sizeof(wendigo_device *) * deviceList->devices_count);
+    current_devices.devices = new_devices;
+    current_devices.devices_count = deviceList->devices_count;
+  }
+  current_devices.view = deviceList->view;
+  current_devices.devices_mask = deviceList->devices_mask;
+  memcpy(current_devices.devices_msg, deviceList->devices_msg, sizeof(current_devices.devices_msg));
 }
 
 /** Restrict displayed devices based on the specified filters
