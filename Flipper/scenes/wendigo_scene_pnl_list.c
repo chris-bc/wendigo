@@ -45,7 +45,8 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
     }
     /* Display a device list for networks[index].devices */
     DeviceListInstance deviceList;
-    strncpy(deviceList.devices_msg, networks[index].ssid, MAX_SSID_LEN + 1);
+    bzero(deviceList.devices_msg, sizeof(deviceList.devices_msg));
+    strncpy(deviceList.devices_msg, networks[index].ssid, MAX_SSID_LEN);
     deviceList.devices_mask = DEVICE_CUSTOM;
     deviceList.free_devices = false;
     deviceList.view = WendigoAppViewPNLDeviceList;
@@ -150,6 +151,9 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
                 FURI_LOG_T(WENDIGO_TAG, "End map_ssids_to_devices() - Unable to resize networks[].");
                 return 0;
             }
+            /* Zero out newly-allocated space to initialise new PreferredNetwork elements
+             * (NULL ssid[] and devices[], 0 device_count). */
+            bzero(new_networks + (networks_count * sizeof(PreferredNetwork)), this_count * sizeof(PreferredNetwork));
             networks_capacity = networks_count + this_count;
             networks = new_networks;
         }
@@ -157,7 +161,6 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
         for (uint8_t j = 0; j < this_count; ++j) {
             new_networks = pnl_for_ssid(devices[i]->radio.sta.saved_networks[j]);
             if (new_networks == NULL) {
-                // TODO Should we test for non-NULL SSID and devices in networks[networks_count]?
                 strncpy(networks[networks_count].ssid, devices[i]->radio.sta.saved_networks[j],
                     strlen(devices[i]->radio.sta.saved_networks[j]));
                 networks[networks_count].device_count = 0;
@@ -180,11 +183,18 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
                     if (msg == NULL) {
                         wendigo_log(MSG_ERROR, "Unable to allocate memory to store an additional device in a PreferredNetwork.");
                     } else {
-                        char staMac[MAC_STRLEN + 1];
-                        bytes_to_string(devices[i]->mac, MAC_BYTES, staMac);
-                        snprintf(msg, 85 + MAX_SSID_LEN + MAC_STRLEN,
-                            "Unable to allocate an additional %d bytes to %s's PreferredNetwork element for STA %s.",
-                            sizeof(wendigo_device *), new_networks->ssid, staMac);
+                        char *staMac = malloc(sizeof(char) * (MAC_STRLEN + 1));
+                        if (staMac == NULL) {
+                            snprintf(msg, 85 + MAX_SSID_LEN + MAC_STRLEN,
+                                "Unable to allocate an additional %d bytes to %s's PreferredNetwork element.",
+                                sizeof(wendigo_device *), new_networks->ssid);
+                        } else {
+                            bytes_to_string(devices[i]->mac, MAC_BYTES, staMac);
+                            snprintf(msg, 85 + MAX_SSID_LEN + MAC_STRLEN,
+                                "Unable to allocate an additional %d bytes to %s's PreferredNetwork element for STA %s.",
+                                sizeof(wendigo_device *), new_networks->ssid, staMac);
+                            free(staMac);
+                        }
                         wendigo_log(MSG_ERROR, msg);
                         free(msg);
                     }
@@ -342,7 +352,6 @@ uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***re
                 strlen(dev->radio.sta.saved_networks[i]) == 0) {
             res[i] = malloc(sizeof(char) * (strlen(dev->radio.sta.saved_networks[i]) + 1));
             if (res[i] == NULL) {
-                // Failed to allocate %d bytes for a probed SSID.  49
                 char *msg = malloc(sizeof(char) * 55);
                 if (msg == NULL) {
                     wendigo_log(MSG_ERROR, "Failed to allocate memory for a probed network.");
