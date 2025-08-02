@@ -13,7 +13,6 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
     * Done for device_list, pnl_list, setup_channel, setup, start & status
 
 #### wendigo_scene_device_list.c
-* Check wendigo_device usage
 * Ensure current_devices is sound
 * Update wendigo_device_is_displayed() to support DEVICE_CUSTOM
 
