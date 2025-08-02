@@ -199,8 +199,17 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
     return;
   }
   // TODO: Do I need a mutex over current_devices?
-  wendigo_device **new_devices = realloc(current_devices.devices,
-    sizeof(wendigo_device *) * deviceList->devices_count);
+  wendigo_device **new_devices;
+  if (current_devices.free_devices) {
+    new_devices = realloc(current_devices.devices,
+      sizeof(wendigo_device *) * deviceList->devices_count);
+  } else {
+    if (deviceList->devices_count > 0) {
+      new_devices = malloc(sizeof(wendigo_device *) * deviceList->devices_count);
+    } else {
+      new_devices = NULL;
+    }
+  }
   if (new_devices == NULL && deviceList->devices_count > 0) {
     /* Log error but proceed if unable to allocate memory for device array */
     char *msg = malloc(sizeof(char) * 49);
@@ -222,10 +231,15 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
       current_devices.devices = NULL;
     }
   } else {
-    /* Copy across deviceList->devices[] */
-    memcpy(new_devices, deviceList->devices, sizeof(wendigo_device *) * deviceList->devices_count);
+    if (new_devices == NULL) {
+      current_devices.devices_count = 0;
+    } else {
+      /* Copy across deviceList->devices[] */
+      memcpy(new_devices, deviceList->devices,
+        sizeof(wendigo_device *) * deviceList->devices_count);
+      current_devices.devices_count = deviceList->devices_count;
+    }
     current_devices.devices = new_devices;
-    current_devices.devices_count = deviceList->devices_count;
   }
   current_devices.view = deviceList->view;
   current_devices.devices_mask = deviceList->devices_mask;
@@ -273,7 +287,15 @@ uint16_t wendigo_scene_device_list_set_current_devices_mask(uint8_t deviceMask) 
     }
   }
   if (deviceCount > 0) {
-    wendigo_device **new_devices = realloc(current_devices.devices, sizeof(wendigo_device *) * deviceCount); // TODO consider free_devices
+    /* Allocate new storage for current_devices.devices[] - malloc or
+     * realloc depending on current_devices.free_devices */
+    wendigo_device **new_devices;
+    if (current_devices.free_devices) {
+      new_devices = realloc(current_devices.devices,
+        sizeof(wendigo_device *) * deviceCount);
+    } else {
+      new_devices = malloc(sizeof(wendigo_device *) * deviceCount);
+    }
     if (new_devices == NULL) {
       char *msg = malloc(sizeof(char) * 104);
       if (msg == NULL) {
@@ -573,6 +595,20 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     variable_item_set_current_value_index(dev->view, optionIndex);
     variable_item_set_current_value_text(dev->view, optionValue);
     /* Update current_devices.devices[] to include the new device */
+    if (!current_devices.free_devices) {
+      char *msg = malloc(sizeof(char) * (123 + MAX_SSID_LEN)); /* Length assumes that a bdname won't be longer than MAX_SSID_LEN */
+      if (msg == NULL || name == NULL) {
+        wendigo_log(MSG_ERROR, "Adding new device to current_devices.devices[] but it is configured to be immutable. Ignoring this and adding anyway...");
+      } else {
+        snprintf(msg, 123 + MAX_SSID_LEN,
+          "Adding a new device %s to current_devices.devices[] but it is configured to be immutable. Ignoring this and adding anyway...",
+          name);
+        wendigo_log(MSG_ERROR, msg);
+      }
+      if (msg != NULL) {
+        free(msg);
+      }
+    }
     wendigo_device **new_devices = realloc(current_devices.devices, sizeof(wendigo_device *) * (current_devices.devices_count + 1));
     if (new_devices != NULL) {
       current_devices.devices = new_devices;
