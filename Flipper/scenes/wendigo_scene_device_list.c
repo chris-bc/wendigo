@@ -743,8 +743,15 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     current_devices.devices_count = 0;
     current_devices.devices = NULL;
     bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
-    char deviceName[MAX_SSID_LEN + 1]; // TODO: Should this be moved to the heap?
-    bzero(deviceName, sizeof(deviceName));
+    char *deviceName = malloc(sizeof(char) * (MAX_SSID_LEN + 1));
+    if (deviceName == NULL) {
+      /* Not using wendigo_log() so I can include %d */
+      // TODO: Extend wendigo_log() to support variable arguments
+      FURI_LOG_E("wendigo_scene_device_list_var_list_enter_callback()",
+        "Failed to allocate deviceName[%d], proceeding without it.", MAX_SSID_LEN + 1);
+    } else {
+      bzero(deviceName, sizeof(char) * (MAX_SSID_LEN + 1));
+    }
     if (item->scanType == SCAN_WIFI_AP) {
       current_devices.view = WendigoAppViewAPSTAs;
       if (item->radio.ap.stations_count > 0) {
@@ -792,21 +799,33 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
         current_devices.devices_count = idx_dest;
       }
       /* Set deviceName using SSID if we have it, otherwise MAC */
-      if (item->radio.ap.ssid[0] == '\0') {
-        bytes_to_string(item->mac, MAC_BYTES, deviceName);
+      if (deviceName == NULL) {
+        snprintf(current_devices.devices_msg,
+          sizeof(current_devices.devices_msg),
+          "Stations");
       } else {
-        strncpy(deviceName, item->radio.ap.ssid, sizeof(deviceName));
+        if (item->radio.ap.ssid[0] == '\0') {
+          bytes_to_string(item->mac, MAC_BYTES, deviceName);
+        } else {
+          strncpy(deviceName, item->radio.ap.ssid, sizeof(char) * (MAX_SSID_LEN + 1));
+        }
+        snprintf(current_devices.devices_msg,
+          sizeof(current_devices.devices_msg),
+          "%s STAs", deviceName);
       }
-      snprintf(current_devices.devices_msg,
-        sizeof(current_devices.devices_msg),
-        "%s STAs", deviceName);
     } else if (item->scanType == SCAN_WIFI_STA) {
       current_devices.view = WendigoAppViewSTAAP;
       /* Use MAC to refer to the device */
-      bytes_to_string(item->mac, MAC_BYTES, deviceName);
-      snprintf(current_devices.devices_msg,
-        sizeof(current_devices.devices_msg),
-        "%s' AP", deviceName);
+      if (deviceName == NULL) {
+        snprintf(current_devices.devices_msg,
+          sizeof(current_devices.devices_msg),
+          "Access Point");
+      } else {
+        bytes_to_string(item->mac, MAC_BYTES, deviceName);
+        snprintf(current_devices.devices_msg,
+          sizeof(current_devices.devices_msg),
+          "%s' AP", deviceName);
+      }
       /* Station will display one device if it has an AP, otherwise 0 */
       if (memcmp(item->radio.sta.apMac, nullMac, MAC_BYTES)) {
         /* We have a MAC. Find the wendigo_device* */
@@ -820,6 +839,9 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     } else {
       wendigo_log(MSG_WARN,
         "Logic error: Fell through conditional nest in wendigo_scene_device_list.c");
+    }
+    if (deviceName != NULL) {
+      free(deviceName);
     }
     view_dispatcher_send_custom_event(app->view_dispatcher,
       Wendigo_EventListDevices);
