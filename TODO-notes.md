@@ -15,6 +15,7 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 #### wendigo_scene_device_list.c
 * Check wendigo_device usage
 * Ensure current_devices is sound
+* Update wendigo_device_is_displayed() to support DEVICE_CUSTOM
 
 #### Manage current_devices.devices[] - free or realloc
 * Often doesn't respect free_devices, but I think it's only used when setting devices to a PNL element, and I'm pretty sure devices[] is copied to a newly-allocated location for that.
