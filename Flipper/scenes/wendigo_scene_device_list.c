@@ -77,11 +77,11 @@ DeviceListInstance current_devices;
  * call, otherwise any memory allocated to devices[] will be leaked.
  */
 void wendigo_scene_device_list_init(void *config) {
+  bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
   if (config == NULL) {
     current_devices.devices = NULL;
     current_devices.devices_count = 0;
     current_devices.devices_mask = DEVICE_ALL;
-    current_devices.devices_msg[0] = '\0';
     current_devices.view = WendigoAppViewDeviceList;
     current_devices.free_devices = false;
   } else {
@@ -178,12 +178,12 @@ bool wendigo_device_is_displayed(wendigo_device *dev) {
  * into current_devices.
  */
 void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceList) {
+  bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
   if (deviceList == NULL) {
     /* Re-initialise current_devices */
     current_devices.view = WendigoAppViewDeviceList;
     current_devices.devices_mask = DEVICE_ALL;
     current_devices.free_devices = false;
-    bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
     if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
       free(current_devices.devices);
     }
