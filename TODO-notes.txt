@@ -1,37 +1,12 @@
-DONE * Add auth mode (find it in probe response)
-DONE * Change channel and RSSI back to integers
-DONE * Make SSID variable-length
-DONE * Update wendigo_wifi_ap and wendigo_wifi_sta to hold MACs, not object pointers
-DONE * Add network_list[] to STA data model and packet
-
-DONE * Refactor wendigo_device free/cleanup functions
 REMOVED * Fix interactive mode display bug by only updating lastSeen if the required period has elapsed - Kludgey, but it'll probably never be used anyway - And Flipper creates its own timestamp so it won't affect Flipper-Wendigo
-DONE * Review ESP32 wifi parsers and ensure that a STA's AP and an AP's STA have their MACs recorded in the object even if we don't have an object for them.
 
-DONE * Update display_wifi_ap_interactive
-DONE * Update parseBufferWifiAp()
 * Check whether 802.11 data packets can be sent between stations - Currently the parser assumes that a STA will only be sending a data packet to an AP
 
-* Turn buffer into a furi_string
-    * Flipper takes care of memory management
-    * Can append
-    * Can remove the first n chars
-* Then, on rx:
-    * Get buffer mutex
-    * Append bytes
-    * While there are complete packets (start < end && end < buffLen)
-        * Copy substring start..end to a new string
-        * Append the string to an array of packets
-        * Remove all bytes up to end of packet from buffer
-        * Call start_of_packet() and end_of_packet()
-    * Release buffer mutex
-    * Foreach packet in packets[]
-        * parsePacket()
-        * Free string
 * wendigo_add_device()
     * Acquire device mutex when realloc()ing and when appending
     * Release when devices[] has been set to the result of realloc(), and count has been incremented to avoid 2 devices being put in the same element
 
+*** Built-in functions ***
 furi_string_alloc()
 furi_string_free(theStr)
 const char *furi_string_get_cstr(theStr)
@@ -48,3 +23,29 @@ FuriStatus furi_mutex_acquire(theMutex, uint32_t timeout) => 0xffffffff?
 FuriStatus furi_mutex_release(theMutex)
 FuriStatusOk is an important status
 FuriWaitForever is a good timeout
+
+typedef struct DeviceListInstance {
+  wendigo_device **devices;
+  uint16_t devices_count;
+  uint8_t devices_mask;
+  WendigoAppView view;
+  char devices_msg[MAX_SSID_LEN + 18]; // Space for "Clients of MAX_SSID_LEN"
+  bool free_devices; // Do we need to free devices[] when we're done with it?
+} DeviceListInstance;
+
+enum wifi_2g_channel_bit_t
+enum wifi_5g_channel_bit_t
+
+variable_item_list_set_header
+-> If NULL calls furi_string_reset() to reset it
+-> Otherwise uses furi_string_set_str to update it
+    -> That must be buggy, so NULL the header in _on_enter()
+    -> Done for device_list, pnl_list, setup_channel, setup, start & status
+
+wendigo_scene_device_list.c
+* Check wendigo_device usage
+-> Ensure current_devices is sound
+
+Manage current_devices.devices[] - free or realloc
+-> Often doesn't respect free_devices, but I think it's only used when setting devices to a PNL element, and I'm pretty sure devices[] is copied to a newly-allocated location for that.
+    -> Either change that so PNL elements are used in-place and free_devices is respected, or remove free_devices from the model.
