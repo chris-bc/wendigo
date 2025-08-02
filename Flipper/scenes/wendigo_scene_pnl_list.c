@@ -45,7 +45,7 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
     }
     /* Display a device list for networks[index].devices */
     DeviceListInstance deviceList;
-    bzero(deviceList.devices_msg, sizeof(deviceList.devices_msg));
+    bzero(&deviceList, sizeof(DeviceListInstance));
     strncpy(deviceList.devices_msg, networks[index].ssid, MAX_SSID_LEN);
     deviceList.devices_mask = DEVICE_CUSTOM;
     deviceList.free_devices = false;
@@ -163,6 +163,7 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
             if (new_networks == NULL) {
                 strncpy(networks[networks_count].ssid, devices[i]->radio.sta.saved_networks[j],
                     strlen(devices[i]->radio.sta.saved_networks[j]));
+                // TODO: Once bugs are addressed, test to confirm that the following 2 lines can be removed
                 networks[networks_count].device_count = 0;
                 networks[networks_count].devices = NULL;
                 new_networks = &(networks[networks_count++]);
@@ -211,8 +212,7 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
         if (new_networks == NULL) {
             /* This condition will (should) never be true */
             wendigo_log(MSG_ERROR, "Unable to shrink networks[] to remove spare capacity.");
-            /* Don't fret too much - although should probably bzero() new capacity so NULL checks will work */
-            // TODO
+            /* Don't fret too much */
         } else {
             networks = new_networks;
         }
@@ -325,13 +325,13 @@ wendigo_device *wendigo_scene_pnl_list_get_device() {
  */
 uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***result) {
     FURI_LOG_T(WENDIGO_TAG, "Start get_networks_for_device()");
-    uint8_t networks = count_networks_for_device(dev);
-    if (networks == 0) {
+    uint8_t nets_count = count_networks_for_device(dev);
+    if (nets_count == 0) {
         FURI_LOG_T(WENDIGO_TAG, "End get_networks_for_device() - No networks.");
         return 0;
     }
     /* Allocate memory for the caller's char **result */
-    char **res = malloc(sizeof(char *) * networks);
+    char **res = malloc(sizeof(char *) * nets_count);
     *result = res;
     if (res == NULL) {
         char *msg = malloc(sizeof(char) * 48);
@@ -339,7 +339,7 @@ uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***re
             wendigo_display_popup(app, "Insufficient memory", "Unable to allocate memory for preferred network list.");
             wendigo_log(MSG_ERROR, "Unable to allocate memory for device's PNL.");
         } else {
-            snprintf(msg, 48, "Unable to allocate %d bytes for device's PNL.", sizeof(char) * networks);
+            snprintf(msg, 48, "Unable to allocate %d bytes for device's PNL.", sizeof(char) * nets_count);
             wendigo_log(MSG_ERROR, msg);
             wendigo_display_popup(app, "Insufficient memory", msg);
             free(msg);
@@ -347,7 +347,7 @@ uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***re
         FURI_LOG_T(WENDIGO_TAG, "End get_networks_for_device() - Unable to initialise results array.");
         return 0;
     }
-    for (uint8_t i = 0; i < networks; ++i) {
+    for (uint8_t i = 0; i < nets_count; ++i) {
         if (dev->radio.sta.saved_networks[i] == NULL ||
                 strlen(dev->radio.sta.saved_networks[i]) == 0) {
             res[i] = malloc(sizeof(char) * (strlen(dev->radio.sta.saved_networks[i]) + 1));
@@ -366,7 +366,7 @@ uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***re
         }
     }
     FURI_LOG_T(WENDIGO_TAG, "End get_networks_for_device()");
-    return networks;
+    return nets_count;
 }
 
 // TODO: May not actually need this function?
@@ -415,6 +415,7 @@ void wendigo_scene_pnl_list_on_enter(void *context) {
     WendigoApp *app = context;
     app->current_view = WendigoAppViewPNLList;
     variable_item_list_reset(app->var_item_list);
+    variable_item_list_set_header(app->var_item_list, NULL);
     /* Set enter callback */
     variable_item_list_set_enter_callback(app->var_item_list,
         wendigo_scene_pnl_list_var_list_enter_callback, app);

@@ -43,6 +43,7 @@ void wendigo_scene_status_on_enter(void *context) {
     app->current_view = WendigoAppViewStatus;
 
     variable_item_list_reset(var_item_list);
+    variable_item_list_set_header(var_item_list, NULL);
     VariableItem *item = variable_item_list_add(var_item_list, "Loading...",
                                                 1, NULL, app);
     variable_item_set_current_value_index(item, 0);

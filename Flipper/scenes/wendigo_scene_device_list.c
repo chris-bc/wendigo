@@ -86,6 +86,10 @@ void wendigo_scene_device_list_init(void *config) {
     current_devices.free_devices = false;
   } else {
     DeviceListInstance *cfg = (DeviceListInstance *)config;
+    if (current_devices.devices_count > 0 && current_devices.devices != NULL &&
+        current_devices.free_devices) {
+      free(current_devices.devices);
+    }
     if (cfg->devices_count > 0 && cfg->devices != NULL) {
       current_devices.devices = malloc(sizeof(wendigo_device *) * cfg->devices_count);
       if (current_devices.devices == NULL) {
@@ -118,9 +122,10 @@ void wendigo_scene_device_list_init(void *config) {
 /** Clean up current_devices and stack in preparation for application exit. */
 void wendigo_scene_device_list_free() {
   /* Clear current_devices */
-  if (current_devices.devices_count > 0 && current_devices.devices != NULL &&
-      current_devices.free_devices) {
-    free(current_devices.devices);
+  if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
+    if (current_devices.free_devices) {
+      free(current_devices.devices);
+    }
     current_devices.devices = NULL;
     current_devices.devices_count = 0;
     current_devices.free_devices = false;
@@ -128,9 +133,10 @@ void wendigo_scene_device_list_free() {
   if (stack_counter > 0 && stack != NULL) {
     /* Free components of the device stack */
     for (uint8_t i = 0; i < stack_counter; ++i) {
-      if (stack[i].devices_count > 0 && stack[i].devices != NULL &&
-          stack[i].free_devices) {
-        free(stack[i].devices);
+      if (stack[i].devices_count > 0 && stack[i].devices != NULL) {
+        if (stack[i].free_devices) {
+          free(stack[i].devices);
+        }
         stack[i].devices = NULL;
         stack[i].devices_count = 0;
         stack[i].free_devices = false;
@@ -183,12 +189,13 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
     /* Re-initialise current_devices */
     current_devices.view = WendigoAppViewDeviceList;
     current_devices.devices_mask = DEVICE_ALL;
-    current_devices.free_devices = false;
-    if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
+    if (current_devices.devices_count > 0 && current_devices.devices != NULL &&
+        current_devices.free_devices) {
       free(current_devices.devices);
     }
     current_devices.devices = NULL;
     current_devices.devices_count = 0;
+    current_devices.free_devices = false;
     return;
   }
   // TODO: Do I need a mutex over current_devices?
@@ -209,7 +216,9 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
      * so that no devices are displayed. */
     if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
       current_devices.devices_count = 0;
-      free(current_devices.devices);
+      if (current_devices.free_devices) {
+        free(current_devices.devices);
+      }
       current_devices.devices = NULL;
     }
   } else {
@@ -220,6 +229,7 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
   }
   current_devices.view = deviceList->view;
   current_devices.devices_mask = deviceList->devices_mask;
+  current_devices.free_devices = true; /* I guess, because we allocated it above */
   memcpy(current_devices.devices_msg, deviceList->devices_msg, sizeof(current_devices.devices_msg));
 }
 
@@ -263,9 +273,20 @@ uint16_t wendigo_scene_device_list_set_current_devices_mask(uint8_t deviceMask) 
     }
   }
   if (deviceCount > 0) {
-    wendigo_device **new_devices = realloc(current_devices.devices, sizeof(wendigo_device *) * deviceCount);
+    wendigo_device **new_devices = realloc(current_devices.devices, sizeof(wendigo_device *) * deviceCount); // TODO consider free_devices
     if (new_devices == NULL) {
-        return 0;
+      char *msg = malloc(sizeof(char) * 104);
+      if (msg == NULL) {
+        wendigo_log(MSG_ERROR,
+          "Unable to allocate current_devices.devices[] for new device mask, keeping devices[] unchanged.");
+      } else {
+        snprintf(msg, 104,
+          "Unable to allocate current_devices.devices[%d] for new device mask %d, keeping devices[] unchanged.",
+          deviceCount, deviceMask);
+        wendigo_log(MSG_ERROR, msg);
+        free(msg);
+      }
+      return 0;
     }
     current_devices.devices = new_devices;
   }
@@ -589,10 +610,11 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
   uint8_t options_index;
   bool free_item_str = false;
   wendigo_scene_device_list_set_current_devices_mask(current_devices.devices_mask);
-  /* Set header text for the list if specified */
-  variable_item_list_set_header(app->devices_var_item_list,
-    (current_devices.devices_msg[0] == '\0') ? NULL
-                                              : current_devices.devices_msg);
+  /* Set header text for the list if specified. NULL first to prevent text-over-text */
+  variable_item_list_set_header(app->devices_var_item_list, NULL);
+  if (current_devices.devices_msg[0] != '\0') {
+    variable_item_list_set_header(app->devices_var_item_list, current_devices.devices_msg);
+  }
   for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
     /* Label with bdname if it's bluetooth & we have a name */
     if (current_devices.devices[i] != NULL && (current_devices.devices[i]->scanType == SCAN_HCI ||
@@ -703,7 +725,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       WendigoOptionAPStaCount) || (item->scanType == SCAN_WIFI_STA &&
       variable_item_get_current_value_index(item->view) ==
       WendigoOptionSTAAP))) {
-    /* Push current_devices onto the call stack */
+    /* Push current_devices onto the device list stack */
     DeviceListInstance *new_stack = realloc(stack, sizeof(DeviceListInstance) * (stack_counter + 1));
     if (new_stack == NULL) {
       wendigo_display_popup(app, "Insufficient Memory", "Unable to allocate an additional DeviceListInstance.");
@@ -717,11 +739,11 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     /* Re-initialise current_devices */
     current_devices.devices_mask = DEVICE_CUSTOM;
     current_devices.view = WendigoAppViewDeviceList;
-    current_devices.free_devices = false;
+    current_devices.free_devices = true;
     current_devices.devices_count = 0;
     current_devices.devices = NULL;
     bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
-    char deviceName[MAX_SSID_LEN + 1];
+    char deviceName[MAX_SSID_LEN + 1]; // TODO: Should this be moved to the heap?
     bzero(deviceName, sizeof(deviceName));
     if (item->scanType == SCAN_WIFI_AP) {
       current_devices.view = WendigoAppViewAPSTAs;
@@ -797,7 +819,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       }
     } else {
       wendigo_log(MSG_WARN,
-        "Logic error: Fell through switch() statement in wendigo_scene_device_list.c");
+        "Logic error: Fell through conditional nest in wendigo_scene_device_list.c");
     }
     view_dispatcher_send_custom_event(app->view_dispatcher,
       Wendigo_EventListDevices);
@@ -831,7 +853,7 @@ static void wendigo_scene_device_list_var_list_change_callback(VariableItem *ite
 
   if (menu_item != NULL) {
     uint8_t option_index = variable_item_get_current_value_index(item);
-    furi_assert(option_index < current_devices.devices_count);
+    furi_assert(option_index < MAX_OPTIONS);
     /* Update the current option label */
     char tempStr[MAX_SSID_LEN + 1];
     bzero(tempStr, MAX_SSID_LEN + 1);
@@ -1096,11 +1118,6 @@ bool wendigo_scene_device_list_on_event(void *context,
           }
         }
         if (optionValue[0] != '\0') {
-          /* Device list is throwing an occasional UsageFault now - it may be
-           * due to too many set_current_value_text()s in too short a time.
-           * Check whether the label has changed before updating it to see
-           * if that helps. */
-          // TODO: There's no way to get the current value text. Right...
           /* We've updated the current device's selected option */
           variable_item_set_current_value_text(current_devices.devices[i]->view,
                                               optionValue);
