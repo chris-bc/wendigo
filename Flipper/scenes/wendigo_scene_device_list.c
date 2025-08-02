@@ -148,6 +148,28 @@ void wendigo_scene_device_list_free() {
   }
 }
 
+/** Tihs alternative version of wendigo_device_is_displayed() is less efficient
+ * than the original, but works correctly when the displayed device mask
+ * includes DEVICE_CUSTOM.
+ * This function is called automatically by wendigo_device_is_displayed() if
+ * the current device mask includes DEVICE_CUSTOM - it is not necessary to
+ * call this function independently.
+ * Returns true if a device containing the specified MAC (dev->mac) is
+ * displayed in the current scene.
+ */
+bool wendigo_device_is_displayed_custom(wendigo_device *dev) {
+  if (dev == NULL || current_devices.devices == NULL) {
+    return false;
+  }
+  /* Loop through current_devices.devices[] searching for dev */
+  uint16_t idx;
+  for (idx = 0; idx < current_devices.devices_count &&
+    (current_devices.devices[idx] == NULL ||
+      memcmp(dev->mac, current_devices.devices[idx]->mac, MAC_BYTES));
+    ++idx) { }
+  return (idx < current_devices.devices_count);
+}
+
 /** Determine whether the specified device should be displayed, based on the
  * criteria provided in wendigo_scene_device_list_set_current_devices_mask().
  * This function DOES NOT consider devices that may be displayed by the
@@ -161,7 +183,8 @@ bool wendigo_device_is_displayed(wendigo_device *dev) {
     return false;
   }
   if ((current_devices.devices_mask & DEVICE_CUSTOM) == DEVICE_CUSTOM) {
-    wendigo_log(MSG_WARN, "wendigo_device_is_displayed(): The current device mask includes DEVICE_CUSTOM, results from this function are inconclusive.");
+    wendigo_log(MSG_INFO, "wendigo_device_is_displayed(): The current device mask includes DEVICE_CUSTOM, passing to wendigo_device_is_displayed_custom() for a precise answer.");
+    return wendigo_device_is_displayed_custom(dev);
   }
   bool display_selected = ((current_devices.devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_device_is_displayed()");
