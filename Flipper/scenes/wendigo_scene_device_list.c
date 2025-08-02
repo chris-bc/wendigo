@@ -83,7 +83,7 @@ void wendigo_scene_device_list_init(void *config) {
     current_devices.devices_count = 0;
     current_devices.devices_mask = DEVICE_ALL;
     current_devices.view = WendigoAppViewDeviceList;
-    current_devices.free_devices = false;
+    current_devices.free_devices = true;
   } else {
     DeviceListInstance *cfg = (DeviceListInstance *)config;
     if (current_devices.devices_count > 0 && current_devices.devices != NULL &&
@@ -128,7 +128,7 @@ void wendigo_scene_device_list_free() {
     }
     current_devices.devices = NULL;
     current_devices.devices_count = 0;
-    current_devices.free_devices = false;
+    current_devices.free_devices = true;
   }
   if (stack_counter > 0 && stack != NULL) {
     /* Free components of the device stack */
@@ -139,7 +139,7 @@ void wendigo_scene_device_list_free() {
         }
         stack[i].devices = NULL;
         stack[i].devices_count = 0;
-        stack[i].free_devices = false;
+        stack[i].free_devices = true;
       }
     }
     free(stack);
@@ -195,7 +195,7 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
     }
     current_devices.devices = NULL;
     current_devices.devices_count = 0;
-    current_devices.free_devices = false;
+    current_devices.free_devices = true;
     return;
   }
   // TODO: Do I need a mutex over current_devices?

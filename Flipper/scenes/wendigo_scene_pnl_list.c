@@ -14,7 +14,7 @@ wendigo_device *current_device = NULL;
 PreferredNetwork *networks = NULL;
 uint8_t networks_count = 0;
 
-/** When displaying all probeid networks this function handles the display of
+/** When displaying all probed networks this function handles the display of
  * a device list when an SSID is selected.
  */
 static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32_t index) {
