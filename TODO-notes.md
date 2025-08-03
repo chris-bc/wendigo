@@ -14,6 +14,12 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 
 #### wendigo_scene_device_list.c
 * Ensure current_devices is sound
+* Only set app->leaving_scene if a device list scene is being displayed
+  * app->current_view is one of
+    * WendigoAppViewDeviceList
+    * WendigoAppViewPNLDeviceList
+    * WendigoAppViewAPSTAs
+    * WendigoAppViewSTAAP
 
 #### Manage current_devices.devices[] - free or realloc
 * Often doesn't respect free_devices, but I think it's only used when setting devices to a PNL element, and I'm pretty sure devices[] is copied to a newly-allocated location for that.

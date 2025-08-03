@@ -27,7 +27,14 @@ static bool wendigo_app_back_event_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_back_event_callback()");
     furi_assert(context);
     WendigoApp *app = context;
-    app->leaving_scene = true;
+    /* Set the app->leaving_scene flag on back button press, but only if a
+     * Device List scene is currently displayed. */
+    if (app->current_view == WendigoAppViewDeviceList ||
+        app->current_view == WendigoAppViewPNLDeviceList ||
+        app->current_view == WendigoAppViewAPSTAs ||
+        app->current_view == WendigoAppViewSTAAP) {
+            app->leaving_scene = true;
+    }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_app_back_event_callback()");
     return scene_manager_handle_back_event(app->scene_manager);
 }

@@ -298,10 +298,11 @@ void wendigo_scene_pnl_list_set_device(wendigo_device *dev, WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_set_device()");
     current_device = dev;
     /* Redraw the list if this scene is active */
-    if (app->current_view == WendigoAppViewPNLList) {
-        FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_set_device() - Redrawing.");
-        return wendigo_scene_pnl_list_redraw(app);
-    }
+    // if (app->current_view == WendigoAppViewPNLList) {
+    //     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_set_device() - Redrawing.");
+    //     return wendigo_scene_pnl_list_redraw(app);
+    // }
+    UNUSED(app);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_set_device()");
 }
 
