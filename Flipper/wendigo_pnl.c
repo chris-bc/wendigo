@@ -262,6 +262,13 @@ uint16_t get_all_networks(WendigoApp *app) {
     return 0;
 }
 
+/** Search for a PreferredNetwork representing the specified SSID, creating
+ * the PreferredNetwork if it does not exist and returning a reference to it.
+ * Returns NULL if the SSID is not in networks[] and additional memory could
+ * not be allocated to make space for it.
+ * If a new PreferredNetwork is created it is initialised, setting devices[]
+ * to NULL and device_count to 0.
+ */
 PreferredNetwork *fetch_or_create_pnl(char *ssid, uint8_t ssid_len) {
     PreferredNetwork *pnl;
     uint16_t idx = index_of_pnl(ssid);
@@ -301,12 +308,18 @@ PreferredNetwork *fetch_or_create_pnl(char *ssid, uint8_t ssid_len) {
     return NULL;
 }
 
+/** Search the specified PreferredNetwork for a device containing the
+ * specified MAC. Returns pnl->device_count if not found.
+ */
 uint8_t pnl_index_of_mac(PreferredNetwork *pnl, uint8_t mac[MAC_BYTES]) {
     UNUSED(pnl);
     UNUSED(mac);
     return 0;
 }
 
+/** Search the specified PreferredNetwork for a device with the same MAC as
+ * the specified device. Returns pnl->device_count if not found.
+ */
 uint8_t pnl_index_of_device(PreferredNetwork *pnl, wendigo_device *dev) {
     return pnl_index_of_mac(pnl, dev->mac);
 }
