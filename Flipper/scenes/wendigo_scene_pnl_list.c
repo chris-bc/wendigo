@@ -107,15 +107,13 @@ uint8_t count_networks_for_device(wendigo_device *dev) {
 uint16_t map_ssids_to_devices(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start map_ssids_to_devices()");
     if (networks_count > 0 && networks != NULL) {
-        // TODO: Refactor function to update, rather than replace, networks[]
-        free(networks);
-        networks = NULL;
-        networks_count = 0;
+        /* If networks[] has been initialised we can assume it's up to date */
+        return networks_count;
     }
-    // TODO: Consider whether a mutex is needed over networks[]
 
     uint8_t this_count;
     PreferredNetwork *new_networks;
+    furi_mutex_acquire(app->pnlMutex, FuriWaitForever);
     /* Loop over each device */
     for (uint16_t i = 0; i < devices_count; ++i) {
         if (devices == NULL || devices[i] == NULL || devices[i]->scanType != SCAN_WIFI_STA ||
@@ -131,12 +129,7 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
                 /* Too annoying to continue on - log and alert error, then clean up and exit */
                 wendigo_log(MSG_ERROR, "Unable to allocate PreferredNetwork elements.");
                 wendigo_display_popup(app, "Insufficient memory", "Unable to allocate PreferredNetwork elements.");
-                if (networks_capacity > 0) {
-                    // TODO: Better NULL checking
-                    free(networks);
-                    networks = NULL;
-                    networks_count = 0;
-                }
+                furi_mutex_release(app->pnlMutex);
                 FURI_LOG_T(WENDIGO_TAG, "End map_ssids_to_devices() - Unable to resize networks[].");
                 return 0;
             }
@@ -206,6 +199,7 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
             networks = new_networks;
         }
     }
+    furi_mutex_release(app->pnlMutex);
     FURI_LOG_T(WENDIGO_TAG, "End map_ssids_to_devices()");
     return networks_count;
 }
