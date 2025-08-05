@@ -16,7 +16,7 @@ uint16_t index_of_pnl(char *ssid) {
     FURI_LOG_T(WENDIGO_TAG, "Start index_of_pnl()");
     if (ssid == NULL || strlen(ssid) == 0 || networks == NULL || networks_count == 0) {
         FURI_LOG_T(WENDIGO_TAG, "End index_of_pnl() - Invalid arguments.");
-        return 0;
+        return networks_count;
     }
     uint16_t idx;
     uint8_t compareLen = MAX_SSID_LEN;
@@ -35,6 +35,10 @@ uint16_t index_of_pnl(char *ssid) {
  */
 PreferredNetwork *pnl_for_ssid(char *ssid) {
     FURI_LOG_T(WENDIGO_TAG, "Start pnl_for_ssid()");
+    if (ssid == NULL || strlen(ssid) == 0 || networks == NULL || networks_count == 0) {
+        FURI_LOG_T(WENDIGO_TAG, "End pnl_for_ssid() - Invalid arguments.");
+        return NULL;
+    }
     PreferredNetwork *result = NULL;
     uint16_t idx = index_of_pnl(ssid);
     if (idx < networks_count) {
@@ -68,6 +72,11 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
     if (networks_count > 0 && networks != NULL) {
         /* If networks[] has been initialised we can assume it's up to date */
         return networks_count;
+    }
+    /* Input validation */
+    if (app == NULL || devices == NULL || devices_count == 0) {
+        FURI_LOG_T(WENDIGO_TAG, "End map_ssids_to_devices() - Invalid arguments.");
+        return 0;
     }
 
     uint8_t this_count;
@@ -109,7 +118,7 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
                 networks[networks_count].devices = NULL;
                 new_networks = &(networks[networks_count++]);
             }
-            /* Is devices[i] in new_networks->devices? */
+            /* Is devices[i] in new_networks->devices[]? */
             uint8_t devIdx;
             // TODO: Should I just compare pointer addresses instead of MAC?
             for (devIdx = 0; devIdx < new_networks->device_count &&
@@ -117,7 +126,7 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
                     memcmp(new_networks->devices[devIdx]->mac, devices[i]->mac, MAC_BYTES));
                 ++devIdx) { }
             if (devIdx == new_networks->device_count) {
-                /* Append devices[i] to new_networks->devices */
+                /* Append devices[i] to new_networks->devices[] */
                 wendigo_device **new_devices = realloc(new_networks->devices,
                     sizeof(wendigo_device *) * (new_networks->device_count + 1));
                 if (new_devices == NULL) {
@@ -155,6 +164,7 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
             wendigo_log(MSG_ERROR, "Unable to shrink networks[] to remove spare capacity.");
             /* Don't fret too much */
         } else {
+            networks_capacity = networks_count;
             networks = new_networks;
         }
     }
@@ -175,9 +185,15 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
  * char **variable is stored - meaning I can allocate enough pointers to
  * hold the SSIDs.
  * Returns the number of SSIDs in results.
+ * CAUTION: This function is unused and has not been tested.
  */
 uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***result) {
     FURI_LOG_T(WENDIGO_TAG, "Start get_networks_for_device()");
+    if (dev == NULL || result == NULL || dev->scanType != SCAN_WIFI_STA ||
+            app == NULL) {
+        FURI_LOG_T(WENDIGO_TAG, "End get_networks_for_device() - Invalid arguments.");
+        return 0;
+    }
     uint8_t nets_count = count_networks_for_device(dev);
     if (nets_count == 0) {
         FURI_LOG_T(WENDIGO_TAG, "End get_networks_for_device() - No networks.");
@@ -200,9 +216,10 @@ uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***re
         FURI_LOG_T(WENDIGO_TAG, "End get_networks_for_device() - Unable to initialise results array.");
         return 0;
     }
+    /* Copy each of dev's saved_networks[] into result*** */
     for (uint8_t i = 0; i < nets_count; ++i) {
-        if (dev->radio.sta.saved_networks[i] == NULL ||
-                strlen(dev->radio.sta.saved_networks[i]) == 0) {
+        if (dev->radio.sta.saved_networks[i] != NULL &&
+                strlen(dev->radio.sta.saved_networks[i]) > 0) {
             res[i] = malloc(sizeof(char) * (strlen(dev->radio.sta.saved_networks[i]) + 1));
             if (res[i] == NULL) {
                 char *msg = malloc(sizeof(char) * 55);
@@ -223,15 +240,25 @@ uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***re
 }
 
 // TODO: May not actually need this function?
+// CAUTION: This function is incomplete, usused and has not been tested
 uint16_t get_all_networks(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start get_all_networks()");
     char **nets;
     int16_t count = 0;
+    /* Input validation */
+    if (devices == NULL || devices_count == 0 || app == NULL) {
+        FURI_LOG_T(WENDIGO_TAG, "End get_all_networks() - Invalid arguments.");
+        return count;
+    }
     /* First find the size of our array */
     for (uint16_t i = 0; i < devices_count; ++i) {
-        if (devices != NULL && devices[i] != NULL && devices[i]->scanType == SCAN_WIFI_STA) {
+        if (devices[i] != NULL && devices[i]->scanType == SCAN_WIFI_STA) {
             count += count_networks_for_device(devices[i]);
         }
+    }
+    if (count == 0) {
+        FURI_LOG_T(WENDIGO_TAG, "End get_all_networks() - No networks.");
+        return count;
     }
     nets = malloc(sizeof(char *) * count);
     if (nets == NULL) {
@@ -250,7 +277,7 @@ uint16_t get_all_networks(WendigoApp *app) {
     char **dev_nets;
     uint8_t dev_count;
     for (uint16_t i = 0; i < devices_count; ++i) {
-        if (devices != NULL && devices[i] != NULL && devices[i]->scanType == SCAN_WIFI_STA) {
+        if (devices[i] != NULL && devices[i]->scanType == SCAN_WIFI_STA) {
             dev_count = get_networks_for_device(app, devices[i], &dev_nets);
             if (dev_count > 0 && dev_nets != NULL) {
                 /* Copy dev_nets into nets */
@@ -274,6 +301,7 @@ uint16_t get_all_networks(WendigoApp *app) {
  * by the calling function in order to prevent concurrency issues.
  */
 PreferredNetwork *fetch_or_create_pnl(char *ssid, PNL_Result *result) {
+    FURI_LOG_T(WENDIGO_TAG, "Start fetch_or_create_pnl()");
     PreferredNetwork *pnl;
     uint16_t idx = index_of_pnl(ssid);
     if (idx == networks_count) {
@@ -317,26 +345,37 @@ PreferredNetwork *fetch_or_create_pnl(char *ssid, PNL_Result *result) {
         }
     }
     if (idx < networks_count) {
+        FURI_LOG_T(WENDIGO_TAG, "End fetch_or_create_pnl() - Succeeded.");
         return &(networks[idx]);
     }
+    FURI_LOG_T(WENDIGO_TAG, "End fetch_or_create_pnl() - Failed.");
     return NULL;
 }
 
 /** Search the specified PreferredNetwork for a device containing the
  * specified MAC. Returns pnl->device_count if not found.
+ * TODO: If pnl is NULL this function will cause a NULL reference exception.
+ *       I couldn't think of an elegant way to handle that condition other
+ *       than refactoring PNL_Result to include an index, and that's too much
+ *       work to do at the moment.
  */
 uint8_t pnl_index_of_mac(PreferredNetwork *pnl, uint8_t mac[MAC_BYTES]) {
+    FURI_LOG_T(WENDIGO_TAG, "Start pnl_index_of_mac()");
     uint8_t idx;
     for (idx = 0; idx < pnl->device_count &&
         (pnl->devices[idx] == NULL ||
             memcmp(pnl->devices[idx]->mac, mac, MAC_BYTES)); ++idx) { }
+    FURI_LOG_T(WENDIGO_TAG, "End pnl_index_of_mac()");
     return idx;
 }
 
 /** Search the specified PreferredNetwork for a device with the same MAC as
  * the specified device. Returns pnl->device_count if not found.
+ * TODO: If pnl is NULL this function will cause a NULL reference exception.
+ *       See above.
  */
 uint8_t pnl_index_of_device(PreferredNetwork *pnl, wendigo_device *dev) {
+    FURI_LOG_T(WENDIGO_TAG, "Start+End pnl_index_of_device()");
     return pnl_index_of_mac(pnl, dev->mac);
 }
 
@@ -352,11 +391,19 @@ uint8_t pnl_index_of_device(PreferredNetwork *pnl, wendigo_device *dev) {
  * not exist and memory could not be allocated for them.
  */
 PNL_Result pnl_find_or_create_device(WendigoApp *app, char *ssid, wendigo_device *dev) {
+    FURI_LOG_T(WENDIGO_TAG, "Start pnl_find_or_create_device()");
+    if (ssid == NULL || strlen(ssid) == 0 || dev == NULL ||
+            dev->scanType != SCAN_WIFI_STA || app == NULL) {
+        FURI_LOG_T(WENDIGO_TAG, "End pnl_find_or_create_device() - Invalid arguments.");
+        return PNL_FAILED;
+    }
     PNL_Result result = PNL_IN_PROGRESS;
     furi_mutex_acquire(app->pnlMutex, FuriWaitForever);
     PreferredNetwork *pnl = fetch_or_create_pnl(ssid, &result);
     if (pnl == NULL) {
+        /* Error is logged by fetch_or_create_pnl() - No need to duplicate */
         furi_mutex_release(app->pnlMutex);
+        FURI_LOG_T(WENDIGO_TAG, "End pnl_find_or_create_device() - Failed to obtain PreferredNetwork.");
         return PNL_FAILED;
     }
     uint8_t devIdx = pnl_index_of_mac(pnl, dev->mac);
@@ -365,12 +412,11 @@ PNL_Result pnl_find_or_create_device(WendigoApp *app, char *ssid, wendigo_device
         wendigo_device **new_dev = realloc(pnl->devices,
             sizeof(wendigo_device *) * (pnl->device_count + 1));
         if (new_dev == NULL) {
-            /* Failed to extend devices[] */
+            /* Failed to extend pnl->devices[] */
             char *msg = malloc(sizeof(char) * (51 + MAX_SSID_LEN));
             if (msg == NULL) {
                 wendigo_log(MSG_ERROR, "Failed to extend PNL devices array.");
             } else {
-                // Failed to extend devices array for SSID to %d bytes. //51
                 snprintf(msg, 51 + MAX_SSID_LEN,
                     "Failed to extend devices array for %s to %d bytes.",
                     ssid, sizeof(wendigo_device *) * (pnl->device_count + 1));
@@ -379,11 +425,9 @@ PNL_Result pnl_find_or_create_device(WendigoApp *app, char *ssid, wendigo_device
             }
             furi_mutex_release(app->pnlMutex);
             return PNL_FAILED;
-        } else {
-            /* Extended pnl->devices[] - Set result as appropriate */
-            if (result != PNL_CREATED) {
-                result = PNL_DEVICE_CREATED;
-            }
+        } else if (result != PNL_CREATED) {
+            /* Extended pnl->devices[] and pnl already existed */
+            result = PNL_DEVICE_CREATED;
         }
         pnl->devices = new_dev;
         pnl->devices[pnl->device_count++] = dev;
@@ -391,11 +435,18 @@ PNL_Result pnl_find_or_create_device(WendigoApp *app, char *ssid, wendigo_device
         result = PNL_EXISTS;
     }
     furi_mutex_release(app->pnlMutex);
+    FURI_LOG_T(WENDIGO_TAG, "End pnl_find_or_create_device()");
     return result;
 }
 
 /* Create a trace log entry describing the specified PNL_Result */
 void pnl_log_result(char *tag, PNL_Result res, char *ssid, wendigo_device *dev) {
+    FURI_LOG_T(WENDIGO_TAG, "Start pnl_log_result()");
+    if (tag == NULL || strlen(tag) == 0 || ssid == NULL || strlen(ssid) == 0 ||
+            dev == NULL || res == PNL_IN_PROGRESS) {
+        FURI_LOG_T(WENDIGO_TAG, "End pnl_log_result() - Invalid arguments.");
+        return;
+    }
     char *devMac = malloc(sizeof(char) * (MAC_STRLEN + 1));
     if (devMac != NULL) {
         bytes_to_string(dev->mac, MAC_BYTES, devMac);
@@ -424,4 +475,5 @@ void pnl_log_result(char *tag, PNL_Result res, char *ssid, wendigo_device *dev) 
     if (devMac != NULL) {
         free(devMac);
     }
+    FURI_LOG_T(WENDIGO_TAG, "End pnl_log_result()");
 }
