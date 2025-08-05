@@ -13,6 +13,10 @@ char *wendigo_popup_text = NULL; // I suspect the popup text is going out of
 wendigo_device **devices = NULL;
 uint16_t devices_count = 0;
 uint16_t devices_capacity = 0;
+/* PNL cache */
+PreferredNetwork *networks = NULL;
+uint16_t networks_count = 0;
+uint16_t networks_capacity = 0;
 
 /* How much will we increase bt_devices[] by when additional space is needed? */
 #define INC_DEVICE_CAPACITY_BY 10

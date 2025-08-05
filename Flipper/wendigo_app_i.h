@@ -132,6 +132,15 @@ typedef struct DeviceListInstance {
   bool free_devices; // Do we need to free devices[] when we're done with it?
 } DeviceListInstance;
 
+/** PreferredNetwork is used to allow us to browse from SSID to devices
+ * that have probed for that SSID.
+ */
+typedef struct PreferredNetwork {
+    char ssid[MAX_SSID_LEN + 1];
+    uint8_t device_count;
+    wendigo_device **devices;
+} PreferredNetwork;
+
 struct WendigoApp {
     Gui *gui;
     ViewDispatcher *view_dispatcher;

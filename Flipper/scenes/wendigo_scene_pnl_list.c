@@ -1,18 +1,7 @@
 #include "../wendigo_app_i.h"
 #include "../wendigo_scan.h"
 
-/** PreferredNetwork is used to allow us to browse from SSID to devices
- * that have probed for that SSID.
- */
-typedef struct PreferredNetwork {
-    char ssid[MAX_SSID_LEN + 1];
-    uint8_t device_count;
-    wendigo_device **devices;
-} PreferredNetwork;
-
 wendigo_device *current_device = NULL;
-PreferredNetwork *networks = NULL;
-uint8_t networks_count = 0;
 
 /** When displaying all probed networks this function handles the display of
  * a device list when an SSID is selected.
@@ -64,13 +53,13 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
  * found.
  * SSID must be a null-terminated string.
  */
-uint8_t index_of_pnl(char *ssid) {
+uint16_t index_of_pnl(char *ssid) {
     FURI_LOG_T(WENDIGO_TAG, "Start index_of_pnl()");
     if (ssid == NULL || strlen(ssid) == 0 || networks == NULL || networks_count == 0) {
         FURI_LOG_T(WENDIGO_TAG, "End index_of_pnl() - Invalid arguments.");
         return 0;
     }
-    uint8_t idx;
+    uint16_t idx;
     uint8_t compareLen = MAX_SSID_LEN;
     if (strlen(ssid) < compareLen) {
         compareLen = strlen(ssid);
@@ -88,7 +77,7 @@ uint8_t index_of_pnl(char *ssid) {
 PreferredNetwork *pnl_for_ssid(char *ssid) {
     FURI_LOG_T(WENDIGO_TAG, "Start pnl_for_ssid()");
     PreferredNetwork *result = NULL;
-    uint8_t idx = index_of_pnl(ssid);
+    uint16_t idx = index_of_pnl(ssid);
     if (idx < networks_count) {
         result = &(networks[idx]);
     }
@@ -113,8 +102,9 @@ uint8_t count_networks_for_device(wendigo_device *dev) {
  * that map all identified networks to the wendigo_device instances that have
  * probed for them.
  * networks[] and networks_count are updated by this function.
+ * Returns the number of associated networks.
  */
-uint8_t map_ssids_to_devices(WendigoApp *app) {
+uint16_t map_ssids_to_devices(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start map_ssids_to_devices()");
     if (networks_count > 0 && networks != NULL) {
         // TODO: Refactor function to update, rather than replace, networks[]
@@ -124,7 +114,6 @@ uint8_t map_ssids_to_devices(WendigoApp *app) {
     }
     // TODO: Consider whether a mutex is needed over networks[]
 
-    uint8_t networks_capacity = 0;
     uint8_t this_count;
     PreferredNetwork *new_networks;
     /* Loop over each device */
@@ -272,7 +261,7 @@ void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
     
     /* Display networks[] */
     char countStr[9];
-    for (uint8_t idx = 0; idx < networks_count; ++idx) {
+    for (uint16_t idx = 0; idx < networks_count; ++idx) {
         /* Add networks[idx].ssid with option networks[idx].device_count */
         snprintf(countStr, sizeof(countStr), "%d STA%s", networks[idx].device_count,
             (networks[idx].device_count == 1) ? "" : "s");
@@ -456,7 +445,7 @@ void wendigo_scene_pnl_list_on_exit(void *context) {
 void wendigo_scene_pnl_list_free() {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_free()");
     if (networks_count > 0 && networks != NULL) {
-        for (uint8_t i = 0; i < networks_count; ++i) {
+        for (uint16_t i = 0; i < networks_count; ++i) {
             if (networks[i].device_count > 0 && networks[i].devices != NULL) {
                 /* Free networks[i].devices - a wendigo_device** - but don't
                  * free the individual wendigo_device elements. networks[i].devices
