@@ -1054,11 +1054,11 @@ void wendigo_scene_device_list_on_enter(void *context) {
   WendigoApp *app = context;
   app->current_view = current_devices.view;
 
-  variable_item_list_set_enter_callback(app->devices_var_item_list,
-    wendigo_scene_device_list_var_list_enter_callback, app);
-
   /* Reset and re-populate the list */
   wendigo_scene_device_list_redraw(app);
+
+  variable_item_list_set_enter_callback(app->devices_var_item_list,
+    wendigo_scene_device_list_var_list_enter_callback, app);
 
   /* Restore the selected device index if it's there to restore (e.g. if we're
    * returning from the device detail scene). But first test that it's in
@@ -1214,8 +1214,8 @@ void wendigo_scene_device_list_on_exit(void *context) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_on_exit()");
   WendigoApp *app = context;
   variable_item_list_reset(app->devices_var_item_list);
-  for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
-    current_devices.devices[i]->view = NULL;
+  for (uint16_t i = 0; i < devices_count; ++i) {
+    devices[i]->view = NULL;
   }
   if (app->leaving_scene) {
     /* This condition is met when we are genuinely exiting this scene - when
