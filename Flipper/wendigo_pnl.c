@@ -268,8 +268,12 @@ uint16_t get_all_networks(WendigoApp *app) {
  * not be allocated to make space for it.
  * If a new PreferredNetwork is created it is initialised, setting devices[]
  * to NULL and device_count to 0.
+ * If result is not NULL it will be set to PNL_EXISTS, PNL_CREATED or
+ * PNL_FAILED to indicate the result of the operation.
+ * CAUTION: This function does not acquire app->pnlMutex. This MUST BE DONE
+ * by the calling function in order to prevent concurrency issues.
  */
-PreferredNetwork *fetch_or_create_pnl(char *ssid, uint8_t ssid_len) {
+PreferredNetwork *fetch_or_create_pnl(char *ssid, PNL_Result *result) {
     PreferredNetwork *pnl;
     uint16_t idx = index_of_pnl(ssid);
     if (idx == networks_count) {
@@ -278,6 +282,9 @@ PreferredNetwork *fetch_or_create_pnl(char *ssid, uint8_t ssid_len) {
             /* No spare capacity - Extend networks[] */
             pnl = realloc(networks, sizeof(PreferredNetwork) * (networks_count + 1));
             if (pnl == NULL) {
+                if (result != NULL) {
+                    *result = PNL_FAILED;
+                }
                 char *msg = malloc(sizeof(char) * (82 + MAX_SSID_LEN));
                 if (msg == NULL) {
                     wendigo_log(MSG_ERROR,
@@ -291,6 +298,9 @@ PreferredNetwork *fetch_or_create_pnl(char *ssid, uint8_t ssid_len) {
                 }
             } else {
                 /* Allocated successfully */
+                if (result != NULL) {
+                    *result = PNL_CREATED;
+                }
                 networks = pnl;
                 ++networks_capacity;
             }
@@ -299,7 +309,11 @@ PreferredNetwork *fetch_or_create_pnl(char *ssid, uint8_t ssid_len) {
             /* Allocated successfully or had spare capacity - Initialise */
             bzero(networks + (sizeof(PreferredNetwork) * networks_count), sizeof(PreferredNetwork));
             idx = networks_count++;
-            strncpy(networks[idx].ssid, ssid, ssid_len);
+            strncpy(networks[idx].ssid, ssid, strlen(ssid));
+        }
+    } else {
+        if (result != NULL) {
+            *result = PNL_EXISTS;
         }
     }
     if (idx < networks_count) {
@@ -324,4 +338,90 @@ uint8_t pnl_index_of_mac(PreferredNetwork *pnl, uint8_t mac[MAC_BYTES]) {
  */
 uint8_t pnl_index_of_device(PreferredNetwork *pnl, wendigo_device *dev) {
     return pnl_index_of_mac(pnl, dev->mac);
+}
+
+/** Ensure that a PreferredNetwork representing the specified SSID exists,
+ * and contains the specified wendigo_device.
+ * If a PreferredNetwork for the specified SSID doesn't exist it will be
+ * created. If the PreferredNetwork does not contain the specified device
+ * it will be added.
+ * Returns PNL_EXISTS if the specified SSID and device already exists.
+ * Returns PNL_CREATED if a PreferredNetwork containing dev was created.
+ * Returns PNL_DEVICE_CREATED if dev was added to an existing PreferredNetwork.
+ * Returns PNL_FAILED if the specified PreferredNetwork or wendigo_device did
+ * not exist and memory could not be allocated for them.
+ */
+PNL_Result pnl_find_or_create_device(WendigoApp *app, char *ssid, wendigo_device *dev) {
+    PNL_Result result = PNL_IN_PROGRESS;
+    furi_mutex_acquire(app->pnlMutex, FuriWaitForever);
+    PreferredNetwork *pnl = fetch_or_create_pnl(ssid, &result);
+    if (pnl == NULL) {
+        furi_mutex_release(app->pnlMutex);
+        return PNL_FAILED;
+    }
+    uint8_t devIdx = pnl_index_of_mac(pnl, dev->mac);
+    if (devIdx == pnl->device_count) {
+        /* Device is not registered in PNL - Append it */
+        wendigo_device **new_dev = realloc(pnl->devices,
+            sizeof(wendigo_device *) * (pnl->device_count + 1));
+        if (new_dev == NULL) {
+            /* Failed to extend devices[] */
+            char *msg = malloc(sizeof(char) * (51 + MAX_SSID_LEN));
+            if (msg == NULL) {
+                wendigo_log(MSG_ERROR, "Failed to extend PNL devices array.");
+            } else {
+                // Failed to extend devices array for SSID to %d bytes. //51
+                snprintf(msg, 51 + MAX_SSID_LEN,
+                    "Failed to extend devices array for %s to %d bytes.",
+                    ssid, sizeof(wendigo_device *) * (pnl->device_count + 1));
+                wendigo_log(MSG_ERROR, msg);
+                free(msg);
+            }
+            furi_mutex_release(app->pnlMutex);
+            return PNL_FAILED;
+        } else {
+            /* Extended pnl->devices[] - Set result as appropriate */
+            if (result != PNL_CREATED) {
+                result = PNL_DEVICE_CREATED;
+            }
+        }
+        pnl->devices = new_dev;
+        pnl->devices[pnl->device_count++] = dev;
+    } else {
+        result = PNL_EXISTS;
+    }
+    furi_mutex_release(app->pnlMutex);
+    return result;
+}
+
+/* Create a trace log entry describing the specified PNL_Result */
+void pnl_log_result(char *tag, PNL_Result res, char *ssid, wendigo_device *dev) {
+    char *devMac = malloc(sizeof(char) * (MAC_STRLEN + 1));
+    if (devMac != NULL) {
+        bytes_to_string(dev->mac, MAC_BYTES, devMac);
+    }
+    switch (res) {
+        case PNL_FAILED:
+            FURI_LOG_T(tag, "Failed to add %s to PreferredNetwork %s.",
+                (devMac == NULL) ? "device" : devMac, ssid);
+            break;
+        case PNL_CREATED:
+            FURI_LOG_T(tag, "Created PreferredNetwork %s containing %s.",
+                ssid, (devMac == NULL) ? "device" : devMac);
+            break;
+        case PNL_DEVICE_CREATED:
+            FURI_LOG_T(tag, "Added %s to PreferredNetwork %s.",
+                (devMac == NULL) ? "device" : devMac, ssid);
+            break;
+        case PNL_EXISTS:
+            FURI_LOG_T(tag, "PreferredNetwork %s contains %s.",
+                ssid, (devMac == NULL) ? "device" : devMac);
+            break;
+        default:
+            /* No action */
+            break;
+    }
+    if (devMac != NULL) {
+        free(devMac);
+    }
 }

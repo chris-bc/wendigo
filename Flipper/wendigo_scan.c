@@ -453,18 +453,13 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
                             new_device->radio.sta.saved_networks[i][this_ssid_len] = '\0';
                         }
                         if (networks_count > 0 && networks != NULL) {
-                            // TODO: Also add or update networks[] to ensure dev->radio.sta.saved_networks[i] is present and contains dev
-                            PreferredNetwork *pnl = fetch_or_create_pnl(
-                                dev->radio.sta.saved_networks[i],
-                                this_ssid_len);
-                            if (pnl != NULL) {
-                                /* We have a new or existing PreferredNetwork.
-                                 * Does it contain dev? */
-                                uint8_t devIdx = pnl_index_of_device(pnl, dev);
-                                FURI_LOG_I(WENDIGO_TAG, "%d", devIdx);
-                                // search for dev->mac in networks[pnlIdx]
-                                // Add if not present
-                            }
+                            /* Create a PreferredNetwork for the SSID if needed
+                             * and add dev to the PreferredNetwork if not there
+                             */
+                            PNL_Result res = pnl_find_or_create_device(app,
+                                dev->radio.sta.saved_networks[i], dev);
+                            pnl_log_result("wendigo_add_device()", res,
+                                dev->radio.sta.saved_networks[i], dev);
                         }
                     }
                 }
