@@ -53,6 +53,12 @@ You can find more information about memory usage [from Espressif's developer doc
 
 ### ESP32-Wendigo Command Sequencing
 
+#### This section has been superseded and requires updating.
+
+*Unless in Interactive mode, all ESP32 output is now contained within binary packets sent as a stream of bytes from ESP32 to Flipper Zero. ESP32-Wendigo no longer acknowledges commands and it turns out UART isn't that error-prone after all.*
+
+Until this document is completed you can find byte offsets for various Wendigo packets in [Flipper/wendigo_common_defs.h](https://github.com/chris-bc/wendigo/blob/main/Flipper/wendigo_common_defs.h).
+
 When ESP32-Wendigo has completed its startup tasks it will send the string ```\nREADY\n``` (where "\n" denotes a carriage return). Wendigo is ready to accept the commands described below. Due to the sometimes-flaky nature of UART communication, ESP32-Wendigo acknowledges receipt of all commands. If a client does not receive confirmation the command should be re-transmitted until it is acknowledged.
 
 Some example dialogues that demonstrate the communication pattern are:
