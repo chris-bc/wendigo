@@ -157,6 +157,7 @@ WendigoApp *wendigo_app_alloc() {
     /* Initialise mutexes */
     app->bufferMutex = furi_mutex_alloc(FuriMutexTypeNormal);
     app->devicesMutex = furi_mutex_alloc(FuriMutexTypeNormal);
+    app->pnlMutex = furi_mutex_alloc(FuriMutexTypeNormal);
 
     app->widget = widget_alloc();
     view_dispatcher_add_view(
@@ -243,6 +244,7 @@ void wendigo_app_free(WendigoApp *app) {
     /* Mutexes */
     furi_mutex_free(app->bufferMutex);
     furi_mutex_free(app->devicesMutex);
+    furi_mutex_free(app->pnlMutex);
 
     wendigo_uart_free(app->uart);
 

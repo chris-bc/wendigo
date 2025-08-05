@@ -177,9 +177,10 @@ struct WendigoApp {
     TextBox *text_box;
     TextInput *text_input;
     Wendigo_TextInput *hex_input;
-    /* Mutexes to manage access to buffer[] and devices[] */
+    /* Mutexes to manage access to buffer[], networks[] and devices[] */
     FuriMutex *bufferMutex;
     FuriMutex *devicesMutex;
+    FuriMutex *pnlMutex;
 
     const char *selected_tx_string;
     bool is_command;
