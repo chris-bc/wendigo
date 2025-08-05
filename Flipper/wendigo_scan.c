@@ -456,6 +456,9 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
                                 dev->radio.sta.saved_networks[i], this_ssid_len);
                             new_device->radio.sta.saved_networks[i][this_ssid_len] = '\0';
                         }
+                        if (networks_count > 0 && networks != NULL) {
+                            // TODO: Also add or update networks[] to ensure dev->radio.sta.saved_networks[i] is present and contains dev
+                        }
                     }
                 }
             }
@@ -592,6 +595,9 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
                                     dev->radio.sta.saved_networks[i], pnl_len);
                                 new_pnl[pnl_idx][pnl_len] = '\0';
                                 ++pnl_idx;
+                            }
+                            if (networks_count > 0 && networks != NULL) {
+                                // TODO: Add or update neworks[] to ensure dev->radio.sta.saved_networks[i] exists and contains dev
                             }
                         }
                     }
