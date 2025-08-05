@@ -72,13 +72,14 @@
   * Concurrency issues - multiple threads sending or receiving packets at once - were the reason for packet corruption and all the headaches I've had trying to work around it.
   * New mutex to guarantee only a single ESP32-Wendigo thread can transmit a packet at a time
   * New mutex to guarantee that a single thread will work on Flipper-Wendigo's UART buffer at a time
-  * I'd like to manage concurrency of Flipper-Wendigo's device cache as well, but want a less-restrictive approach than mutex or semaphore and it's been too many decades since I've done that so I'm a bit rusty :)
+  * I'd like to manage concurrency of Flipper-Wendigo's device cache as well, but want to implement a read-write lock for that, and that'll take a little time
   * This change has eliminated practically all instability of both apps - I've still made mistakes, but you have to look harder to find them!
 * A WiFi station's Preferred Network List (PNL), commonly called "saved networks", are collected and displayed
   * Device list display for stations includes a new menu option ```N networks``` (where N is a number).
   * Select this to view a list of the SSIDs the station has sent probe requests for.
   * New menu option to view all probed networks, including a count of devices searching for each SSID.
     * From this view, selecting an SSID will display all stations that probed for that SSID.
+    * This required introducing a second data model. It gets a mutex too!
 * Navigate from a WiFi Station to its AP by selecting the AP menu option and pushing ```OK```.
   * This is a new Device List display, but displaying only the AP
   * You can select and view attributes in the same way as the device list

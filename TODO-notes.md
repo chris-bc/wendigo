@@ -13,11 +13,6 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
     * That must be buggy, so NULL the header in _on_enter()
     * Done for device_list, pnl_list, setup_channel, setup, start & status
 
-#### Improve PNL data model
-* Initialise networks[] once then reuse it subsequently
-* Update wendigo_add_device() and wendigo_update_devivce() to maintain networks[] if it's non-null
-* Add mutex so this doesn't result in collisions 
-
 #### wendigo_scene_device_list.c
 * Ensure current_devices is sound
 * Only set app->leaving_scene if a device list scene is being displayed
