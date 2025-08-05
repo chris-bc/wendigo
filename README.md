@@ -68,7 +68,7 @@
 
 ### v0.4.0 (so far)
 
-* Introduced mutexes to manage concurrency during packet transimission and decoding
+* Introduced mutexes to manage concurrency during packet transimission and reception
   * Concurrency issues - multiple threads sending or receiving packets at once - were the reason for packet corruption and all the headaches I've had trying to work around it.
   * New mutex to guarantee only a single ESP32-Wendigo thread can transmit a packet at a time
   * New mutex to guarantee that a single thread will work on Flipper-Wendigo's UART buffer at a time
@@ -95,9 +95,9 @@ That just about wraps it up for 2.4GHz WiFi! The AP authentication mode is a jok
 
 ### v0.3.0
 
-* Work around bug in FZ API. See [source code](https://github.com/chris-bc/wendigo/blob/main/Flipper/scenes/wendigo_scene_device_list.c) for details
+* Work around possible bug in FZ API. See [source code](https://github.com/chris-bc/wendigo/blob/main/Flipper/scenes/wendigo_scene_device_list.c) for details
 * 2.4GHz WiFi scanning/sniffing - Decodes eight 802.11 packet types
-* Bluetooth Classic Discovery (requires device in pairing mode)
+* Bluetooth Classic Discovery (requires devices to be in pairing mode)
 * Bluetooth Low Energy discovery
 * Device list dynamically updates during scanning
 * Device List displays
@@ -141,9 +141,9 @@ feature.
 
 Wendigo is an application for the Flipper Zero and ESP32 microcontrollers. It is primarily a WiFi and Bluetooth scanner/sniffer, with a few extra tricks up its sleeve. Wendigo is in its early stages of development, with features and bugfixes regularly committed, and releases to mark significant milestones.
 
-Why write Wendigo when there are already great apps like [Marauder](https://github.com/justcallmekoko/ESP32Marauder) and [GhostESP](https://github.com/jaylikesbunda/Ghost_ESP) that do this? Flipper Zero has a large and fairly complete SDK (Software Development Kit) that makes it easy to create interactive interfaces; all of the Flipper + microcontroller apps I've seen display information in a serial console and require you to select devices and enter commands in a console, using the fairly clunky Flipper Zero keyboard. Wendigo has a graphical interface - instead of scrolling through pages of text to determine you want to select Access Point #13, and then typing ```13``` with the keyboard, in Wendigo you use the navigation buttons to navigate to the Access Point you're interested in, then scroll through the available commands and select the one you want.
+Why write Wendigo when there are already great apps like [Marauder](https://github.com/justcallmekoko/ESP32Marauder) and [GhostESP](https://github.com/jaylikesbunda/Ghost_ESP) that do this and more? Flipper Zero has a large and fairly complete SDK (Software Development Kit) that makes it easy to create interactive interfaces; all of the Flipper + microcontroller apps I've seen display information in a serial console and require you to select devices and enter commands in a console, using the fairly clunky Flipper Zero keyboard. Wendigo has a graphical interface - instead of scrolling through pages of text to determine you want to select Access Point #13, and then typing ```13``` with the keyboard, in Wendigo you use the navigation buttons to navigate to the Access Point you're interested in, then scroll through the available commands and select the one you want.
 
-My hope is that Wendigo will be a quick and easy way to get information about a wireless device, making it easier to troubleshoot and diagnose issues (and satisfy your curiousity :)). I think of Marauder as the tool you use to carry out an attack, and Wendigo as the tool to help you find the right target.
+My hope is that Wendigo will be a quick and easy way to get information about a wireless device; make it easier to troubleshoot and diagnose issues; and provide an interesting and accessible platform to explore the wireless spectrum and understand the data that it exposes. I think of Marauder as the tool you use to carry out an attack, and Wendigo as the tool to help you find the right target.
 
 At a high level, these are Wendigo's features - Both implemented and planned:
 
@@ -189,9 +189,9 @@ More might come after this - Or it might not. My previous Flipper app, [Gravity]
 
 ## Getting Started
 
-Wendigo is still under active development. As you can see from the above list there is still a lot to do before a version 1.0 release. Currently it can scan for and display Bluetooth (Classic and Low Energy) and WiFi (2.4GHz Access Point and Station) devices, and not much else. Because it's under active development you might find a bug. If the Main branch is ever unuseable you'll have better luck with a release, which you can download from the [Releases](https://github.com/chris-bc/wendigo/releases) page or check out using the release tag.
+Wendigo is still under active development. As you can see from the above list there is still a lot to do before a version 1.0 release. Currently it can scan for and display Bluetooth (Classic and Low Energy) and WiFi (2.4GHz) devices; collate and display devices' saved networks; and not much else. Because it's under active development you might find a bug. If the Main branch is ever unuseable you'll have better luck with a release, which you can download from the [Releases](https://github.com/chris-bc/wendigo/releases) page or check out using the release tags.
 
-Binaries for Flipper Zero and ESP32 are available from the [Releases](https://github.com/chris-bc/wendigo/releases) page, do I need to document how to use those? Alternatively, especially if you want the latest features or to contribute to the development, you can compile the application yourself, as described below. These instructions assume you're using a Unix-like OS - MacOS, Linux or BSD. Windows users can either install WSL or adapt the instructions to suit windows.
+Binaries for Flipper Zero and ESP32 are available from the [Releases](https://github.com/chris-bc/wendigo/releases) page. Significant releases will provide binaries for a variety of ESP32 models but - for now at least - minor releases include just standard ESP32 (Wroom) binaries. If you use a different ESP32 model, or want the latest features or to contribute to development, you can compile the application yourself as described below. These instructions assume you're using a Unix-like OS - MacOS, Linux or BSD. Windows users can either install WSL or adapt the instructions to suit windows.
 
 <a id="prerequisites"></a>
 
@@ -199,7 +199,7 @@ Binaries for Flipper Zero and ESP32 are available from the [Releases](https://gi
 
 <a id="flipper-prerequisites"></a>
 
-To use Wendigo you'll need a Flipper Zero and an ESP32 microcontroller. Any model of ESP32 should work fine - Wendigo probes for available features and will disable Bluetooth and/or 5GHz WiFi if they're not supported by the chip. I'd recommend against using an ESP32-S2 because it lacks Bluetooth support. ESP32-C5 is currently the only model with 5GHz WiFi support. You can pick one up for under AUD$25 from [Espressif's official Ali Express store](https://www.aliexpress.com/item/1005009128201189.html).
+To use Wendigo you'll need a Flipper Zero and an ESP32 microcontroller. Any model of ESP32 should work fine - Wendigo probes for available features and will disable Bluetooth and/or 5GHz WiFi if they're not supported by the chip. I'd recommend against using an ESP32-S2 because it lacks Bluetooth support. ESP32-C5 is currently the only model with 5GHz WiFi support, which will be added to Wendigo within the next few months. You can pick one up for under AUD$25 from [Espressif's official Ali Express store](https://www.aliexpress.com/item/1005009128201189.html).
 
 #### Flipper Zero
 
@@ -233,7 +233,7 @@ Download source code for your preferred Flipper Zero firmware. The most popular 
 
 #### ESP32
 
-Download ESP-IDF, the Espressif IoT Development Framework. If you use VSCode you can download the extension *ESP-IDF by Espressif Systems* from the VSCode Extension Marketplace and follow the setup wizard. This guide focuses on building and flashing using the command line so if you opt for this approach you're on your own! :)
+Download ESP-IDF, the Espressif IoT Development Framework. If you use VSCode you can download the extension *ESP-IDF by Espressif Systems* from the VSCode Extension Marketplace and follow the setup wizard. This guide focuses on building and flashing using the command line, but the setup wizard for the VSCode ESP-IDF extension makes it a breeze to get up and running.
 
   ```sh
   git clone https://github.com/espressif/esp-idf.git
@@ -257,7 +257,7 @@ Download ESP-IDF, the Espressif IoT Development Framework. If you use VSCode you
 
 ### Building & Flashing
 
-These instructions are written under the assumption that the above packages have been downloaded to the following locations. Substitute those locations for your own in the instructions that follow.
+These instructions are written under the assumption that the above repositories have been downloaded to the following locations. Substitute those locations for your own in the instructions that follow.
 
 * Flipper Zero firmware: ~/flipperzero
 * ESP-IDF: ~/esp-idf
@@ -282,7 +282,7 @@ These instructions are written under the assumption that the above packages have
    ls /dev/tty*
    ```
 
-   It should appear as ```ttyUSB0``` or ```ttyACM0```.
+   It should appear (on Linux) as ```ttyUSB0``` or ```ttyACM0```.
 
 4. Compile and flash ESP32-Wendigo
 
@@ -304,7 +304,7 @@ These instructions are written under the assumption that the above packages have
    ./fbt
    ```
 
-6. Configure the Flipper Build Tool for your current terminal session. As with step (2), this needs to be done in each terminal session you wish to use FBT.
+6. Configure the Flipper Build Tool (FBT) for your current terminal session. As with step (2), this needs to be done in each terminal session you wish to use FBT.
 
    ```sh
    source `./fbt -s env`
@@ -321,6 +321,12 @@ These instructions are written under the assumption that the above packages have
    ```sh
    ln -s ~/wendigo/flipper ~/flipperzero/applications_user/wendigo
    ./fbt firmware_all flash_usb_full
+   ```
+
+9. Alternatively, to flash just Wendigo and not the entire firmware:
+
+   ```sh
+   ./fbt launch APPSRC=wendigo
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
