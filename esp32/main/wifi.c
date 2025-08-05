@@ -439,7 +439,6 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
 
 /** Parse a probe request frame, creating or updating a wendigo_device for
  * the STA that transmitted it.
- * TODO: Add network_list[] to wendigo_wifi_ap, add the probed SSID to this
  */
 esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     wendigo_device *dev = retrieve_by_mac(payload + PROBE_SRCADDR_OFFSET);
