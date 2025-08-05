@@ -454,6 +454,49 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
                         }
                         if (networks_count > 0 && networks != NULL) {
                             // TODO: Also add or update networks[] to ensure dev->radio.sta.saved_networks[i] is present and contains dev
+                            /* Is dev->radio.sta.saved_networks[i] in networks[]? */
+                            uint16_t pnlIdx = index_of_pnl(dev->radio.sta.saved_networks[i]);
+                            if (pnlIdx == networks_count) {
+                                /* PNL does not exist - Add a new one */
+                                if (networks_capacity == networks_count) {
+                                    /* Allocate more space for networks[] */
+                                    PreferredNetwork *new_networks = realloc(
+                                        networks, sizeof(PreferredNetwork) * (networks_count + 1));
+                                    if (new_networks == NULL) {
+                                        char *msg = malloc(sizeof(char) * (82 + MAX_SSID_LEN));
+                                        if (msg == NULL) {
+                                            wendigo_log(MSG_ERROR,
+                                                "wendigo_add_device(): Failed to increase networks[], skipping PNL.");
+                                        } else {
+                                            snprintf(msg, 82 + MAX_SSID_LEN,
+                                                "wendigo_add_device(): Failed to increase networks[] to %d bytes, skipping PNL %s.",
+                                                sizeof(PreferredNetwork) * (networks_count + 1),
+                                                dev->radio.sta.saved_networks[i]);
+                                            wendigo_log(MSG_ERROR, msg);
+                                            free(msg);
+                                        }
+                                    } else {
+                                        /* Allocated successfully */
+                                        networks = new_networks;
+                                        ++networks_capacity;
+                                    }
+                                }
+                                if (networks_count < networks_capacity) {
+                                    /* Allocated successfully or had spare capacity.
+                                     * Initialise new PreferredNetwork */
+                                    bzero(networks + (sizeof(PreferredNetwork) * networks_count), sizeof(PreferredNetwork));
+                                    pnlIdx = networks_count++;
+                                    strncpy(networks[pnlIdx].ssid,
+                                        dev->radio.sta.saved_networks[i],
+                                        this_ssid_len);
+                                }
+                            }
+                            if (pnlIdx < networks_count) {
+                                /* We have a new or existing PreferredNetwork.
+                                 * Does it contain dev? */
+                                // search for dev->mac in networks[pnlIdx]
+                                // Add if not present
+                            }
                         }
                     }
                 }
