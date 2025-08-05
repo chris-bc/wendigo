@@ -14,10 +14,6 @@ extern void wendigo_scene_device_list_set_current_devices(DeviceListInstance *de
 extern wendigo_device **devices;
 extern uint16_t devices_count;
 extern uint16_t devices_capacity;
-/* Preferred Network List caches */
-extern PreferredNetwork *networks;
-extern uint16_t networks_count;
-extern uint16_t networks_capacity;
 
 void wendigo_set_scanning_active(WendigoApp *app, bool starting);
 void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context);
