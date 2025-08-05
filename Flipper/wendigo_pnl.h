@@ -16,6 +16,9 @@ uint8_t count_networks_for_device(wendigo_device *dev);
 uint16_t map_ssids_to_devices(WendigoApp *app);
 uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***result);
 uint16_t get_all_networks(WendigoApp *app);
+PreferredNetwork *fetch_or_create_pnl(char *ssid, uint8_t ssid_len);
+uint8_t pnl_index_of_device(PreferredNetwork *pnl, wendigo_device *dev);
+uint8_t pnl_index_of_mac(PreferredNetwork *pnl, uint8_t mac[MAC_BYTES]);
 
 /* Preferred Network List caches */
 extern PreferredNetwork *networks;

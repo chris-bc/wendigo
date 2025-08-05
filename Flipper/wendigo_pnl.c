@@ -261,3 +261,52 @@ uint16_t get_all_networks(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "End get_all_networks()");
     return 0;
 }
+
+PreferredNetwork *fetch_or_create_pnl(char *ssid, uint8_t ssid_len) {
+    PreferredNetwork *pnl;
+    uint16_t idx = index_of_pnl(ssid);
+    if (idx == networks_count) {
+        /* Not found - Create a new PreferredNetwork */
+        if (networks_count == networks_capacity) {
+            /* No spare capacity - Extend networks[] */
+            pnl = realloc(networks, sizeof(PreferredNetwork) * (networks_count + 1));
+            if (pnl == NULL) {
+                char *msg = malloc(sizeof(char) * (82 + MAX_SSID_LEN));
+                if (msg == NULL) {
+                    wendigo_log(MSG_ERROR,
+                        "wendigo_add_device(): Failed to increase networks[], skipping PNL.");
+                } else {
+                    snprintf(msg, 82 + MAX_SSID_LEN,
+                        "wendigo_add_device(): Failed to increase networks[] to %d bytes, skipping PNL %s.",
+                        sizeof(PreferredNetwork) * (networks_count + 1), ssid);
+                    wendigo_log(MSG_ERROR, msg);
+                    free(msg);
+                }
+            } else {
+                /* Allocated successfully */
+                networks = pnl;
+                ++networks_capacity;
+            }
+        }
+        if (networks_count < networks_capacity) {
+            /* Allocated successfully or had spare capacity - Initialise */
+            bzero(networks + (sizeof(PreferredNetwork) * networks_count), sizeof(PreferredNetwork));
+            idx = networks_count++;
+            strncpy(networks[idx].ssid, ssid, ssid_len);
+        }
+    }
+    if (idx < networks_count) {
+        return &(networks[idx]);
+    }
+    return NULL;
+}
+
+uint8_t pnl_index_of_mac(PreferredNetwork *pnl, uint8_t mac[MAC_BYTES]) {
+    UNUSED(pnl);
+    UNUSED(mac);
+    return 0;
+}
+
+uint8_t pnl_index_of_device(PreferredNetwork *pnl, wendigo_device *dev) {
+    return pnl_index_of_mac(pnl, dev->mac);
+}
