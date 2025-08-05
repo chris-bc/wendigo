@@ -312,9 +312,11 @@ PreferredNetwork *fetch_or_create_pnl(char *ssid, uint8_t ssid_len) {
  * specified MAC. Returns pnl->device_count if not found.
  */
 uint8_t pnl_index_of_mac(PreferredNetwork *pnl, uint8_t mac[MAC_BYTES]) {
-    UNUSED(pnl);
-    UNUSED(mac);
-    return 0;
+    uint8_t idx;
+    for (idx = 0; idx < pnl->device_count &&
+        (pnl->devices[idx] == NULL ||
+            memcmp(pnl->devices[idx]->mac, mac, MAC_BYTES)); ++idx) { }
+    return idx;
 }
 
 /** Search the specified PreferredNetwork for a device with the same MAC as
