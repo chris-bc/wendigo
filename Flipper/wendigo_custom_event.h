@@ -12,4 +12,5 @@ typedef enum {
     Wendigo_EventListDevices,
     Wendigo_EventListNetworks,
     Wendigo_EventListDeviceDetails,
+    Wendigo_EventRefreshPNLCount,
 } Wendigo_CustomEvent;
