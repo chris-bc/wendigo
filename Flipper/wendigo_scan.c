@@ -99,6 +99,36 @@ void wendigo_version(WendigoApp *app) {
     wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
 }
 
+/** Enable or disable Wendigo scanning on the specified interface.
+ * interface->active determines whether the interface can be enabled,
+ * if this is false the interface will not be started regardless of
+ * the value of starting.
+ */
+void wendigo_set_scanning_interface(WendigoApp *app, InterfaceType interface, bool starting) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_scanning_interface()");
+    if (app == NULL || interface >= IF_COUNT) {
+        wendigo_log(MSG_ERROR, "wendigo_set_scanning_interface() called with invalid arguments");
+        return;
+    }
+    const uint8_t CMD_LEN = 5; // e.g. "b 1\n\0"
+    char cmdString[CMD_LEN];
+    uint8_t arg = (app->interfaces[interface].active && starting) ? 1 : 0;
+    char cmd = (interface == IF_BLE) ? 'b' : (interface == IF_BT_CLASSIC) ? 'h' : 'w';
+    snprintf(cmdString, CMD_LEN, "%c %d\n", cmd, arg);
+    wendigo_uart_tx(app->uart, (uint8_t *)cmdString, CMD_LEN);
+    app->interfaces[interface].scanning = (arg == 1);
+    /* Update app->is_scanning to reflect current status */
+    if (app->interfaces[interface].scanning) {
+        app->is_scanning = true;
+    } else {
+        /* Loop through all iterfaces to see if we're still scanning */
+        uint8_t idx;
+        for (idx = 0; idx < IF_COUNT && !app->interfaces[idx].scanning; ++idx) { }
+        app->is_scanning = (idx < IF_COUNT);
+    }
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_set_scanning_interface()");
+}
+
 /** Enable or disable Wendigo scanning on all interfaces, using app->interfaces
  *  to determine which radios should be enabled/disabled when starting to scan.
  *  This function is called by the UI handler (wendigo_scene_start) when scanning
@@ -108,19 +138,10 @@ void wendigo_version(WendigoApp *app) {
  */
 void wendigo_set_scanning_active(WendigoApp *app, bool starting) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_set_scanning_active()");
-    char cmd;
-    uint8_t arg;
-    const uint8_t CMD_LEN = 5; // e.g. "b 1\n\0"
-    char cmdString[CMD_LEN];
     /* This flag will cause incomplete packets to be ignored */
     app->is_scanning = starting;
     for (uint8_t i = 0; i < IF_COUNT; ++i) {
-        /* Set command */
-        cmd = (i == IF_BLE) ? 'b' : (i == IF_BT_CLASSIC) ? 'h' : 'w';
-        /* arg */
-        arg = (starting && app->interfaces[i].active) ? 1 : 0;
-        snprintf(cmdString, CMD_LEN, "%c %d\n", cmd, arg);
-        wendigo_uart_tx(app->uart, (uint8_t *)cmdString, CMD_LEN);
+        wendigo_set_scanning_interface(app, i, starting);
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_set_scanning_active()");
 }

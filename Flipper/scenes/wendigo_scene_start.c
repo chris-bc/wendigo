@@ -10,7 +10,7 @@ extern void wendigo_scene_pnl_list_set_device(wendigo_device *dev, WendigoApp *a
  */
 static const WendigoItem items[START_MENU_ITEMS] = {
     {"Setup", {""}, 1, OPEN_SETUP, BOTH_MODES},
-    {"Scan", {"Start", "Stop", "Status"}, 3, OPEN_SCAN, TEXT_MODE},
+    {"Scan", {"WiFi", "BT", "Status"}, 3, OPEN_SCAN, TEXT_MODE},
     {"Devices", {"All", "Bluetooth", "WiFi", "BT Classic", "BLE", "WiFi AP",
         "WiFi STA"}, 7, LIST_DEVICES, BOTH_MODES},
     {"Selected Devices", {"All", "Bluetooth", "WiFi", "BT Classic", "BLE",
@@ -23,9 +23,11 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 #define SETUP_IDX       (0)
 #define SCAN_IDX        (1)
 #define PNL_IDX         (4)
-#define SCAN_START_IDX  (0)
-#define SCAN_STOP_IDX   (1)
+#define SCAN_WIFI_IDX   (0)
+#define SCAN_BT_IDX     (1)
 #define SCAN_STATUS_IDX (2)
+#define SCAN_START_STR  "Start"
+#define SCAN_STOP_STR   "Stop"
 #define ABOUT_IDX       (0)
 #define ESP_VER_IDX     (1)
 #define LOCKED_MSG      "Stop\nScanning\nFirst!"
@@ -110,23 +112,41 @@ static void wendigo_scene_start_var_list_enter_callback(void *context, uint32_t 
             return;
         case OPEN_SCAN:
             VariableItem *myItem;
-            /* Quit now if there's nothing to do */
-            if ((selected_option_index == SCAN_START_IDX && app->is_scanning) ||
-                (selected_option_index == SCAN_STOP_IDX && !app->is_scanning)) {
-                break;
-            }
-            bool starting = (selected_option_index == SCAN_START_IDX);
+            WendigoRadio *radio;
             /* Disable/Enable settings menu when starting/stopping scanning */
-            if (selected_option_index == SCAN_START_IDX || selected_option_index == SCAN_STOP_IDX) {
+            if (selected_option_index == SCAN_WIFI_IDX || selected_option_index == SCAN_BT_IDX) {
+                if (selected_option_index == SCAN_WIFI_IDX) {
+                    radio = &app->interfaces[IF_WIFI];
+                    wendigo_set_scanning_interface(app, IF_WIFI, !radio->scanning);
+                } else {
+                    radio = &app->interfaces[IF_BLE];
+                    /* Because BLE and BT Classic are managed by a single option,
+                    * we disable both only if both are running, otherwise assume
+                    * we want both to be started. */
+                    bool stopping = (app->interfaces[IF_BLE].scanning &&
+                        app->interfaces[IF_BT_CLASSIC].scanning);
+                    wendigo_set_scanning_interface(app, IF_BLE, !stopping);
+                    wendigo_set_scanning_interface(app, IF_BT_CLASSIC, !stopping);
+                }
+                /* Lock or unlock the settings menu based on app->is_scanning */
                 myItem = variable_item_list_get(app->var_item_list, SETUP_IDX);
-                variable_item_set_locked(myItem, starting, LOCKED_MSG);
-                /* Set selected option to Stop when starting and Start when stopping */
+                variable_item_set_locked(myItem, app->is_scanning, LOCKED_MSG);
+                /* Set selected option text to Start or Stop */
                 myItem = variable_item_list_get(app->var_item_list, SCAN_IDX);
-                uint8_t newOption = (starting) ? SCAN_STOP_IDX : SCAN_START_IDX;
-                app->selected_option_index[index] = newOption;
-                variable_item_set_current_value_index(myItem, newOption);
-                variable_item_set_current_value_text(myItem, item->options_menu[newOption]);
-                wendigo_set_scanning_active(app, starting);
+                uint8_t optionLen = strlen(item->options_menu[app->selected_option_index[index]]) + 2;
+                if (radio->scanning) {
+                    optionLen += strlen(SCAN_STOP_STR);
+                } else {
+                    optionLen += strlen(SCAN_START_STR);
+                }
+                char *optionStr = malloc(sizeof(char) * optionLen);
+                if (optionStr != NULL) {
+                    snprintf(optionStr, optionLen, "%s %s",
+                        (radio->scanning) ? SCAN_STOP_STR : SCAN_START_STR,
+                        item->options_menu[app->selected_option_index[index]]);
+                    variable_item_set_current_value_text(myItem, optionStr);
+                    free(optionStr);
+                }
             } else if (selected_option_index == SCAN_STATUS_IDX) {
                 view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventDisplayStatus);
                 FURI_LOG_T(WENDIGO_TAG,
@@ -206,8 +226,37 @@ static void wendigo_scene_start_var_list_change_callback(VariableItem *item) {
     const WendigoItem *menu_item = &items[item_index];
     uint8_t option_index = variable_item_get_current_value_index(item);
     furi_assert(option_index < menu_item->num_options_menu);
-    variable_item_set_current_value_text(item,
-                                        menu_item->options_menu[option_index]);
+    if (item_index == SCAN_IDX && option_index < SCAN_STATUS_IDX) {
+        /* Append Start or Stop to the radio name */
+        bool optionStarting;
+        uint8_t optionLen = strlen(menu_item->options_menu[option_index]) + 2;
+        if ((option_index == SCAN_WIFI_IDX && !app->interfaces[IF_WIFI].scanning) ||
+            (option_index == SCAN_BT_IDX && (!app->interfaces[IF_BT_CLASSIC].scanning ||
+                !app->interfaces[IF_BLE].scanning))) {
+            optionStarting = true;
+        } else {
+            optionStarting = false;
+        }
+        if (optionStarting) {
+            optionLen += strlen(SCAN_START_STR);
+        } else {
+            optionLen += strlen(SCAN_STOP_STR);
+        }
+        char *optionStr = malloc(sizeof(char) * optionLen);
+        if (optionStr == NULL) {
+            variable_item_set_current_value_text(item,
+                menu_item->options_menu[option_index]);
+        } else {
+            snprintf(optionStr, optionLen, "%s %s",
+                (optionStarting) ? SCAN_START_STR : SCAN_STOP_STR,
+                menu_item->options_menu[option_index]);
+            variable_item_set_current_value_text(item, optionStr);
+            free(optionStr);
+        }
+    } else {
+        variable_item_set_current_value_text(item,
+            menu_item->options_menu[option_index]);
+    }
     app->selected_option_index[app->selected_menu_index] = option_index;
     FURI_LOG_T(WENDIGO_TAG,
                 "End wendigo_scene_start_var_list_change_callback()");
@@ -251,16 +300,28 @@ void wendigo_scene_start_on_enter(void *context) {
             if (i == SETUP_IDX && app->is_scanning) {
                 variable_item_set_locked(item, true, LOCKED_MSG);
             } else if (i == SCAN_IDX) {
-                if (app->is_scanning) {
-                    variable_item_set_current_value_index(item, SCAN_STOP_IDX);
-                    app->selected_option_index[i] = SCAN_STOP_IDX;
-                    variable_item_set_current_value_text(item,
-                        items[i].options_menu[SCAN_STOP_IDX]);
+                /* Update the selected interface based on scanning status */
+                bool scanning;
+                if (app->selected_option_index[i] == SCAN_WIFI_IDX) {
+                    scanning = app->interfaces[IF_WIFI].scanning;
                 } else {
-                    variable_item_set_current_value_index(item, SCAN_START_IDX);
-                    app->selected_option_index[i] = SCAN_START_IDX;
-                    variable_item_set_current_value_text(item,
-                        items[i].options_menu[SCAN_START_IDX]);
+                    scanning = (app->interfaces[IF_BLE].scanning ||
+                        app->interfaces[IF_BT_CLASSIC].scanning);
+                }
+                /* Append "start" or "stop" to the current option text */
+                uint8_t optionLen = strlen(items[i].options_menu[app->selected_option_index[i]]) + 2;
+                if (scanning) {
+                    optionLen += strlen(SCAN_STOP_STR);
+                } else {
+                    optionLen += strlen(SCAN_START_STR);
+                }
+                char *scanningStr = malloc(sizeof(char) * optionLen);
+                if (scanningStr != NULL) {
+                    snprintf(scanningStr, optionLen, "%s %s",
+                        (scanning) ? SCAN_STOP_STR : SCAN_START_STR,
+                        items[i].options_menu[app->selected_option_index[i]]);
+                    variable_item_set_current_value_text(item, scanningStr);
+                    free(scanningStr);
                 }
             } else if (i == PNL_IDX) {
                 pnl_view = item;

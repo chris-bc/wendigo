@@ -60,9 +60,67 @@
   </ol>
 </details>
 
+<a id="about-the-project"></a>
+
+## About The Project
+
+Wendigo is an application for the Flipper Zero and ESP32 microcontrollers. It is primarily a WiFi and Bluetooth scanner/sniffer, with a few extra tricks up its sleeve. Wendigo is in its early stages of development, with features and bugfixes regularly committed, and releases to mark significant milestones.
+
+Why write Wendigo when there are already great apps like [Marauder](https://github.com/justcallmekoko/ESP32Marauder) and [GhostESP](https://github.com/jaylikesbunda/Ghost_ESP) that do this and more? Flipper Zero has a large and fairly complete SDK (Software Development Kit) that makes it easy to create interactive interfaces; all of the Flipper + microcontroller apps I've seen display information in a serial console and require you to select devices and enter commands in a console, using the fairly clunky Flipper Zero keyboard. Wendigo has a graphical interface - instead of scrolling through pages of text to determine you want to select Access Point #13, and then typing ```13``` with the keyboard, in Wendigo you use the navigation buttons to navigate to the Access Point you're interested in, then scroll through the available commands and select the one you want.
+
+My hope is that Wendigo will be a quick and easy way to get information about a wireless device; make it easier to troubleshoot and diagnose issues; and provide an interesting and accessible platform to explore the wireless spectrum and understand the data that it exposes. I think of Marauder as the tool you use to carry out an attack, and Wendigo as the tool to help you find the right target.
+
+At a high level, these are Wendigo's features - Both implemented and planned:
+
+* [X] Bluetooth Classic discovery
+* [X] Bluetooth Low Energy discovery
+* [X] WiFi Access Point discovery (2.4GHz)
+* [X] WiFi Station (client device) discovery (2.4GHz)
+* [X] WiFi channel hopping (2.4GHz)
+* [X] Select which WiFi channels and which radios are used for scanning
+* [X] Console Mode to use ESP32-Wendigo with other tools (e.g. laptop)
+* [X] Tagging (selecting) devices of interest to view only them
+* [X] Display discovered devices in a native Flipper Zero menu
+  * [X] Device type
+  * [X] Bluetooth device name (if present) or Bluetooth Device Address (BDA - looks like a MAC)
+  * [X] Access Point SSID (if present) or MAC
+  * [X] RSSI
+  * [X] Bluetooth Class of Device (CoD)
+  * [X] WiFi channel
+  * [X] Access Point authentication mode (WEP, WPA2, etc.)
+  * [X] SSID that a WiFi Station (client) is connected to
+  * [X] Time since device was last seen
+  * [X] Tag/Untag to select devices of interest
+  * [X] List dynamically updates as new devices, or additional information about existing devices, are found
+* [X] Select which device types are displayed (BT Classic, BLE, WiFi Access Points, WiFi Stations, All Bluetooth, All WiFi, All Devices)
+* [ ] Display detailed device information
+* [ ] Bluetooth service discovery
+* [ ] Bluetooth attribute read/write
+* [ ] Browse Bluetooth devices and their services & attributes
+* [X] Browse WiFi networks, navigating from an Access Point to its connected Stations or from a Station to its Access Point
+* [ ] Deauthenticate a device or all devices on a network
+* [X] Collect & display a Station's (WiFi client - such as a phone) saved network list
+* Put this list into Wigle to get a good idea where the device's owner lives, works and plays
+* [X] Display all networks that probes were received for and support browsing from probed SSIDs to the Stations that probed for them.
+* [ ] 5GHz WiFi channels ([requires ESP32-C5](https://www.aliexpress.com/item/1005009128201189.html))
+* [ ] Change Bluetooth BDA and WiFi MAC
+* [ ] Use Flipper Zero's LED to indicate events
+
+More might come after this - Or it might not. My previous Flipper app, [Gravity](https://github.com/chris-bc/flipper-gravity), tried to include everything including the kitchen sink, and as a result it did everything poorly. My primary goal with Wendigo is a quick and easy way to do reconnaissance and extract as much information as possible from a device(s), displaying everything using native Flipper UI components.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 <a id="whats-new"></a>
 
 ## What's New
+
+<a id ="whats-new-050"></a>
+
+### v0.5.0 (So far)
+
+* Because crowded areas get poor results running BLE and WiFi simultaneously, restructured menu to simplify running one or the other.
+* (TODO) Additional packets: associate, authenticate
+* (TODO) BT services
 
 <a id="whats-new-040"></a>
 
@@ -135,56 +193,6 @@ to receive WiFi packets. Sorry about that - I don't think there's anything I
 can do, other than change the UI so it's no longer possible to run both WiFi
 and Bluetooth scanning concurrently. And I hate the idea of removing a
 feature.
-
-<a id="about-the-project"></a>
-
-## About The Project
-
-Wendigo is an application for the Flipper Zero and ESP32 microcontrollers. It is primarily a WiFi and Bluetooth scanner/sniffer, with a few extra tricks up its sleeve. Wendigo is in its early stages of development, with features and bugfixes regularly committed, and releases to mark significant milestones.
-
-Why write Wendigo when there are already great apps like [Marauder](https://github.com/justcallmekoko/ESP32Marauder) and [GhostESP](https://github.com/jaylikesbunda/Ghost_ESP) that do this and more? Flipper Zero has a large and fairly complete SDK (Software Development Kit) that makes it easy to create interactive interfaces; all of the Flipper + microcontroller apps I've seen display information in a serial console and require you to select devices and enter commands in a console, using the fairly clunky Flipper Zero keyboard. Wendigo has a graphical interface - instead of scrolling through pages of text to determine you want to select Access Point #13, and then typing ```13``` with the keyboard, in Wendigo you use the navigation buttons to navigate to the Access Point you're interested in, then scroll through the available commands and select the one you want.
-
-My hope is that Wendigo will be a quick and easy way to get information about a wireless device; make it easier to troubleshoot and diagnose issues; and provide an interesting and accessible platform to explore the wireless spectrum and understand the data that it exposes. I think of Marauder as the tool you use to carry out an attack, and Wendigo as the tool to help you find the right target.
-
-At a high level, these are Wendigo's features - Both implemented and planned:
-
-* [X] Bluetooth Classic discovery
-* [X] Bluetooth Low Energy discovery
-* [X] WiFi Access Point discovery (2.4GHz)
-* [X] WiFi Station (client device) discovery (2.4GHz)
-* [X] WiFi channel hopping (2.4GHz)
-* [X] Select which WiFi channels and which radios are used for scanning
-* [X] Console Mode to use ESP32-Wendigo with other tools (e.g. laptop)
-* [X] Tagging (selecting) devices of interest to view only them
-* [X] Display discovered devices in a native Flipper Zero menu
-  * [X] Device type
-  * [X] Bluetooth device name (if present) or Bluetooth Device Address (BDA - looks like a MAC)
-  * [X] Access Point SSID (if present) or MAC
-  * [X] RSSI
-  * [X] Bluetooth Class of Device (CoD)
-  * [X] WiFi channel
-  * [X] Access Point authentication mode (WEP, WPA2, etc.)
-  * [X] SSID that a WiFi Station (client) is connected to
-  * [X] Time since device was last seen
-  * [X] Tag/Untag to select devices of interest
-  * [X] List dynamically updates as new devices, or additional information about existing devices, are found
-* [X] Select which device types are displayed (BT Classic, BLE, WiFi Access Points, WiFi Stations, All Bluetooth, All WiFi, All Devices)
-* [ ] Display detailed device information
-* [ ] Bluetooth service discovery
-* [ ] Bluetooth attribute read/write
-* [ ] Browse Bluetooth devices and their services & attributes
-* [X] Browse WiFi networks, navigating from an Access Point to its connected Stations or from a Station to its Access Point
-* [ ] Deauthenticate a device or all devices on a network
-* [X] Collect & display a Station's (WiFi client - such as a phone) saved network list
-* Put this list into Wigle to get a good idea where the device's owner lives, works and plays
-* [X] Display all networks that probes were received for and support browsing from probed SSIDs to the Stations that probed for them.
-* [ ] 5GHz WiFi channels ([requires ESP32-C5](https://www.aliexpress.com/item/1005009128201189.html))
-* [ ] Change Bluetooth BDA and WiFi MAC
-* [ ] Use Flipper Zero's LED to indicate events
-
-More might come after this - Or it might not. My previous Flipper app, [Gravity](https://github.com/chris-bc/flipper-gravity), tried to include everything including the kitchen sink, and as a result it did everything poorly. My primary goal with Wendigo is a quick and easy way to do reconnaissance and extract as much information as possible from a device(s), displaying everything using native Flipper UI components.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <a id="getting-started"></a>
 

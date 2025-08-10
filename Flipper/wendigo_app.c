@@ -91,6 +91,7 @@ void wendigo_interface_init(WendigoApp *app) {
     for (uint8_t i = 0; i < IF_COUNT; ++i) {
         app->interfaces[i].active = true;
         app->interfaces[i].mutable = true;
+        app->interfaces[i].scanning = false;
     }
     // TODO: Retrieve actual MAC
     const uint8_t mac_wifi[MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xac};
