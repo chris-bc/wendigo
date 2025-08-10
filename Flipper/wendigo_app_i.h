@@ -21,14 +21,15 @@
 
 #define IS_FLIPPER_APP           (1)
 /* TODO: Find a way to extract fap_version from application.fam */
-#define FLIPPER_WENDIGO_VERSION  "0.3.0"
+#define FLIPPER_WENDIGO_VERSION  "0.4.0"
 
 #include "wendigo_common_defs.h"
+#include "wendigo_pnl.h"
 
 /* How frequently should Flipper poll ESP32 when scanning to restart
    scanning in the event the device restarts (seconds)? */
 #define ESP32_POLL_INTERVAL      (3)
-#define START_MENU_ITEMS         (6)
+#define START_MENU_ITEMS         (7)
 #define SETUP_MENU_ITEMS         (4)
 #define SETUP_CHANNEL_MENU_ITEMS (14)
 
@@ -53,7 +54,8 @@ typedef enum {
     OPEN_SCAN,
     LIST_DEVICES,
     LIST_SELECTED_DEVICES,
-    TRACK_DEVICES,
+    PNL_LIST,
+    UART_TERMINAL,
     OPEN_MAC,
     OPEN_HELP
 } ActionType;
@@ -104,6 +106,7 @@ typedef enum {
     WendigoAppViewDeviceDetail,
     WendigoAppViewStatus,       /* This doesn't have a view but is used as a flag in app->current_view */
     WendigoAppViewPNLList,      /* As above */
+    WendigoAppViewPNLDeviceList,/* This too */
     WendigoAppViewAPSTAs,       /* And this */
     WendigoAppViewSTAAP,        /* Also */
     WendigoAppViewConsoleOutput, // TODO: Consider whether there's a better way to flag these views
@@ -115,6 +118,20 @@ typedef enum {
     WendigoAppViewSetupChannel,
     WendigoAppViewPopup,
 } WendigoAppView;
+
+/* The Device List scene can be nested any number of times (well, until the
+ * stack pointer overflows) to allow navigation, for example, from the
+ * device list to an AP to one of its stations. DeviceListInstance captures
+ * the components of that scene that differ between instances.
+ */
+typedef struct DeviceListInstance {
+  wendigo_device **devices;
+  uint16_t devices_count;
+  uint8_t devices_mask;
+  WendigoAppView view;
+  char devices_msg[MAX_SSID_LEN + 18]; // Space for "Clients of MAX_SSID_LEN"
+  bool free_devices; // Do we need to free devices[] when we're done with it?
+} DeviceListInstance;
 
 struct WendigoApp {
     Gui *gui;
@@ -152,9 +169,10 @@ struct WendigoApp {
     TextBox *text_box;
     TextInput *text_input;
     Wendigo_TextInput *hex_input;
-    /* Mutexes to manage access to buffer[] and devices[] */
+    /* Mutexes to manage access to buffer[], networks[] and devices[] */
     FuriMutex *bufferMutex;
     FuriMutex *devicesMutex;
+    FuriMutex *pnlMutex;
 
     const char *selected_tx_string;
     bool is_command;

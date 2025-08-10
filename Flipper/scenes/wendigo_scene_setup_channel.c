@@ -68,6 +68,7 @@ void wendigo_scene_setup_channel_on_enter(void *context) {
     VariableItemList *var_item_list = app->var_item_list;
     app->current_view = WendigoAppViewSetupChannel;
     variable_item_list_reset(var_item_list);
+    variable_item_list_set_header(var_item_list, NULL);
     variable_item_list_set_enter_callback(var_item_list,
         wendigo_scene_setup_channel_var_list_enter_callback, app);
 

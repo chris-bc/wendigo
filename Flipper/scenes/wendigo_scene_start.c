@@ -2,6 +2,9 @@
 #include "../wendigo_scan.h"
 #include <dolphin/dolphin.h>
 
+/** Public method from wendigo_scene_pnl_list.c */
+extern void wendigo_scene_pnl_list_set_device(wendigo_device *dev, WendigoApp *app);
+
 /** NUM_MENU_ITEMS defined in wendigo_app_i.h - if you add an entry here,
  * increment it!
  */
@@ -12,12 +15,14 @@ static const WendigoItem items[START_MENU_ITEMS] = {
         "WiFi STA"}, 7, LIST_DEVICES, BOTH_MODES},
     {"Selected Devices", {"All", "Bluetooth", "WiFi", "BT Classic", "BLE",
         "WiFi AP", "WiFi STA"}, 7, LIST_SELECTED_DEVICES, BOTH_MODES},
-    {"Track Selected", {""}, 1, TRACK_DEVICES, TEXT_MODE},
+    {"Probed SSIDs", {""}, 1, PNL_LIST, TEXT_MODE},
+    {"UART Terminal", {""}, 1, UART_TERMINAL, TEXT_MODE},
     {"Help", {"About", "Version"}, 2, OPEN_HELP, TEXT_MODE},
 };
 
 #define SETUP_IDX       (0)
 #define SCAN_IDX        (1)
+#define PNL_IDX         (4)
 #define SCAN_START_IDX  (0)
 #define SCAN_STOP_IDX   (1)
 #define SCAN_STATUS_IDX (2)
@@ -34,6 +39,7 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
+static VariableItem *pnl_view = NULL;
 
 uint8_t wendigo_device_mask(uint8_t selected_option) {
     switch (selected_option) {
@@ -54,6 +60,24 @@ uint8_t wendigo_device_mask(uint8_t selected_option) {
         default:
             return 0;
     }
+}
+
+void wendigo_display_pnl_count(WendigoApp *app) {
+    if (pnl_view == NULL) {
+        wendigo_log(MSG_WARN, "wendigo_display_pnl_count() called with NULL pnl_view.");
+        return;
+    }
+    if (app->current_view != WendigoAppViewVarItemList) {
+        wendigo_log(MSG_WARN, "wendigo_display_pnl_count() called when wendigo_scene_start not displayed.");
+    }
+    char countStr[4];
+    bzero(countStr, sizeof(countStr));
+    uint8_t ssid_count = 0;
+    if (networks_count > 0 && networks != NULL) {
+        ssid_count = networks_count;
+    }
+    snprintf(countStr, sizeof(countStr), "%d", ssid_count);
+    variable_item_set_current_value_text(pnl_view, countStr);
 }
 
 /** Callback invoked when a menu item is selected */
@@ -112,21 +136,28 @@ static void wendigo_scene_start_var_list_enter_callback(void *context, uint32_t 
             break;
         case LIST_DEVICES:
             /* Find selected option to determine device mask */
-            wendigo_set_current_devices(wendigo_device_mask(selected_option_index));
+            wendigo_scene_device_list_set_current_devices_mask(wendigo_device_mask(selected_option_index));
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
             FURI_LOG_T(WENDIGO_TAG,
                 "End wendigo_scene_start_var_list_enter_callback(): Displaying device list.");
             return;
         case LIST_SELECTED_DEVICES:
-            wendigo_set_current_devices(wendigo_device_mask(selected_option_index) | DEVICE_SELECTED_ONLY);
+            wendigo_scene_device_list_set_current_devices_mask(
+                wendigo_device_mask(selected_option_index) | DEVICE_SELECTED_ONLY);
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListDevices);
             FURI_LOG_T(WENDIGO_TAG,
                 "End wendigo_scene_start_var_list_enter_callback(): Displaying selected device lists.");
             return;
-        case TRACK_DEVICES:
+        case UART_TERMINAL:
             view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventStartConsole);
             FURI_LOG_T(WENDIGO_TAG,
                 "End wendigo_scene_start_var_list_enter_callback(): Displaying device tracking.");
+            return;
+        case PNL_LIST:
+            wendigo_scene_pnl_list_set_device(NULL, app);
+            view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventListNetworks);
+            FURI_LOG_T(WENDIGO_TAG,
+                "End wendigo_scene_start_var_list_enter_callback(): Displaying Preferred Network List.");
             return;
         case OPEN_HELP:
             switch (selected_option_index) {
@@ -188,6 +219,8 @@ void wendigo_scene_start_on_enter(void *context) {
     WendigoApp *app = context;
     app->current_view = WendigoAppViewVarItemList;
 
+    variable_item_list_reset(app->var_item_list);
+    variable_item_list_set_header(app->var_item_list, NULL);
     variable_item_list_set_enter_callback(app->var_item_list,
         wendigo_scene_start_var_list_enter_callback, app);
 
@@ -228,6 +261,13 @@ void wendigo_scene_start_on_enter(void *context) {
                     app->selected_option_index[i] = SCAN_START_IDX;
                     variable_item_set_current_value_text(item,
                         items[i].options_menu[SCAN_START_IDX]);
+                }
+            } else if (i == PNL_IDX) {
+                pnl_view = item;
+                if (pnl_view != NULL && networks_count > 0 &&
+                        networks != NULL) {
+                    /* Update the count of probed networks */
+                    wendigo_display_pnl_count(app);
                 }
             }
         }
@@ -287,6 +327,19 @@ bool wendigo_scene_start_on_event(void *context, SceneManagerEvent event) {
                     WendigoSceneStart, app->selected_menu_index);
                 scene_manager_next_scene(app->scene_manager,
                                         WendigoSceneStatus);
+                break;
+            case Wendigo_EventListNetworks:
+                scene_manager_set_scene_state(app->scene_manager,
+                    WendigoSceneStart, app->selected_menu_index);
+                scene_manager_next_scene(app->scene_manager,
+                                        WendigoScenePNLList);
+                break;
+            case Wendigo_EventRefreshPNLCount:
+                if (app->current_view == WendigoAppViewVarItemList) {
+                    wendigo_display_pnl_count(app);
+                } else {
+                    wendigo_log(MSG_WARN, "Event Wendigo_EventRefreshPNLCount received but start view not displayed.");
+                }
                 break;
             default:
                 /* Do nothing */

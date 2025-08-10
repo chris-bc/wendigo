@@ -7,3 +7,4 @@ lib/*
 .editorconfig
 .env
 .ufbt
+*swp

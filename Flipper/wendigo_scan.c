@@ -452,6 +452,14 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
                                 dev->radio.sta.saved_networks[i], this_ssid_len);
                             new_device->radio.sta.saved_networks[i][this_ssid_len] = '\0';
                         }
+                        if (networks_count > 0 && networks != NULL) {
+                            /* PNL data model has been initialised - ensure the
+                             * current SSID and device are in it. */
+                            PNL_Result res = pnl_find_or_create_device(app,
+                                dev->radio.sta.saved_networks[i], dev);
+                            pnl_log_result("wendigo_add_device()", res,
+                                dev->radio.sta.saved_networks[i], dev);
+                        }
                     }
                 }
             }
@@ -588,6 +596,14 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
                                     dev->radio.sta.saved_networks[i], pnl_len);
                                 new_pnl[pnl_idx][pnl_len] = '\0';
                                 ++pnl_idx;
+                            }
+                            if (networks_count > 0 && networks != NULL) {
+                                /* PNL data model has been initialised - ensure
+                                 * the current device and SSID are in it. */
+                                PNL_Result res = pnl_find_or_create_device(app,
+                                    dev->radio.sta.saved_networks[i], dev);
+                                pnl_log_result("wendigo_update_device()", res,
+                                    dev->radio.sta.saved_networks[i], dev);
                             }
                         }
                     }

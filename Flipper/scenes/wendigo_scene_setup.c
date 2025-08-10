@@ -138,6 +138,7 @@ void wendigo_scene_setup_on_enter(void *context) {
         wendigo_scene_setup_var_list_enter_callback, app);
 
     variable_item_list_reset(app->var_item_list);
+    variable_item_list_set_header(app->var_item_list, NULL);
     VariableItem *item;
     for (uint8_t i = 0; i < SETUP_MENU_ITEMS; ++i) {
         item = variable_item_list_add(app->var_item_list, items[i].item_string,

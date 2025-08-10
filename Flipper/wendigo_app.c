@@ -12,6 +12,8 @@ extern void wendigo_console_output_handle_rx_data_cb(uint8_t *buf, size_t len, v
 /* Initialiser and terminator for wendigo_scene_device_list.c */
 extern void wendigo_scene_device_list_init(void *config);
 extern void wendigo_scene_device_list_free();
+/* Cleanup function for wendigo_scene_pnl_list.c */
+extern void wendigo_scene_pnl_list_free();
 
 static bool wendigo_app_custom_event_callback(void *context, uint32_t event) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_custom_event_callback()");
@@ -25,7 +27,14 @@ static bool wendigo_app_back_event_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_back_event_callback()");
     furi_assert(context);
     WendigoApp *app = context;
-    app->leaving_scene = true;
+    /* Set the app->leaving_scene flag on back button press, but only if a
+     * Device List scene is currently displayed. */
+    if (app->current_view == WendigoAppViewDeviceList ||
+        app->current_view == WendigoAppViewPNLDeviceList ||
+        app->current_view == WendigoAppViewAPSTAs ||
+        app->current_view == WendigoAppViewSTAAP) {
+            app->leaving_scene = true;
+    }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_app_back_event_callback()");
     return scene_manager_handle_back_event(app->scene_manager);
 }
@@ -37,7 +46,7 @@ static void wendigo_app_tick_event_callback(void *context) {
     if (app->is_scanning) {
         /* Is it time to poll ESP32 to ensure it's still scanning? */
         uint32_t now = furi_hal_rtc_get_timestamp();
-        if (now - app->last_packet > ESP32_POLL_INTERVAL) {
+        if (now - app->last_packet > ESP32_POLL_INTERVAL * 1000) { // TODO: Docs say seconds but that IS NOT seconds! Test to confirm this is 3 seconds
             wendigo_set_scanning_active(app, true);
         }
     }
@@ -148,6 +157,7 @@ WendigoApp *wendigo_app_alloc() {
     /* Initialise mutexes */
     app->bufferMutex = furi_mutex_alloc(FuriMutexTypeNormal);
     app->devicesMutex = furi_mutex_alloc(FuriMutexTypeNormal);
+    app->pnlMutex = furi_mutex_alloc(FuriMutexTypeNormal);
 
     app->widget = widget_alloc();
     view_dispatcher_add_view(
@@ -226,12 +236,15 @@ void wendigo_app_free(WendigoApp *app) {
 
     /* Free device list scene's contents and stack */
     wendigo_scene_device_list_free();
+    /* Free preferred network list scene's device cache */
+    wendigo_scene_pnl_list_free();
     /* Free device cache and UART buffer */
     wendigo_free_uart_buffer();
     wendigo_free_devices();
     /* Mutexes */
     furi_mutex_free(app->bufferMutex);
     furi_mutex_free(app->devicesMutex);
+    furi_mutex_free(app->pnlMutex);
 
     wendigo_uart_free(app->uart);
 
