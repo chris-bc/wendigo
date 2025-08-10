@@ -7,6 +7,7 @@
 #include <esp_wifi.h>
 #include <esp_wifi_types.h>
 #include <esp_gap_ble_api.h>
+#include "esp_mac.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -51,6 +52,13 @@ typedef enum {
     ACTION_INVALID
 } ActionType;
 
+typedef enum {
+    MAC_BASE = 0,
+    MAC_WIFI,
+    MAC_BLUETOOTH,
+    MACS_COUNT
+} MacType;
+
 /* Globals for state management */
 const char *TAG = "WENDIGO";
 ActionType scanStatus[DEF_SCAN_COUNT] = { ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE };
@@ -65,6 +73,7 @@ SemaphoreHandle_t uartMutex;
 /* Device caches accessible across Wendigo */
 extern uint16_t devices_count;
 extern wendigo_device *devices;
+extern uint8_t BANNER_WIDTH;
 
 /* Device factories */
 wendigo_device *wendigo_new_device(uint8_t *mac);

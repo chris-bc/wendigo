@@ -27,7 +27,6 @@ char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2",
     "WPA3 Enterprise", "WPA3 Enterprise Transition", "Unknown"};
 
 bool WIFI_INITIALISED = false;
-uint8_t BANNER_WIDTH = 62;
 static const char *WIFI_TAG = "WiFi@Wendigo";
 
 /* Local function declarations */

@@ -5,6 +5,88 @@ uint16_t devices_count = 0;
 uint16_t devices_capacity = 0;
 wendigo_device *devices;
 
+/** Banner width when in interactive mode */
+uint8_t BANNER_WIDTH = 62;
+
+/** Retrieve the specified MAC address. mac[] must be an initialised
+ * byte array of length MAC_BYTES (6).
+ */
+esp_err_t wendigo_get_mac(MacType type, uint8_t mac[MAC_BYTES]) {
+    if (type == MACS_COUNT || !memcmp(mac, nullMac, MAC_BYTES)) {
+        // TODO: Error log
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint8_t ifType;
+    switch (type) {
+        case MAC_BASE:
+            ifType = ESP_MAC_BASE;
+            break;
+        case MAC_WIFI:
+            ifType = ESP_MAC_WIFI_SOFTAP;
+            break;
+        case MAC_BLUETOOTH:
+            ifType = ESP_MAC_BT;
+            break;
+        default:
+            // TODO: Think more on the best way to handle this
+            ifType = ESP_MAC_BASE;
+            break;
+    }
+    return esp_read_mac(mac, ifType);
+}
+
+/** Set the specified MAC address to the specified value.
+ * Permitted values are defined by the MacType enum. ESP32 supports
+ * separate MACs for ethernet, STA and AP. Currently Wendigo only
+ * uses the device in SoftAP mode.
+ * Returns ESP_OK on success.
+ */
+esp_err_t wendigo_set_mac(MacType type, uint8_t mac[MAC_BYTES]) {
+    if (type == MACS_COUNT || !memcmp(mac, nullMac, MAC_BYTES)) {
+        // TODO: log error
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint8_t ifType;
+    switch (type) {
+        case MAC_WIFI:
+            ifType = ESP_MAC_WIFI_SOFTAP;
+            break;
+        case MAC_BLUETOOTH:
+            ifType = ESP_MAC_BT;
+            break;
+        case MAC_BASE:
+        default:
+            ifType = ESP_MAC_BASE;
+            break;
+    }
+    return esp_iface_mac_addr_set(mac, ifType);
+}
+
+esp_err_t wendigo_display_mac_uart(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTES]) {
+    UNUSED(wifi);
+    UNUSED(bda);
+    return ESP_OK;
+}
+
+esp_err_t wendigo_display_mac_interactive(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTES]) {
+    UNUSED(wifi);
+    UNUSED(bda);
+    return ESP_OK;
+}
+
+/** Displays ESP32's WiFi and Bluetooth MACs. */
+esp_err_t wendigo_display_mac(MacType type) {
+    uint8_t wifi[MAC_BYTES];
+    uint8_t bda[MAC_BYTES];
+    esp_err_t result = wendigo_get_mac(MAC_WIFI, wifi);
+    result |= wendigo_get_mac(MAC_BLUETOOTH, bda);
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+        return result || wendigo_display_mac_interactive(wifi, bda);
+    } else {
+        return result || wendigo_display_mac_uart(wifi, bda);
+    }
+}
+
 /** Locates a device with the MAC of the specified device in devices[] cache.
  * Returns a pointer to the object in devices[] if found, NULL otherwise.
  */

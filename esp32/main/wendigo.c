@@ -292,6 +292,19 @@ esp_err_t cmd_channel(int argc, char **argv) {
     }
 }
 
+/** Get or change the MAC(s) associated with the ESP32.
+ * Syntax: "macs [ <type> [ <mac> ] ]", where:
+ *  * <type> is 1 for WiFi, 2 for Bluetooth, 0 for Base MAC
+ *    (WiFi MAC is Base MAC + 1, Bluetooth is Base MAC + 2)
+ *  * <mac> is a 6-byte array.
+ * Returns ESP_OK when successful
+ */
+esp_err_t cmd_macs(int argc, char **argv) {
+    /* Validate arguments */
+    // TODO: Pass args to a function that'll display MAC(s)
+    return ESP_OK;
+}
+
 /** The `status` command is intended to provide an overall picture of ESP32-Wendigo's current state:
  *  * Support for each radio
  *  * Scanning status for each radio

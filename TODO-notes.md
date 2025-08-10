@@ -25,7 +25,7 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 * esp_err_t esp_iface_mac_addr_set(bytes, ESP_MAC_WIFI_SOFTAP)
 * esp_base_mac_addr_set()
 * esp_err_t esp_read_mac(bytes, type)
-* ESP_MAC_WIFI_STA, ESP_MAC_WIFI_SOFTAP, ESP_MAC_BT
+* ESP_MAC_WIFI_STA, ESP_MAC_WIFI_SOFTAP, ESP_MAC_BT, ESP_MAC_BASE
 * in "esp_chip_info.h"
 
 * esp_ble_gap_read_rssi(bda)?!?
