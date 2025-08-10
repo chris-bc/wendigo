@@ -1254,9 +1254,12 @@ uint16_t parseBufferMAC(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
         offset += MAC_BYTES;
         if (thisIface == SCAN_WIFI_AP) {
             memcpy(app->interfaces[IF_WIFI].mac_bytes, thisMac, MAC_BYTES);
+            app->interfaces[IF_WIFI].initialised = true;
         } else if (thisIface == SCAN_BLE) {
             memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, thisMac, MAC_BYTES);
             memcpy(app->interfaces[IF_BLE].mac_bytes, thisMac, MAC_BYTES);
+            app->interfaces[IF_BT_CLASSIC].initialised = true;
+            app->interfaces[IF_BLE].initialised = true;
         } else {
             wendigo_log_with_packet(MSG_WARN,
                 "MAC packet specifies unknown interface.",

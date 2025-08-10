@@ -82,6 +82,7 @@ typedef struct {
     bool active;
     bool mutable;
     bool scanning;
+    bool initialised;
 } WendigoRadio;
 
 typedef struct {

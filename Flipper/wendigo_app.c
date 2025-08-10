@@ -92,6 +92,7 @@ void wendigo_interface_init(WendigoApp *app) {
         app->interfaces[i].active = true;
         app->interfaces[i].mutable = true;
         app->interfaces[i].scanning = false;
+        app->interfaces[i].initialised = false;
     }
     memcpy(app->interfaces[IF_WIFI].mac_bytes, nullMac, MAC_BYTES);
     memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, nullMac, MAC_BYTES);
