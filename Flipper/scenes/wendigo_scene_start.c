@@ -22,6 +22,7 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 
 #define SETUP_IDX       (0)
 #define SCAN_IDX        (1)
+#define PNL_IDX         (4)
 #define SCAN_START_IDX  (0)
 #define SCAN_STOP_IDX   (1)
 #define SCAN_STATUS_IDX (2)
@@ -38,6 +39,7 @@ static const WendigoItem items[START_MENU_ITEMS] = {
 
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
+static VariableItem *pnl_view = NULL;
 
 uint8_t wendigo_device_mask(uint8_t selected_option) {
     switch (selected_option) {
@@ -58,6 +60,24 @@ uint8_t wendigo_device_mask(uint8_t selected_option) {
         default:
             return 0;
     }
+}
+
+void wendigo_display_pnl_count(WendigoApp *app) {
+    if (pnl_view == NULL) {
+        wendigo_log(MSG_WARN, "wendigo_display_pnl_count() called with NULL pnl_view.");
+        return;
+    }
+    if (app->current_view != WendigoAppViewVarItemList) {
+        wendigo_log(MSG_WARN, "wendigo_display_pnl_count() called when wendigo_scene_start not displayed.");
+    }
+    char countStr[4];
+    bzero(countStr, sizeof(countStr));
+    uint8_t ssid_count = 0;
+    if (networks_count > 0 && networks != NULL) {
+        ssid_count = networks_count;
+    }
+    snprintf(countStr, sizeof(countStr), "%d", ssid_count);
+    variable_item_set_current_value_text(pnl_view, countStr);
 }
 
 /** Callback invoked when a menu item is selected */
@@ -242,6 +262,13 @@ void wendigo_scene_start_on_enter(void *context) {
                     variable_item_set_current_value_text(item,
                         items[i].options_menu[SCAN_START_IDX]);
                 }
+            } else if (i == PNL_IDX) {
+                pnl_view = item;
+                if (pnl_view != NULL && networks_count > 0 &&
+                        networks != NULL) {
+                    /* Update the count of probed networks */
+                    wendigo_display_pnl_count(app);
+                }
             }
         }
     }
@@ -306,6 +333,13 @@ bool wendigo_scene_start_on_event(void *context, SceneManagerEvent event) {
                     WendigoSceneStart, app->selected_menu_index);
                 scene_manager_next_scene(app->scene_manager,
                                         WendigoScenePNLList);
+                break;
+            case Wendigo_EventRefreshPNLCount:
+                if (app->current_view == WendigoAppViewVarItemList) {
+                    wendigo_display_pnl_count(app);
+                } else {
+                    wendigo_log(MSG_WARN, "Event Wendigo_EventRefreshPNLCount received but start view not displayed.");
+                }
                 break;
             default:
                 /* Do nothing */

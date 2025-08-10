@@ -36,7 +36,7 @@
     </li>
     <li><a href="#whats-new">What's New</a>
       <ul>
-        <li><a href="#whats-new-040">v0.4.0 (Pre-release)</a></li>
+        <li><a href="#whats-new-040">v0.4.0</a></li>
         <li><a href="#whats-new-030">v0.3.0</a></li>
       </ul>
     </li>
@@ -66,7 +66,7 @@
 
 <a id="whats-new-040"></a>
 
-### v0.4.0 (so far)
+### v0.4.0
 
 * Introduced mutexes to manage concurrency during packet transimission and reception
   * Concurrency issues - multiple threads sending or receiving packets at once - were the reason for packet corruption and all the headaches I've had trying to work around it.
@@ -77,7 +77,8 @@
 * A WiFi station's Preferred Network List (PNL), commonly called "saved networks", are collected and displayed
   * Device list display for stations includes a new menu option ```N networks``` (where N is a number).
   * Select this to view a list of the SSIDs the station has sent probe requests for.
-  * New menu option to view all probed networks, including a count of devices searching for each SSID.
+* New menu option to view all probed networks and the number of probed SSIDs
+  * Selecting this option will display all probed SSIDs and the number of devices searching for each SSID.
     * From this view, selecting an SSID will display all stations that probed for that SSID.
     * This required introducing a second data model. It gets a mutex too!
 * Navigate from a WiFi Station to its AP by selecting the AP menu option and pushing ```OK```.

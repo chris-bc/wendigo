@@ -13,19 +13,6 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
     * That must be buggy, so NULL the header in _on_enter()
     * Done for device_list, pnl_list, setup_channel, setup, start & status
 
-#### wendigo_pnl.c
-* map_ssids_to_devices() and pnl_find_or_create_device()
-  * If Start scene active send an event to update PNL option text
-  * if (app->current_view == WendigoAppViewVarItemList)
-    * view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventRefreshPNLCount)
-  * scene_start: on_event()
-    * if networks_count > 0 && networks != NULL && pnl_view != NULL
-      * variable_item_set_current_value_text(pnl_view, strNetworksCount)
-  * Need somewhere to put the VariableItem's view
-    * Just use a scene-local VariableItem*
-  * on_enter()
-    * if items[i].action == PNL_LIST && networks_count > 0 && networks != NULL
-
 #### wendigo_scene_device_list.c
 * Ensure current_devices is sound
 * Only set app->leaving_scene if a device list scene is being displayed
