@@ -828,46 +828,192 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
 /** Parse an association request packet, creating device cache entries for
  * the transmitting STA and receiving AP if necessary.
  */
+// TODO: Extend with additional attributes - SSID, authentication, etc.
 esp_err_t parse_assoc_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     esp_err_t result = ESP_OK;
     wendigo_device *sta = retrieve_by_mac(payload + SRCADDR_80211_OFFSET);
     wendigo_device *ap = retrieve_by_mac(payload + DESTADDR_80211_OFFSET);
-    UNUSED(ap);
-    UNUSED(sta);
-
+    bool creatingSta = (sta == NULL);
+    bool creatingAp = (ap == NULL);
+    if (creatingSta) {
+        sta = wendigo_new_sta(payload + SRCADDR_80211_OFFSET);
+    }
+    if (sta != NULL) {
+        sta->scanType = SCAN_WIFI_STA;
+        sta->rssi = rx_ctrl.rssi;
+        sta->radio.sta.channel = rx_ctrl.channel;
+        if (creatingSta) {
+            result |= add_device(sta);
+            free(sta);
+            sta = retrieve_by_mac(payload + SRCADDR_80211_OFFSET);
+        } else {
+            gettimeofday(&(sta->lastSeen), NULL);
+        }
+    }
+    if (creatingAp) {
+        ap = wendigo_new_ap(payload + DESTADDR_80211_OFFSET);
+    }
+    if (ap != NULL) {
+        ap->scanType = SCAN_WIFI_AP;
+        ap->rssi = rx_ctrl.rssi;
+        ap->radio.ap.channel = rx_ctrl.channel;
+        if (creatingAp) {
+            result |= add_device(ap);
+            free(ap);
+            ap = retrieve_by_mac(payload + DESTADDR_80211_OFFSET);
+        } else {
+            gettimeofday(&(ap->lastSeen), NULL);
+        }
+    }
+    if (ap != NULL && sta != NULL) {
+        result |= set_associated(sta, ap);
+    }
+    display_wifi_device(ap, creatingAp);
+    display_wifi_device(sta, creatingSta);
     return result;
 }
 
 /** Parse an association response packet, creating device cache entries for
  * the transmitting AP and receiving STA if necessary.
  */
+// TODO: Extend with additional attributes - SSID, authentication, etc.
 esp_err_t parse_assoc_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     esp_err_t result = ESP_OK;
-
-    // TODO
-
+    wendigo_device *ap = retrieve_by_mac(payload + SRCADDR_80211_OFFSET);
+    wendigo_device *sta = retrieve_by_mac(payload + DESTADDR_80211_OFFSET);
+    bool creatingAp = (ap == NULL);
+    bool creatingSta = (sta == NULL);
+    if (creatingAp) {
+        ap = wendigo_new_ap(payload + SRCADDR_80211_OFFSET);
+    }
+    if (ap != NULL) {
+        ap->scanType = SCAN_WIFI_AP;
+        ap->rssi = rx_ctrl.rssi;
+        ap->radio.ap.channel = rx_ctrl.channel;
+        if (creatingAp) {
+            result |= add_device(ap);
+            free(ap);
+            ap = retrieve_by_mac(payload + SRCADDR_80211_OFFSET);
+        } else {
+            gettimeofday(&(ap->lastSeen), NULL);
+        }
+    }
+    if (creatingSta) {
+        sta = wendigo_new_sta(payload + DESTADDR_80211_OFFSET);
+    }
+    if (sta != NULL) {
+        sta->scanType = SCAN_WIFI_STA;
+        sta->rssi = rx_ctrl.rssi;
+        sta->radio.sta.channel = rx_ctrl.channel;
+        if (creatingSta) {
+            result |= add_device(sta);
+            free(sta);
+            sta = retrieve_by_mac(payload + DESTADDR_80211_OFFSET);
+        } else {
+            gettimeofday(&(sta->lastSeen), NULL);
+        }
+    }
+    if (ap != NULL && sta != NULL) {
+        result |= set_associated(sta, ap);
+    }
+    display_wifi_device(ap, creatingAp);
+    display_wifi_device(sta, creatingSta);
     return result;
 }
 
 /** Parse a re-association request packet, creating device cache entries for
  * the transmitting STA and receiving AP if necessary.
  */
+// TODO: Extend with additional attributes - SSID, authentication, etc.
 esp_err_t parse_reassoc_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     esp_err_t result = ESP_OK;
-
-    // TODO
-
+    wendigo_device *sta = retrieve_by_mac(payload + SRCADDR_80211_OFFSET);
+    wendigo_device *ap = retrieve_by_mac(payload + DESTADDR_80211_OFFSET);
+    bool creatingSta = (sta == NULL);
+    bool creatingAp = (ap == NULL);
+    if (creatingSta) {
+        sta = wendigo_new_sta(payload + SRCADDR_80211_OFFSET);
+    }
+    if (sta != NULL) {
+        sta->scanType = SCAN_WIFI_STA;
+        sta->rssi = rx_ctrl.rssi;
+        sta->radio.sta.channel = rx_ctrl.channel;
+        if (creatingSta) {
+            result |= add_device(sta);
+            free(sta);
+            sta = retrieve_by_mac(payload + SRCADDR_80211_OFFSET);
+        } else {
+            gettimeofday(&(sta->lastSeen), NULL);
+        }
+    }
+    if (creatingAp) {
+        ap = wendigo_new_ap(payload + DESTADDR_80211_OFFSET);
+    }
+    if (ap != NULL) {
+        ap->scanType = SCAN_WIFI_AP;
+        ap->rssi = rx_ctrl.rssi;
+        ap->radio.ap.channel = rx_ctrl.channel;
+        if (creatingAp) {
+            result |= add_device(ap);
+            free(ap);
+            ap = retrieve_by_mac(payload + DESTADDR_80211_OFFSET);
+        } else {
+            gettimeofday(&(ap->lastSeen), NULL);
+        }
+    }
+    if (ap != NULL && sta != NULL) {
+        result |= set_associated(sta, ap);
+    }
+    display_wifi_device(ap, creatingAp);
+    display_wifi_device(sta, creatingSta);
     return result;
 }
 
 /** Parse a re-association response packet, creating device cache entries for
  * the transmitting STA and receiving AP if necessary.
  */
+// TODO: Extend with additional attributes - SSID, authentication, etc.
 esp_err_t parse_reassoc_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     esp_err_t result = ESP_OK;
-
-    // TODO
-
+    wendigo_device *ap = retrieve_by_mac(payload + SRCADDR_80211_OFFSET);
+    wendigo_device *sta = retrieve_by_mac(payload + DESTADDR_80211_OFFSET);
+    bool creatingAp = (ap == NULL);
+    bool creatingSta = (sta == NULL);
+    if (creatingAp) {
+        ap = wendigo_new_ap(payload + SRCADDR_80211_OFFSET);
+    }
+    if (ap != NULL) {
+        ap->scanType = SCAN_WIFI_AP;
+        ap->rssi = rx_ctrl.rssi;
+        ap->radio.ap.channel = rx_ctrl.channel;
+        if (creatingAp) {
+            result |= add_device(ap);
+            free(ap);
+            ap = retrieve_by_mac(payload + SRCADDR_80211_OFFSET);
+        } else {
+            gettimeofday(&(ap->lastSeen), NULL);
+        }
+    }
+    if (creatingSta) {
+        sta = wendigo_new_sta(payload + DESTADDR_80211_OFFSET);
+    }
+    if (sta != NULL) {
+        sta->scanType = SCAN_WIFI_STA;
+        sta->rssi = rx_ctrl.rssi;
+        sta->radio.sta.channel = rx_ctrl.channel;
+        if (creatingSta) {
+            result |= add_device(sta);
+            free(sta);
+            sta = retrieve_by_mac(payload + DESTADDR_80211_OFFSET);
+        } else {
+            gettimeofday(&(sta->lastSeen), NULL);
+        }
+    }
+    if (ap != NULL && sta != NULL) {
+        result |= set_associated(sta, ap);
+    }
+    display_wifi_device(ap, creatingAp);
+    display_wifi_device(sta, creatingSta);
     return result;
 }
 
