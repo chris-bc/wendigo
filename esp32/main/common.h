@@ -66,8 +66,7 @@ SemaphoreHandle_t uartMutex;
 extern uint16_t devices_count;
 extern wendigo_device *devices;
 
-/* Device management */
-// TODO: Lots of refactoring to have these used instead
+/* Device factories */
 wendigo_device *wendigo_new_device(uint8_t *mac);
 wendigo_device *wendigo_new_ap(uint8_t *mac);
 wendigo_device *wendigo_new_sta(uint8_t *mac);
