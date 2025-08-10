@@ -118,7 +118,7 @@ esp_err_t wendigo_display_mac_interactive(uint8_t wifi[MAC_BYTES], uint8_t bda[M
 }
 
 /** Displays ESP32's WiFi and Bluetooth MACs. */
-esp_err_t wendigo_display_mac(MacType type) {
+esp_err_t wendigo_display_mac() {
     uint8_t wifi[MAC_BYTES];
     uint8_t bda[MAC_BYTES];
     esp_err_t result = wendigo_get_mac(MAC_WIFI, wifi);

@@ -299,10 +299,49 @@ esp_err_t cmd_channel(int argc, char **argv) {
  *  * <mac> is a 6-byte array.
  * Returns ESP_OK when successful
  */
-esp_err_t cmd_macs(int argc, char **argv) {
-    /* Validate arguments */
-    // TODO: Pass args to a function that'll display MAC(s)
-    return ESP_OK;
+esp_err_t cmd_mac(int argc, char **argv) {
+    /* Validate arguments:
+     * * count <= 3 (e.g. mac 1 00:00:00:00:00:00)
+     * * if count > 1, argv[1] must be < MACS_COUNT
+     * * if count == 3, argv[2] must be a MAC
+     */
+    uint8_t interface = 255;
+    uint8_t *macBytes = NULL;
+    if (argc > 3) {
+        // TODO: Log error
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (argc > 1) {
+        char *endPtr;
+        interface = strtol(argv[1], &endPtr, 10);
+        if (endPtr == argv[1] || interface >= MACS_COUNT) {
+            /* No number, or the wrong number, found */
+            // TODO: Log error
+            return ESP_ERR_INVALID_ARG;
+        }
+        if (argc == 3) {
+            macBytes = malloc(sizeof(uint8_t) * MAC_BYTES);
+            if (macBytes == NULL) {
+                // TODO: Log error
+                return outOfMemory();
+            }
+            if (wendigo_string_to_bytes(argv[2], macBytes) != ESP_OK) {
+                // TODO: Error
+                free(macBytes);
+                return ESP_ERR_INVALID_ARG;
+            }
+        }
+    }
+    /* We've validated arguments, & retrieved interface and MAC as needed */
+    esp_err_t result = ESP_OK;
+    if (argc == 3) {
+        /* Set the MAC for the specified interface(s) */
+        result = wendigo_set_mac(interface, macBytes);
+        free(macBytes);
+    }
+    /* Display MAC after changing as confirmation */
+    result |= wendigo_display_mac();
+    return result;
 }
 
 /** The `status` command is intended to provide an overall picture of ESP32-Wendigo's current state:
@@ -312,6 +351,7 @@ esp_err_t cmd_macs(int argc, char **argv) {
  *  * Metrics of device caches
  */
 esp_err_t cmd_status(int argc, char **argv) {
+    // TODO: Refactor to use wendigo_supported_features()
     #if defined(CONFIG_DECODE_UUIDS)
         bool uuidDictionarySupported = true;
     #else

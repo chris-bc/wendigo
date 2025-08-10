@@ -24,7 +24,7 @@ esp_err_t cmd_version(int argc, char **argv);
 esp_err_t cmd_interactive(int argc, char **argv);
 esp_err_t cmd_tag(int argc, char **argv);
 esp_err_t cmd_focus(int argc, char **argv);
-esp_err_t cmd_macs(int argc, char **argv);
+esp_err_t cmd_mac(int argc, char **argv);
 
 void invalid_command(char *cmd, char *arg, char *syntax);
 void display_syntax(char *command);
@@ -127,10 +127,10 @@ esp_console_cmd_t commands[CMD_COUNT] = {
         .func = cmd_interactive
     },
     {
-        .command = "macs",
-        .hint = "macs [ <type> [ <mac> ] ]",
+        .command = "mac",
+        .hint = "mac [ <type> [ <mac> ] ]",
         .help = "Get/Set MACs",
-        .func = cmd_macs
+        .func = cmd_mac
     }
 };
 
