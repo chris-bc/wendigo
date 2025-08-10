@@ -113,6 +113,14 @@ typedef enum DeviceMask {
     DEVICE_ALL              = 15
 } DeviceMask;
 
+/** Enum bitmask that defines supported hardware features */
+typedef enum SupportedHardwareMask {
+    HW_WIFI_24_SUPPORTED    = 1,
+    HW_WIFI_5_SUPPORTED     = 2,
+    HW_BT_CLASSIC_SUPPORTED = 4,
+    HW_BLE_SUPPORTED        = 8
+} SupportedHardwareMask;
+
 typedef struct {
     uint16_t uuid16;
     char name[40];

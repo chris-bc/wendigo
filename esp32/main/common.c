@@ -97,11 +97,24 @@ esp_err_t wendigo_display_mac_uart(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTE
 
 /** Display the device's MAC addresses */
 esp_err_t wendigo_display_mac_interactive(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTES]) {
+    char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
+    if (macStr == NULL) {
+        return outOfMemory();
+    }
+    esp_err_t result = mac_bytes_to_string(bda, macStr);
     print_star(BANNER_WIDTH, true);
     print_empty_row(BANNER_WIDTH);
-    UNUSED(wifi);
-    UNUSED(bda);
-    return ESP_OK;
+    print_row_start(7);
+    printf("Bluetooth Device Address: %21s", macStr);
+    print_row_end(7);
+    print_empty_row(BANNER_WIDTH);
+    print_row_start(7);
+    result |= mac_bytes_to_string(wifi, macStr);
+    printf("WiFi Access Point: %28s", macStr);
+    print_row_end(7);
+    print_empty_row(BANNER_WIDTH);
+    print_star(BANNER_WIDTH, true);
+    return result;
 }
 
 /** Displays ESP32's WiFi and Bluetooth MACs. */
