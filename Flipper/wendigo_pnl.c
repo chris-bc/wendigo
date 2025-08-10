@@ -169,6 +169,10 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
         }
     }
     furi_mutex_release(app->pnlMutex);
+    if (app->current_view == WendigoAppViewVarItemList) {
+        /* Set/Refresh the SSID count on the main menu */
+        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventRefreshPNLCount);
+    }
     FURI_LOG_T(WENDIGO_TAG, "End map_ssids_to_devices()");
     return networks_count;
 }
@@ -435,6 +439,10 @@ PNL_Result pnl_find_or_create_device(WendigoApp *app, char *ssid, wendigo_device
         result = PNL_EXISTS;
     }
     furi_mutex_release(app->pnlMutex);
+    if (app->current_view == WendigoAppViewVarItemList) {
+        /* Add/Refresh SSID count on main menu */
+        view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventRefreshPNLCount);
+    }
     FURI_LOG_T(WENDIGO_TAG, "End pnl_find_or_create_device()");
     return result;
 }
