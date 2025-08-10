@@ -88,6 +88,9 @@ esp_err_t outOfMemory();
 
 void print_star(int size, bool newline);
 void print_space(int size, bool newline);
+void print_row_start(int spaces);
+void print_row_end(int spaces);
+void print_empty_row(int lineLength);
 void repeat_bytes(uint8_t byte, uint8_t count);
 void send_bytes(uint8_t *bytes, uint8_t size);
 void send_end_of_packet();

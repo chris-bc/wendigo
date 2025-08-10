@@ -62,13 +62,43 @@ esp_err_t wendigo_set_mac(MacType type, uint8_t mac[MAC_BYTES]) {
     return esp_iface_mac_addr_set(mac, ifType);
 }
 
+/** Send a Wendigo packet containing the specified MACs.
+ * Packet format is:
+ * * Preamble (4 bytes)
+ * * Interface count (1 byte). For each interface:
+ *   * Type (1 byte, SCAN_WIFI_AP or SCAN_HCI)
+ *   * MAC (6 bytes)
+ * * Terminator (4 bytes)
+ */
 esp_err_t wendigo_display_mac_uart(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTES]) {
-    UNUSED(wifi);
-    UNUSED(bda);
-    return ESP_OK;
+    uint8_t packet_len = WENDIGO_OFFSET_MAC_TERMINATOR + PREAMBLE_LEN + 1;
+    uint8_t *packet = malloc(packet_len);
+    if (packet == NULL) {
+        return outOfMemory();
+    }
+    memcpy(packet, PREAMBLE_MAC, PREAMBLE_LEN);
+    packet[WENDIGO_OFFSET_MAC_IF_COUNT] = 0x02;
+    packet[WENDIGO_OFFSET_MAC_BT_TYPE] = (uint8_t)SCAN_HCI;
+    memcpy(packet + WENDIGO_OFFSET_MAC_BT_MAC, bda, MAC_BYTES);
+    packet[WENDIGO_OFFSET_MAC_WIFI_TYPE] = (uint8_t)SCAN_WIFI_AP;
+    memcpy(packet + WENDIGO_OFFSET_MAC_WIFI_MAC, wifi, MAC_BYTES);
+    memcpy(packet + WENDIGO_OFFSET_MAC_TERMINATOR, PACKET_TERM, PREAMBLE_LEN);
+    /* Send the packet */
+    esp_err_t result = ESP_OK;
+    if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
+        send_bytes(packet, packet_len);
+        xSemaphoreGive(uartMutex);
+    } else {
+        result = ESP_ERR_INVALID_STATE;
+    }
+    free(packet);
+    return result;
 }
 
+/** Display the device's MAC addresses */
 esp_err_t wendigo_display_mac_interactive(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTES]) {
+    print_star(BANNER_WIDTH, true);
+    print_empty_row(BANNER_WIDTH);
     UNUSED(wifi);
     UNUSED(bda);
     return ESP_OK;
@@ -465,6 +495,7 @@ void print_star(int size, bool newline) {
         putc('\n', stdout);
     }
 }
+
 void print_space(int size, bool newline) {
     for (int i = 0; i < size; ++i) {
         putc(' ', stdout);
@@ -472,6 +503,22 @@ void print_space(int size, bool newline) {
     if (newline) {
         putc('\n', stdout);
     }
+}
+
+void print_row_start(int spaces) {
+    print_star(1, false);
+    print_space(spaces, false);
+}
+
+void print_row_end(int spaces) {
+    print_space(spaces, false);
+    print_star(1, true);
+}
+
+void print_empty_row(int lineLength) {
+    print_star(1, false);
+    print_space(lineLength - 2, false);
+    print_star(1, true);
 }
 
 /** Display a simple out of memory message and set error code */

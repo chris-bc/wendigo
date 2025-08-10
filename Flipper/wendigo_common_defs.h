@@ -50,8 +50,13 @@
 
  #define WENDIGO_OFFSET_CHANNEL_COUNT           (4)
  #define WENDIGO_OFFSET_CHANNELS                (5)
- #define WENDIGO_OFFSET_MAC_WIFI                (4)
- #define WENDIGO_OFFSET_MAC_BLUETOOTH           (10)
+
+ #define WENDIGO_OFFSET_MAC_IF_COUNT            (4)
+ #define WENDIGO_OFFSET_MAC_BT_TYPE             (5)
+ #define WENDIGO_OFFSET_MAC_BT_MAC              (6)
+ #define WENDIGO_OFFSET_MAC_WIFI_TYPE           (12)
+ #define WENDIGO_OFFSET_MAC_WIFI_MAC            (13)
+ #define WENDIGO_OFFSET_MAC_TERMINATOR          (19)
 
  #ifdef IS_FLIPPER_APP
     typedef enum {
@@ -185,6 +190,7 @@ extern uint8_t PREAMBLE_WIFI_STA[];
 extern uint8_t PREAMBLE_CHANNELS[];
 extern uint8_t PREAMBLE_STATUS[];
 extern uint8_t PREAMBLE_VER[];
+extern uint8_t PREAMBLE_MAC[];
 extern uint8_t PACKET_TERM[];
 extern uint8_t nullMac[];
 extern uint8_t broadcastMac[];
