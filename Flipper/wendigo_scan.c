@@ -117,6 +117,15 @@ void wendigo_set_scanning_interface(WendigoApp *app, InterfaceType interface, bo
     snprintf(cmdString, CMD_LEN, "%c %d\n", cmd, arg);
     wendigo_uart_tx(app->uart, (uint8_t *)cmdString, CMD_LEN);
     app->interfaces[interface].scanning = (arg == 1);
+    /* Update app->is_scanning to reflect current status */
+    if (app->interfaces[interface].scanning) {
+        app->is_scanning = true;
+    } else {
+        /* Loop through all iterfaces to see if we're still scanning */
+        uint8_t idx;
+        for (idx = 0; idx < IF_COUNT && !app->interfaces[idx].scanning; ++idx) { }
+        app->is_scanning = (idx < IF_COUNT);
+    }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_set_scanning_interface()");
 }
 

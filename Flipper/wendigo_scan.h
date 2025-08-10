@@ -15,6 +15,7 @@ extern wendigo_device **devices;
 extern uint16_t devices_count;
 extern uint16_t devices_capacity;
 
+void wendigo_set_scanning_interface(WendigoApp *app, InterfaceType interface, bool starting);
 void wendigo_set_scanning_active(WendigoApp *app, bool starting);
 void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context);
 void wendigo_free_uart_buffer();
