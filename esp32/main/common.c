@@ -18,15 +18,13 @@ esp_err_t wendigo_get_mac(MacType type, uint8_t mac[MAC_BYTES]) {
     }
     uint8_t ifType;
     switch (type) {
-        case MAC_BASE:
-            ifType = ESP_MAC_BASE;
-            break;
         case MAC_WIFI:
             ifType = ESP_MAC_WIFI_SOFTAP;
             break;
         case MAC_BLUETOOTH:
             ifType = ESP_MAC_BT;
             break;
+        case MAC_BASE:
         default:
             // TODO: Think more on the best way to handle this
             ifType = ESP_MAC_BASE;
@@ -105,12 +103,11 @@ esp_err_t wendigo_display_mac_interactive(uint8_t wifi[MAC_BYTES], uint8_t bda[M
     print_star(BANNER_WIDTH, true);
     print_empty_row(BANNER_WIDTH);
     print_row_start(7);
-    printf("Bluetooth Device Address: %21s", macStr);
+    printf("Bluetooth Device Address: %20s", macStr);
     print_row_end(7);
-    print_empty_row(BANNER_WIDTH);
     print_row_start(7);
     result |= mac_bytes_to_string(wifi, macStr);
-    printf("WiFi Access Point: %28s", macStr);
+    printf("WiFi Access Point: %27s", macStr);
     print_row_end(7);
     print_empty_row(BANNER_WIDTH);
     print_star(BANNER_WIDTH, true);
