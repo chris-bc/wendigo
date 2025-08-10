@@ -15,6 +15,43 @@ extern void wendigo_scene_device_list_free();
 /* Cleanup function for wendigo_scene_pnl_list.c */
 extern void wendigo_scene_pnl_list_free();
 
+/** Ask ESP32-Wendigo to provide MAC details about its interfaces. */
+void wendigo_mac_query(WendigoApp *app) {
+    wendigo_uart_tx(app->uart, (uint8_t *)"mac\n", 5); // TODO: Evaluate whether this should be 4 or 5
+}
+
+/** Ask ESP32-Wendigo to change the MAC for the specified interface. */
+void wendigo_mac_set(WendigoApp *app, InterfaceType type, uint8_t mac_bytes[MAC_BYTES]) {
+    char *cmd = malloc(sizeof(char) * 28);
+    char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
+    if (cmd == NULL || macStr == NULL) {
+        // TODO: Memory error
+        if (cmd != NULL) {
+            free(cmd);
+        }
+        if (macStr != NULL) {
+            free(macStr);
+        }
+        return;
+    }
+    uint8_t ifType;
+    switch (type) {
+        case IF_BLE:
+        case IF_BT_CLASSIC:
+            ifType = SCAN_BLE;
+            break;
+        case IF_WIFI:
+        default:
+            ifType = SCAN_WIFI_AP;
+            break;
+    }
+    bytes_to_string(mac_bytes, MAC_BYTES, macStr);
+    snprintf(cmd, 28, "mac %d %s\n", ifType, macStr);
+    wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd));
+    free(macStr);
+    free(cmd);
+}
+
 static bool wendigo_app_custom_event_callback(void *context, uint32_t event) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_custom_event_callback()");
     furi_assert(context);

@@ -275,7 +275,7 @@ void wendigo_scene_start_on_enter(void *context) {
 
     /* Displaying the main menu seems a good time to refresh our
      * MAC and BDA from the ESP32. */
-    wendigo_uart_tx(app->uart, (uint8_t *)"mac\n", 4);
+    wendigo_mac_query(app);
 
     VariableItem *item;
     menu_items_num = 0;

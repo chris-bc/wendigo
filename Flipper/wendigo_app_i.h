@@ -193,3 +193,5 @@ void wendigo_display_popup(WendigoApp *app, char *header, char*body);
 void wendigo_uart_set_binary_cb(Wendigo_Uart *uart);
 void wendigo_uart_set_console_cb(Wendigo_Uart *uart);
 void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes);
+void wendigo_mac_query(WendigoApp *app);
+void wendigo_mac_set(WendigoApp *app, InterfaceType type, uint8_t mac_bytes[MAC_BYTES]);

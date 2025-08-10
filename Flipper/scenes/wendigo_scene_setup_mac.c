@@ -33,12 +33,14 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
             case IF_BT_CLASSIC:
             case IF_BLE:
                 strcpy(result_if_text, "Bluetooth");
-                // TODO: Set bluetooth MAC
+                /* Set Bluetooth MAC */
+                wendigo_mac_set(app, app->active_interface, view_bytes);
                 mac_changed = true;
                 break;
             case IF_WIFI:
                 strcpy(result_if_text, "WiFi");
-                // TODO: Set WiFi MAC
+                /* Set WiFi MAC */
+                wendigo_mac_set(app, app->active_interface, view_bytes);
                 mac_changed = true;
                 break;
             case IF_COUNT:
@@ -94,6 +96,12 @@ void wendigo_scene_setup_mac_on_enter(void *context) {
     WendigoApp *app = context;
     ByteInput *mac_input = app->setup_mac;
     app->current_view = WendigoAppViewSetupMAC;
+
+    /* If necessary, fetch the interface's MAC first */
+    while (!app->interfaces[app->active_interface].initialised) {
+        wendigo_mac_query(app);
+        // TODO: Display popup while polling for device
+    }
 
     /* Copy app->mac_bytes into a temp array for modification by the view */
     memcpy(view_bytes, app->interfaces[app->active_interface].mac_bytes, MAC_BYTES);
