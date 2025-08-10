@@ -118,7 +118,8 @@ typedef enum SupportedHardwareMask {
     HW_WIFI_24_SUPPORTED    = 1,
     HW_WIFI_5_SUPPORTED     = 2,
     HW_BT_CLASSIC_SUPPORTED = 4,
-    HW_BLE_SUPPORTED        = 8
+    HW_BLE_SUPPORTED        = 8,
+    HW_BT_UUID_DICTIONARY   = 16
 } SupportedHardwareMask;
 
 typedef struct {

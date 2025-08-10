@@ -606,3 +606,25 @@ void send_end_of_packet() {
     send_bytes(PACKET_TERM, PREAMBLE_LEN);
     fflush(stdout);
 }
+
+/** Check which device-specific features are supported and
+ * return the sum of each feature's SupportedHardwareMask
+ * value.
+ */
+uint8_t wendigo_supported_features() {
+    uint8_t result = 0;
+    #if defined(CONFIG_DECODE_UUIDS)
+        result += HW_BT_UUID_DICTIONARY;
+    #endif
+    #if defined(CONFIG_BT_CLASSIC_ENABLED)
+        result += HW_BT_CLASSIC_SUPPORTED;
+    #endif
+    #if defined(CONFIG_BT_BLE_ENABLED)
+        result += HW_BLE_SUPPORTED;
+    #endif
+    #if defined(CONFIG_ESP_WIFI_ENABLED) || defined(CONFIG_ESP_HOST_WIFI_ENABLED)
+        result += HW_WIFI_24_SUPPORTED;
+    #endif
+    // TODO: Where is 5G defined?
+    return result;
+}

@@ -85,6 +85,7 @@ esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount);
 esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac);
 esp_err_t wendigo_string_to_bytes(char *strMac, uint8_t *bMac);
 esp_err_t outOfMemory();
+uint8_t wendigo_supported_features();
 
 void print_star(int size, bool newline);
 void print_space(int size, bool newline);
