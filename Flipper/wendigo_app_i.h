@@ -81,6 +81,7 @@ typedef struct {
     uint8_t mac_bytes[MAC_BYTES];
     bool active;
     bool mutable;
+    bool scanning;
 } WendigoRadio;
 
 typedef struct {
