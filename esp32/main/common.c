@@ -77,6 +77,40 @@ uint8_t wendigo_index_of_string(char *str, char **array, uint8_t array_len) {
     return idx;
 }
 
+/** Create and return an initialised wendigo_device pointer */
+wendigo_device *wendigo_new_device(uint8_t *mac) {
+    wendigo_device *device = malloc(sizeof(wendigo_device));
+    if (device == NULL) {
+        outOfMemory();
+        return NULL;
+    }
+    explicit_bzero(device, sizeof(wendigo_device));
+    device->tagged = false;
+    gettimeofday(&(device->lastSeen), NULL);
+    if (mac != NULL) {
+        memcpy(device->mac, mac, MAC_BYTES);
+    }
+    return device;
+}
+
+/** Create and return a new WiFi Station object. mac may be NULL. */
+wendigo_device *wendigo_new_sta(uint8_t *mac) {
+    wendigo_device *result = wendigo_new_device(mac);
+    if (result != NULL) {
+        result->scanType = SCAN_WIFI_STA;
+    }
+    return result;
+}
+
+/** Create and return a new Access Point object. mac may be NULL. */
+wendigo_device *wendigo_new_ap(uint8_t *mac) {
+    wendigo_device *result = wendigo_new_device(mac);
+    if (result != NULL) {
+        result->scanType = SCAN_WIFI_AP;
+    }
+    return result;
+}
+
 /** Adds the specified device to devices[] if not already present.
  *  Updates the attributes of the specified device in devices[]
  *  if it already exists. */

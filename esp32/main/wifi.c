@@ -897,6 +897,52 @@ esp_err_t parse_disassoc(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     return result;
 }
 
+/** Parse an association request packet, creating device cache entries for
+ * the transmitting STA and receiving AP if necessary.
+ */
+esp_err_t parse_assoc_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    esp_err_t result = ESP_OK;
+    wendigo_device *sta = retrieve_by_mac(payload + SRCADDR_80211_OFFSET);
+    wendigo_device *ap = retrieve_by_mac(payload + DESTADDR_80211_OFFSET);
+    UNUSED(ap);
+    UNUSED(sta);
+
+    return result;
+}
+
+/** Parse an association response packet, creating device cache entries for
+ * the transmitting AP and receiving STA if necessary.
+ */
+esp_err_t parse_assoc_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    esp_err_t result = ESP_OK;
+
+    // TODO
+
+    return result;
+}
+
+/** Parse a re-association request packet, creating device cache entries for
+ * the transmitting STA and receiving AP if necessary.
+ */
+esp_err_t parse_reassoc_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    esp_err_t result = ESP_OK;
+
+    // TODO
+
+    return result;
+}
+
+/** Parse a re-association response packet, creating device cache entries for
+ * the transmitting STA and receiving AP if necessary.
+ */
+esp_err_t parse_reassoc_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
+    esp_err_t result = ESP_OK;
+
+    // TODO
+
+    return result;
+}
+
 /** Monitor mode callback
  *  This is the callback function invoked when the wireless interface receives any selected packet.
  */
