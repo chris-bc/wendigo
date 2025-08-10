@@ -119,7 +119,10 @@ typedef enum SupportedHardwareMask {
     HW_WIFI_5_SUPPORTED     = 2,
     HW_BT_CLASSIC_SUPPORTED = 4,
     HW_BLE_SUPPORTED        = 8,
-    HW_BT_UUID_DICTIONARY   = 16
+    HW_BT_UUID_DICTIONARY   = 16,
+    /* If logical-and with the following values is non-zero they're supported */
+    HW_WIFI_SUPPORTED       = 3,
+    HW_BT_SUPPORTED         = 12
 } SupportedHardwareMask;
 
 typedef struct {

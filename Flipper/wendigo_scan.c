@@ -40,7 +40,8 @@ uint16_t start_of_packet(uint8_t *bytes, uint16_t size) {
             memcmp(bytes + result, PREAMBLE_WIFI_STA, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_STATUS, PREAMBLE_LEN) &&
             memcmp(bytes + result, PREAMBLE_CHANNELS, PREAMBLE_LEN) &&
-            memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN);
+            memcmp(bytes + result, PREAMBLE_VER, PREAMBLE_LEN) &&
+            memcmp(bytes + result, PREAMBLE_MAC, PREAMBLE_LEN);
         ++result) {
     }
     /* If not found, set result to size */
@@ -1200,7 +1201,6 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
  * consumed bytes, this must be handled by the calling function.
  */
 uint16_t parseBufferVersion(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
-    UNUSED(app);
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferVersion()");
     /* Find the end-of-packet sequence to determine version string length */
     uint16_t endSeq = packetLen - PREAMBLE_LEN; /* To reach first byte in seq */
@@ -1218,6 +1218,58 @@ uint16_t parseBufferVersion(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     wendigo_popup_text[messageLen - 1] = '\0'; /* Just in case */
     wendigo_display_popup(app, "Wendigo Version", wendigo_popup_text);
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferVersion()");
+    return packetLen;
+}
+
+uint16_t parseBufferMAC(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
+    FURI_LOG_T(WENDIGO_TAG, "Start parseBufferMAC()");
+    if (packetLen < (2 * PREAMBLE_LEN)) {
+        wendigo_log_with_packet(MSG_ERROR, "MAC packet too short", packet, packetLen);
+        return packetLen;
+    }
+    uint8_t interface_count;
+    memcpy(&interface_count, packet + WENDIGO_OFFSET_MAC_IF_COUNT, sizeof(uint8_t));
+    uint8_t expected_len = (2 * PREAMBLE_LEN) + (interface_count * (MAC_BYTES + 1)) + 1;
+    if (packetLen != expected_len) {
+        char *msg = malloc(sizeof(char) * 55);
+        if (msg == NULL) {
+            wendigo_log_with_packet(MSG_ERROR, "MAC packet length different from expected.", packet, packetLen);
+        } else {
+            snprintf(msg, 55, "MAC packet is wrong length. Expected %d actual %d.", expected_len, packetLen);
+            wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
+            free(msg);
+        }
+        return packetLen;
+    }
+    /* The packet's the right length - Process its contents */
+    uint8_t thisMac[MAC_BYTES];
+    uint8_t thisIface;
+    uint16_t offset = WENDIGO_OFFSET_MAC_IF_COUNT + 1;
+    uint8_t interface = 0;
+    while (interface < interface_count && offset + MAC_BYTES + PREAMBLE_LEN < packetLen) {
+        /* Get the interface type */
+        memcpy(&thisIface, packet + offset, sizeof(uint8_t));
+        ++offset;
+        memcpy(thisMac, packet + offset, MAC_BYTES);
+        offset += MAC_BYTES;
+        if (thisIface == SCAN_WIFI_AP) {
+            memcpy(app->interfaces[IF_WIFI].mac_bytes, thisMac, MAC_BYTES);
+        } else if (thisIface == SCAN_BLE) {
+            memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, thisMac, MAC_BYTES);
+            memcpy(app->interfaces[IF_BLE].mac_bytes, thisMac, MAC_BYTES);
+        } else {
+            wendigo_log_with_packet(MSG_WARN,
+                "MAC packet specifies unknown interface.",
+                packet, packetLen);
+        }
+        ++interface;
+    }
+    /* Finally, confirm that offset now points to the packet terminator */
+    if (memcmp(packet + offset, PACKET_TERM, PREAMBLE_LEN)) {
+        wendigo_log_with_packet(MSG_ERROR, "MAC packet terminator not found where expected.", packet, packetLen);        
+    }
+    // TODO: Does anything need to be notified when these change?
+    FURI_LOG_T(WENDIGO_TAG, "End parseBufferMAC()");
     return packetLen;
 }
 
@@ -1359,6 +1411,8 @@ void parsePacket(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
         parseBufferVersion(app, packet, packetLen);
     } else if (!memcmp(PREAMBLE_CHANNELS, packet, PREAMBLE_LEN)) {
         parseBufferChannels(app, packet, packetLen);
+    } else if (!memcmp(PREAMBLE_MAC, packet, PREAMBLE_LEN)) {
+        parseBufferMAC(app, packet, packetLen);
     } else {
         wendigo_log_with_packet(MSG_WARN, "Packet doesn't have a valid preamble", packet, packetLen);
     }
@@ -1509,6 +1563,8 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
         }
     }
     /* Release the mutex and parse the packets */
+    // TODO: Replace with with a new thread and a pub/sub pattern, with new thread monitoring packets[] for packets to process.
+    //       What's the best way for this thread to wait? Ooooh, a semaphore using packets as the counter?!?
     furi_mutex_release(app->bufferMutex);
     for (uint8_t i = 0; i < packetsCount; ++i) {
         //wendigo_log_with_packet(MSG_DEBUG, "wendigo_scan_handle_rx_data() Parsing packet", packets[i], packetSize[i]);

@@ -93,12 +93,9 @@ void wendigo_interface_init(WendigoApp *app) {
         app->interfaces[i].mutable = true;
         app->interfaces[i].scanning = false;
     }
-    // TODO: Retrieve actual MAC
-    const uint8_t mac_wifi[MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xac};
-    const uint8_t mac_bt[MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xaf};
-    memcpy(app->interfaces[IF_WIFI].mac_bytes, mac_wifi, MAC_BYTES);
-    memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, mac_bt, MAC_BYTES);
-    memcpy(app->interfaces[IF_BLE].mac_bytes, mac_bt, MAC_BYTES);
+    memcpy(app->interfaces[IF_WIFI].mac_bytes, nullMac, MAC_BYTES);
+    memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, nullMac, MAC_BYTES);
+    memcpy(app->interfaces[IF_BLE].mac_bytes, nullMac, MAC_BYTES);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_interface_init()");
 }
 

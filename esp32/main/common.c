@@ -64,7 +64,7 @@ esp_err_t wendigo_set_mac(MacType type, uint8_t mac[MAC_BYTES]) {
  * Packet format is:
  * * Preamble (4 bytes)
  * * Interface count (1 byte). For each interface:
- *   * Type (1 byte, SCAN_WIFI_AP or SCAN_HCI)
+ *   * Type (1 byte, SCAN_WIFI_AP or SCAN_BLE)
  *   * MAC (6 bytes)
  * * Terminator (4 bytes)
  */
@@ -76,7 +76,7 @@ esp_err_t wendigo_display_mac_uart(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTE
     }
     memcpy(packet, PREAMBLE_MAC, PREAMBLE_LEN);
     packet[WENDIGO_OFFSET_MAC_IF_COUNT] = 0x02;
-    packet[WENDIGO_OFFSET_MAC_BT_TYPE] = (uint8_t)SCAN_HCI;
+    packet[WENDIGO_OFFSET_MAC_BT_TYPE] = (uint8_t)SCAN_BLE;
     memcpy(packet + WENDIGO_OFFSET_MAC_BT_MAC, bda, MAC_BYTES);
     packet[WENDIGO_OFFSET_MAC_WIFI_TYPE] = (uint8_t)SCAN_WIFI_AP;
     memcpy(packet + WENDIGO_OFFSET_MAC_WIFI_MAC, wifi, MAC_BYTES);
@@ -115,6 +115,7 @@ esp_err_t wendigo_display_mac_interactive(uint8_t wifi[MAC_BYTES], uint8_t bda[M
 }
 
 /** Displays ESP32's WiFi and Bluetooth MACs. */
+// TODO: Update to first check which devices are supported
 esp_err_t wendigo_display_mac() {
     uint8_t wifi[MAC_BYTES];
     uint8_t bda[MAC_BYTES];

@@ -273,6 +273,10 @@ void wendigo_scene_start_on_enter(void *context) {
     variable_item_list_set_enter_callback(app->var_item_list,
         wendigo_scene_start_var_list_enter_callback, app);
 
+    /* Displaying the main menu seems a good time to refresh our
+     * MAC and BDA from the ESP32. */
+    wendigo_uart_tx(app->uart, (uint8_t *)"mac\n", 4);
+
     VariableItem *item;
     menu_items_num = 0;
     for (uint8_t i = 0; i < START_MENU_ITEMS; ++i) {
