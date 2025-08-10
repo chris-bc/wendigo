@@ -441,6 +441,7 @@ PNL_Result pnl_find_or_create_device(WendigoApp *app, char *ssid, wendigo_device
     furi_mutex_release(app->pnlMutex);
     if (app->current_view == WendigoAppViewVarItemList) {
         /* Add/Refresh SSID count on main menu */
+        // TODO: This couples wendigo_pnl.c to the UI - Change this to a generic inversion of control pattern later on
         view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventRefreshPNLCount);
     }
     FURI_LOG_T(WENDIGO_TAG, "End pnl_find_or_create_device()");
