@@ -368,7 +368,7 @@ Alternatively you can connect ESP32-Wendigo to any device with a serial console 
 This section is a running list of current priorities.
 
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
-* [ ] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped - Use a single menu option that changes its text, similar to Tag/Untag.
+* [X] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped - Use a single menu option that changes its text, similar to Tag/Untag.
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
 * [X] BT Classic and LE device transmission from ESP32 to Flipper

@@ -50,6 +50,8 @@
 
  #define WENDIGO_OFFSET_CHANNEL_COUNT           (4)
  #define WENDIGO_OFFSET_CHANNELS                (5)
+ #define WENDIGO_OFFSET_MAC_WIFI                (4)
+ #define WENDIGO_OFFSET_MAC_BLUETOOTH           (10)
 
  #ifdef IS_FLIPPER_APP
     typedef enum {

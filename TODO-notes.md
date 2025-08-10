@@ -13,6 +13,23 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
     * That must be buggy, so NULL the header in _on_enter()
     * Done for device_list, pnl_list, setup_channel, setup, start & status
 
+#### WIFI & BT MACS
+* esp_wifi_get_mac(WIFI_IF_AP, macBytes)
+* esp_wifi_set_mac(ESP_IF_WIFI_AP or WIFI_IF_AP, macBytes)
+
+* esp_ble_gap_addr_create_static()
+* esp_ble_gap_addr_create_nrpa()
+* esp_ble_gap_clear_rand_addr()
+* esp_ble_gap_config_local_icon(icon)
+* esp_ble_gap_ext_adv_set_rand_addr(instance, bdaddr)
+* esp_err_t esp_iface_mac_addr_set(bytes, ESP_MAC_WIFI_SOFTAP)
+* esp_base_mac_addr_set()
+* esp_err_t esp_read_mac(bytes, type)
+* ESP_MAC_WIFI_STA, ESP_MAC_WIFI_SOFTAP, ESP_MAC_BT
+* in "esp_chip_info.h"
+
+* esp_ble_gap_read_rssi(bda)?!?
+
 #### wendigo_scene_device_list.c
 * Ensure current_devices is sound
 * Only set app->leaving_scene if a device list scene is being displayed
