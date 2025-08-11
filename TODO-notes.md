@@ -1,7 +1,7 @@
 REMOVED * Fix interactive mode display bug by only updating lastSeen if the required period has elapsed - Kludgey, but it'll probably never be used anyway - And Flipper creates its own timestamp so it won't affect Flipper-Wendigo
 
 * Check whether 802.11 data packets can be sent between stations - Currently the parser assumes that a STA will only be sending a data packet to an AP
-* Add parsers for association and authentication packets
+* (Partially complete - MACs only) Add parsers for association and authentication packets
 
 * wendigo_add_device()
   * Acquire device mutex when realloc()ing and when appending
