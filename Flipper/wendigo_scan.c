@@ -1271,7 +1271,9 @@ uint16_t parseBufferMAC(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     if (memcmp(packet + offset, PACKET_TERM, PREAMBLE_LEN)) {
         wendigo_log_with_packet(MSG_ERROR, "MAC packet terminator not found where expected.", packet, packetLen);        
     }
-    // TODO: Does anything need to be notified when these change?
+    /* Invoke the 'MAC received' callback if there is one */
+    wendigo_mac_rcvd_callback(app);
+    // TODO: I'd prefer to have this on a different thread from the UART RX - pub/sub for receiver/parser!
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferMAC()");
     return packetLen;
 }

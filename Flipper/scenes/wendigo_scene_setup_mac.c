@@ -59,7 +59,7 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
         }
         wendigo_mac_set(app, app->active_interface, view_bytes, wendigo_scene_setup_mac_update_complete);
         /* Wait for completion */
-        // TODO: Not sure how to do this? Define a callback in wendigo_mac_set() that is called by the parser?
+        // TODO: Move below into mac_update_callback()
         snprintf(popup_header_text,
             strlen("Update  MAC") + strlen(result_if_text) + 1,
             "Update %s MAC", result_if_text);
