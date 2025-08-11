@@ -118,6 +118,7 @@ typedef enum {
     WendigoAppViewSetup,        /* This doesn't have an associated view but is used as a flag in app->current_view */
     WendigoAppViewSetupMAC,
     WendigoAppViewSetupChannel,
+    WendigoAppViewLoading,
     WendigoAppViewPopup,
 } WendigoAppView;
 

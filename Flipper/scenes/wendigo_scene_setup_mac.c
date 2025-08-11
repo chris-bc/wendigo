@@ -1,4 +1,5 @@
 #include "../wendigo_app_i.h"
+#include <gui/modules/loading.h>
 
 /** Maximum length of an interface string ("WiFi", "Bluetooth", etc.) */
 #define IF_MAX_LEN (10)
@@ -9,6 +10,10 @@ uint8_t view_bytes[MAC_BYTES];
 /** Strings for popups */
 char popup_header_text[IF_MAX_LEN + 11] = "";
 char popup_text[IF_MAX_LEN + 50] = "";
+
+/** Loading dialogue in case we need to wait to receive UART packets */
+Loading *loading = NULL;
+bool loading_displayed = false;
 
 void wendigo_scene_setup_mac_popup_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_popup_callback()");
@@ -97,10 +102,33 @@ void wendigo_scene_setup_mac_on_enter(void *context) {
     ByteInput *mac_input = app->setup_mac;
     app->current_view = WendigoAppViewSetupMAC;
 
+    loading_displayed = false;
     /* If necessary, fetch the interface's MAC first */
+    if (!app->interfaces[app->active_interface].initialised) {
+        /* Creating the loading dialogue if needed */
+        if (loading == NULL) {
+            loading = loading_alloc();
+            if (loading != NULL) {
+                view_dispatcher_add_view(app->view_dispatcher,
+                    WendigoAppViewLoading,
+                    loading_get_view(loading));
+            }
+        }
+        if (loading != NULL) {
+            /* Display the loading dialogue */
+            loading_displayed = true;
+            view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewLoading);
+        }
+    }
+    /* Pause for 100ms and check whether we've received MACs yet */
     while (!app->interfaces[app->active_interface].initialised) {
+        furi_delay_ms(100); // TODO: Review frequency (and whether it's sensible to send a new request 10 times a second)
         wendigo_mac_query(app);
-        // TODO: Display popup while polling for device
+    }
+    /* Hooray! */
+    if (loading_displayed) {
+        loading_displayed = false;
+        view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewSetupMAC);
     }
 
     /* Copy app->mac_bytes into a temp array for modification by the view */
@@ -125,6 +153,11 @@ bool wendigo_scene_setup_mac_on_event(void *context, SceneManagerEvent event) {
 
 void wendigo_scene_setup_mac_on_exit(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_on_exit()");
-    UNUSED(context);
+    WendigoApp *app = (WendigoApp *)context;
+    if (loading != NULL) {
+        view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewLoading);
+        loading_free(loading);
+        loading = NULL;
+    }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_on_exit()");
 }
