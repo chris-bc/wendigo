@@ -14,6 +14,11 @@ char popup_text[IF_MAX_LEN + 50] = "";
 /** Loading dialogue in case we need to wait to receive UART packets */
 Loading *loading = NULL;
 
+void wendigo_scene_setup_mac_update_complete(void *context) {
+    //TODO
+    UNUSED(context);
+}
+
 void wendigo_scene_setup_mac_popup_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_popup_callback()");
     WendigoApp *app = (WendigoApp*)context;
@@ -52,7 +57,7 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
         if (!mac_changed) {
             scene_manager_handle_back_event(app->scene_manager);
         }
-        wendigo_mac_set(app, app->active_interface, view_bytes);
+        wendigo_mac_set(app, app->active_interface, view_bytes, wendigo_scene_setup_mac_update_complete);
         /* Wait for completion */
         // TODO: Not sure how to do this? Define a callback in wendigo_mac_set() that is called by the parser?
         snprintf(popup_header_text,

@@ -19,9 +19,20 @@ extern void wendigo_scene_pnl_list_free();
 void wendigo_mac_query(WendigoApp *app) {
     wendigo_uart_tx(app->uart, (uint8_t *)"mac\n", 5); // TODO: Evaluate whether this should be 4 or 5
 }
+/** Function pointer to notify when a MAC packet is received */
+void (*mac_rcvd_callback)(void *);
+
+/** Cal the MAC received callback */
+void wendigo_mac_rcvd_callback(WendigoApp *app) {
+    if (mac_rcvd_callback != NULL && app != NULL) {
+        mac_rcvd_callback(app);
+    }
+}
 
 /** Ask ESP32-Wendigo to change the MAC for the specified interface. */
-void wendigo_mac_set(WendigoApp *app, InterfaceType type, uint8_t mac_bytes[MAC_BYTES]) {
+void wendigo_mac_set(WendigoApp *app, InterfaceType type,
+        uint8_t mac_bytes[MAC_BYTES], void (*update_callback)(void *)) {
+    mac_rcvd_callback = update_callback;
     char *cmd = malloc(sizeof(char) * 28);
     char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
     if (cmd == NULL || macStr == NULL) {
