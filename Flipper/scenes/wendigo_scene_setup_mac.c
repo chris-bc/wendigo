@@ -13,7 +13,6 @@ char popup_text[IF_MAX_LEN + 50] = "";
 
 /** Loading dialogue in case we need to wait to receive UART packets */
 Loading *loading = NULL;
-bool loading_displayed = false;
 
 void wendigo_scene_setup_mac_popup_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_popup_callback()");
@@ -37,20 +36,21 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
         switch (app->active_interface) {
             case IF_BT_CLASSIC:
             case IF_BLE:
-                strcpy(result_if_text, "Bluetooth");
                 /* Set Bluetooth MAC */
-                wendigo_mac_set(app, app->active_interface, view_bytes);
+                strcpy(result_if_text, "Bluetooth");
                 mac_changed = true;
                 break;
             case IF_WIFI:
-                strcpy(result_if_text, "WiFi");
                 /* Set WiFi MAC */
-                wendigo_mac_set(app, app->active_interface, view_bytes);
+                strcpy(result_if_text, "WiFi");
                 mac_changed = true;
                 break;
             case IF_COUNT:
                 // Do nothing
                 break;
+        }
+        if (mac_changed) {
+            wendigo_mac_set(app, app->active_interface, view_bytes);
         }
         snprintf(popup_header_text,
             strlen("Update  MAC") + strlen(result_if_text) + 1,
@@ -102,7 +102,6 @@ void wendigo_scene_setup_mac_on_enter(void *context) {
     ByteInput *mac_input = app->setup_mac;
     app->current_view = WendigoAppViewSetupMAC;
 
-    loading_displayed = false;
     /* If necessary, fetch the interface's MAC first */
     if (!app->interfaces[app->active_interface].initialised) {
         /* Creating the loading dialogue if needed */
@@ -116,7 +115,6 @@ void wendigo_scene_setup_mac_on_enter(void *context) {
         }
         if (loading != NULL) {
             /* Display the loading dialogue */
-            loading_displayed = true;
             view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewLoading);
         }
     }
@@ -124,14 +122,9 @@ void wendigo_scene_setup_mac_on_enter(void *context) {
     while (!app->interfaces[app->active_interface].initialised) {
         furi_delay_ms(100); // TODO: Review frequency (and whether it's sensible to send a new request 10 times a second)
         wendigo_mac_query(app);
-    }
-    /* Hooray! */
-    if (loading_displayed) {
-        loading_displayed = false;
-        view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewSetupMAC);
-    }
+    } /* Hooray - We finished! */
 
-    /* Copy app->mac_bytes into a temp array for modification by the view */
+    /* Copy active interface's MAC into a temp array for modification by the view */
     memcpy(view_bytes, app->interfaces[app->active_interface].mac_bytes, MAC_BYTES);
 
     byte_input_set_header_text(mac_input, "MAC Address");
