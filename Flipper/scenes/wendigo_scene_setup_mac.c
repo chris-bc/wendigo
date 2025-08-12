@@ -11,12 +11,50 @@ uint8_t view_bytes[MAC_BYTES];
 char popup_header_text[IF_MAX_LEN + 11] = "";
 char popup_text[IF_MAX_LEN + 50] = "";
 
+/** State variables to keep track of interface and target MAC while updating */
+InterfaceType updated_interface;
+uint8_t updated_mac[MAC_BYTES];
+
 /** Loading dialogue in case we need to wait to receive UART packets */
 Loading *loading = NULL;
 
 void wendigo_scene_setup_mac_update_complete(void *context) {
-    //TODO
-    UNUSED(context);
+    WendigoApp *app = (WendigoApp *)context;
+    if (app == NULL) {
+        // TODO: Error
+        return;
+    }
+    /* Set interface string */
+    char result_if_text[IF_MAX_LEN] = "";
+    switch (updated_interface) {
+        case IF_BT_CLASSIC:
+        case IF_BLE:
+            strcpy(result_if_text, "Bluetooth");
+            break;
+        case IF_WIFI:
+            strcpy(result_if_text, "WiFi");
+            break;
+        default:
+            strcpy(result_if_text, "UNKNOWN");
+            break;
+    }
+    snprintf(popup_header_text,
+            strlen("Update  MAC") + strlen(result_if_text) + 1,
+            "Update %s MAC", result_if_text);
+    /* Was the MAC change successful? */
+    if (memcmp(app->interfaces[updated_interface].mac_bytes, updated_mac, MAC_BYTES)) {
+        /* Received MAC does not match expected MAC */
+        snprintf(popup_text,
+                strlen(result_if_text) + strlen("Failed to Update  MAC!") + 1,
+                "Failed to Update %s MAC!", result_if_text);
+    } else {
+        /* Received MAC matches expected MAC */
+        snprintf(popup_text,
+                strlen(result_if_text) + strlen(" MAC Updated!") + 1,
+                "%s MAC Updated!", result_if_text);
+    }
+    wendigo_display_popup(app, popup_header_text, popup_text);
+    // TODO: Is this sufficient? 1) popup callback will display main menu, 2) back event isn't fired, potentially orphaning this scene
 }
 
 void wendigo_scene_setup_mac_popup_callback(void *context) {
@@ -28,65 +66,30 @@ void wendigo_scene_setup_mac_popup_callback(void *context) {
 
 void wendigo_scene_setup_mac_input_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_input_callback()");
-    /* If MAC has changed
-     * Popup indicating success or failure */
+    /* Finished with the MAC dialogue */
     WendigoApp *app = context;
 
     /* Did the user change the MAC? */
     if (memcmp(view_bytes, app->interfaces[app->active_interface].mac_bytes, MAC_BYTES)) {
-        char result_if_text[IF_MAX_LEN] = "";
         /* MAC was changed - Update ESP32's MAC */
-        /* Also set interface string for popups */
-        bool mac_changed = false;
+        bool mac_changed;;
         switch (app->active_interface) {
             case IF_BT_CLASSIC:
             case IF_BLE:
-                /* Set Bluetooth MAC */
-                strcpy(result_if_text, "Bluetooth");
-                mac_changed = true;
-                break;
             case IF_WIFI:
-                /* Set WiFi MAC */
-                strcpy(result_if_text, "WiFi");
                 mac_changed = true;
                 break;
-            case IF_COUNT:
-                // Do nothing
+            default:
+                mac_changed = false;
                 break;
         }
         if (!mac_changed) {
+            /* The MAC is different, but I don't know what it's different from */
             scene_manager_handle_back_event(app->scene_manager);
         }
-        wendigo_mac_set(app, app->active_interface, view_bytes, wendigo_scene_setup_mac_update_complete);
+        memcpy(updated_mac, view_bytes, MAC_BYTES);
+        wendigo_mac_set(app, app->active_interface, updated_mac, wendigo_scene_setup_mac_update_complete);
         /* Wait for completion */
-        // TODO: Move below into mac_update_callback()
-        snprintf(popup_header_text,
-            strlen("Update  MAC") + strlen(result_if_text) + 1,
-            "Update %s MAC", result_if_text);
-        /* Was the MAC changed successfully? */
-        if (mac_changed) {
-            /* Record the new MAC in app->interfaces */
-            switch (app->active_interface) {
-                case IF_BT_CLASSIC:
-                case IF_BLE:
-                    memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, view_bytes, MAC_BYTES);
-                    memcpy(app->interfaces[IF_BLE].mac_bytes, view_bytes, MAC_BYTES);
-                    break;
-                case IF_WIFI:
-                    memcpy(app->interfaces[IF_WIFI].mac_bytes, view_bytes, MAC_BYTES);
-                    break;
-                default:
-                    /* Do nothing */
-            }
-            snprintf(popup_text,
-                strlen(result_if_text) + strlen(" MAC Updated!") + 1,
-                "%s MAC Updated!", result_if_text);
-        } else {
-            snprintf(popup_text,
-                strlen(result_if_text) + strlen("Failed to Update  MAC!") + 1,
-                "Failed to Update %s MAC!", result_if_text);
-        }
-        wendigo_display_popup(app, popup_header_text, popup_text);
     } else {
         // TODO: Should this also be run after the popup?
         scene_manager_handle_back_event(app->scene_manager);
