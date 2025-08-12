@@ -55,9 +55,10 @@ void wendigo_scene_setup_mac_update_complete(void *context) {
     }
     wendigo_display_popup(app, popup_header_text, popup_text);
     // TODO: Is this sufficient? 1) popup callback will display main menu, 2) back event isn't fired, potentially orphaning this scene
-    scene_manager_handle_back_event(app->scene_manager);
+    //scene_manager_handle_back_event(app->scene_manager);
 }
 
+// TODO: This function is currently unused
 void wendigo_scene_setup_mac_popup_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_popup_callback()");
     WendigoApp *app = (WendigoApp*)context;
@@ -86,13 +87,20 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
         }
         if (!mac_changed) {
             /* The MAC is different, but I don't know what it's different from */
+            FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_input_callback() - Invalid MAC changed, going BACK.");
+            // TODO: I think these should be changed to scene_manager_previous_scene(app->scene_manager)
             scene_manager_handle_back_event(app->scene_manager);
+            return;
         }
         memcpy(updated_mac, view_bytes, MAC_BYTES);
         wendigo_mac_set(app, app->active_interface, updated_mac, wendigo_scene_setup_mac_update_complete);
         /* Wait for completion */
+        if (loading != NULL) {
+            view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewLoading);
+        }
     } else {
-        // TODO: Should this also be run after the popup?
+        /* MAC not changed */
+        FURI_LOG_T(WENDIGO_TAG, "End wendio_scene_setup_mac_input_callback() - MAC unchanged, going BACK.");
         scene_manager_handle_back_event(app->scene_manager);
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_input_callback()");
@@ -114,17 +122,18 @@ void wendigo_scene_setup_mac_on_enter(void *context) {
     ByteInput *mac_input = app->setup_mac;
     app->current_view = WendigoAppViewSetupMAC;
 
+    /* Initialise the loading view if needed */
+    if (loading == NULL) {
+        loading = loading_alloc();
+        if (loading != NULL) {
+            view_dispatcher_add_view(app->view_dispatcher,
+                WendigoAppViewLoading,
+                loading_get_view(loading));
+        }
+    }
+
     /* If necessary, fetch the interface's MAC first */
     if (!app->interfaces[app->active_interface].initialised) {
-        /* Creating the loading dialogue if needed */
-        if (loading == NULL) {
-            loading = loading_alloc();
-            if (loading != NULL) {
-                view_dispatcher_add_view(app->view_dispatcher,
-                    WendigoAppViewLoading,
-                    loading_get_view(loading));
-            }
-        }
         if (loading != NULL) {
             /* Display the loading dialogue */
             view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewLoading);

@@ -102,16 +102,33 @@ static void wendigo_app_tick_event_callback(void *context) {
 //    FURI_LOG_T(WENDIGO_TAG, "End wendigo_app_tick_event_callback()");
 }
 
-/* Generic handler for app->popup that restores the previous view */
+/** Return the view, registered with the view dispatcher, that's associated
+ * with the specified "logical" view. For example, the main, setup, status,
+ * and other menus all use the central WendigoAppViewVarItemList.
+ */
+WendigoAppView wendigo_appview_for_view(WendigoAppView logicalView) {
+    WendigoAppView result;
+    switch (logicalView) {
+        case WendigoAppViewVarItemList:
+        case WendigoAppViewStatus:
+        case WendigoAppViewSetup:
+        case WendigoAppViewSetupChannel:
+        case WendigoAppViewPNLList:
+            result = WendigoAppViewVarItemList;
+            break;
+        default:
+            result = logicalView;
+            break;
+    }
+    return result;
+}
+
+/** Generic handler for app->popup that restores the previous view */
 void wendigo_popup_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_popup_callback()");
     WendigoApp *app = (WendigoApp *)context;
-    bool done = scene_manager_previous_scene(app->scene_manager);
-    if (!done) {
-        /* No previous scene - Start the main menu scene */
-        // TODO: Alongside wendigo_display_popup() (below), restore the scene that was actually running prior to the popup
-        scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
-    }
+    WendigoAppView view = wendigo_appview_for_view(app->current_view);
+    view_dispatcher_switch_to_view(app->view_dispatcher, view);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_popup_callback()");
 }
 
@@ -127,8 +144,6 @@ void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
     popup_enable_timeout(app->popup);
     popup_set_callback(app->popup, wendigo_popup_callback);
     popup_set_context(app->popup, app);
-    // TODO: Check which scene is active so we can restore it later. For now assuming we're on the main menu.
-    scene_manager_set_scene_state(app->scene_manager, WendigoSceneStart, app->selected_menu_index);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_display_popup()");
 }

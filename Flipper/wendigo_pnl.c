@@ -95,9 +95,9 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
             new_networks = realloc(networks, sizeof(PreferredNetwork) * (networks_count + this_count));
             if (new_networks == NULL) {
                 /* Too annoying to continue on - log and alert error, then clean up and exit */
+                furi_mutex_release(app->pnlMutex);
                 wendigo_log(MSG_ERROR, "Unable to allocate PreferredNetwork elements.");
                 wendigo_display_popup(app, "Insufficient memory", "Unable to allocate PreferredNetwork elements.");
-                furi_mutex_release(app->pnlMutex);
                 FURI_LOG_T(WENDIGO_TAG, "End map_ssids_to_devices() - Unable to resize networks[].");
                 return 0;
             }
