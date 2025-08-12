@@ -336,7 +336,15 @@ esp_err_t cmd_mac(int argc, char **argv) {
     esp_err_t result = ESP_OK;
     if (argc == 3) {
         /* Set the MAC for the specified interface(s) */
+        ESP_LOGI(TAG, "Setting interface %d to %02x:%02x:%02x:%02x:%02x:%02x.",
+            interface, macBytes[0], macBytes[1], macBytes[2], macBytes[3],
+            macBytes[4], macBytes[5]);
         result = wendigo_set_mac(interface, macBytes);
+        if (result == ESP_OK) {
+            ESP_LOGI(TAG, "Changed ok");
+        } else {
+            ESP_LOGI(TAG, "Error %d: %s", result, esp_err_to_name(result));
+        }
         free(macBytes);
     }
     /* Display MAC after changing as confirmation */
