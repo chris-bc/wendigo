@@ -29,6 +29,13 @@ void wendigo_mac_rcvd_callback(WendigoApp *app) {
     }
 }
 
+/** Set the callback invoked when a MAC packet is
+ * received. NULL to disable.
+ */
+void wendigo_set_mac_rcvd_callback(void (*update_callback)(void *)) {
+    mac_rcvd_callback = update_callback;
+}
+
 /** Ask ESP32-Wendigo to change the MAC for the specified interface. */
 void wendigo_mac_set(WendigoApp *app, InterfaceType type,
         uint8_t mac_bytes[MAC_BYTES], void (*update_callback)(void *)) {
@@ -128,6 +135,7 @@ void wendigo_popup_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_popup_callback()");
     WendigoApp *app = (WendigoApp *)context;
     WendigoAppView view = wendigo_appview_for_view(app->current_view);
+    popup_reset(app->popup);
     view_dispatcher_switch_to_view(app->view_dispatcher, view);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_popup_callback()");
 }
@@ -140,7 +148,7 @@ void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
     popup_set_header(app->popup, header, 64, 3, AlignCenter, AlignTop);
     popup_set_text(app->popup, newBody, 64, 22, AlignCenter, AlignTop);
     popup_set_icon(app->popup, -1, -1, NULL); // TODO: Find a fun icon to use
-    popup_set_timeout(app->popup, 5000); // was 2000
+    popup_set_timeout(app->popup, 3000); // was 2000
     popup_enable_timeout(app->popup);
     popup_set_callback(app->popup, wendigo_popup_callback);
     popup_set_context(app->popup, app);

@@ -18,6 +18,10 @@ uint8_t updated_mac[MAC_BYTES];
 /** Loading dialogue in case we need to wait to receive UART packets */
 Loading *loading = NULL;
 
+/** Callback invoked by the UART receiver thread when a MAC
+ * packet is received.
+ * TODO: This handles changing the MAC fine, but once changed causes popup to display on every MAC packet
+ */
 void wendigo_scene_setup_mac_update_complete(void *context) {
     WendigoApp *app = (WendigoApp *)context;
     if (app == NULL) {
@@ -52,6 +56,8 @@ void wendigo_scene_setup_mac_update_complete(void *context) {
         snprintf(popup_text,
                 strlen(result_if_text) + strlen(" MAC Updated!") + 1,
                 "%s MAC Updated!", result_if_text);
+        /* Disable the callback since it worked */
+        wendigo_set_mac_rcvd_callback(NULL);
     }
     wendigo_display_popup(app, popup_header_text, popup_text);
     // TODO: Is this sufficient? 1) popup callback will display main menu, 2) back event isn't fired, potentially orphaning this scene
@@ -88,8 +94,8 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
         if (!mac_changed) {
             /* The MAC is different, but I don't know what it's different from */
             FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_input_callback() - Invalid MAC changed, going BACK.");
-            // TODO: I think these should be changed to scene_manager_previous_scene(app->scene_manager)
-            scene_manager_handle_back_event(app->scene_manager);
+            //scene_manager_handle_back_event(app->scene_manager);
+            scene_manager_previous_scene(app->scene_manager);
             return;
         }
         memcpy(updated_mac, view_bytes, MAC_BYTES);
@@ -101,7 +107,8 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
     } else {
         /* MAC not changed */
         FURI_LOG_T(WENDIGO_TAG, "End wendio_scene_setup_mac_input_callback() - MAC unchanged, going BACK.");
-        scene_manager_handle_back_event(app->scene_manager);
+        //scene_manager_handle_back_event(app->scene_manager);
+        scene_manager_previous_scene(app->scene_manager);
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_input_callback()");
 }
