@@ -55,6 +55,7 @@ void wendigo_scene_setup_mac_update_complete(void *context) {
     }
     wendigo_display_popup(app, popup_header_text, popup_text);
     // TODO: Is this sufficient? 1) popup callback will display main menu, 2) back event isn't fired, potentially orphaning this scene
+    scene_manager_handle_back_event(app->scene_manager);
 }
 
 void wendigo_scene_setup_mac_popup_callback(void *context) {
