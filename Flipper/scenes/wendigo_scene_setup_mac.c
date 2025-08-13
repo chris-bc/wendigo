@@ -22,6 +22,9 @@ Loading *loading = NULL;
  * packet is received and we're waiting for an updated MAC.
  */
 void wendigo_scene_setup_mac_update_complete(void *context) {
+    /* Disable the callback - the update either worked or it didn't,
+     * in either case we no longer need to subscribe to MAC packets. */
+    wendigo_set_mac_rcvd_callback(NULL);
     WendigoApp *app = (WendigoApp *)context;
     if (app == NULL) {
         // TODO: Error
@@ -55,8 +58,6 @@ void wendigo_scene_setup_mac_update_complete(void *context) {
         snprintf(popup_text,
                 strlen(result_if_text) + strlen(" MAC Updated!") + 1,
                 "%s MAC Updated!", result_if_text);
-        /* Disable the callback since it worked */
-        wendigo_set_mac_rcvd_callback(NULL);
     }
     wendigo_display_popup(app, popup_header_text, popup_text);
     // TODO: Is this sufficient? 1) popup callback will display WendigoAppViewSetupMAC, 2) back event isn't fired, keeping us in this scene
