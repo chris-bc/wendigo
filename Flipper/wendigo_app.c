@@ -22,7 +22,7 @@ void wendigo_mac_query(WendigoApp *app) {
 /** Function pointer to notify when a MAC packet is received */
 void (*mac_rcvd_callback)(void *);
 
-/** Cal the MAC received callback */
+/** Call the MAC received callback in a new task */
 void wendigo_mac_rcvd_callback(WendigoApp *app) {
     if (mac_rcvd_callback != NULL && app != NULL) {
         mac_rcvd_callback(app);

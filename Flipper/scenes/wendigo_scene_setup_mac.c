@@ -1,5 +1,7 @@
 #include "../wendigo_app_i.h"
 #include <gui/modules/loading.h>
+/* Included to have access to wendigo_log() - Seems excessive */
+#include "../wendigo_scan.h"
 
 /** Maximum length of an interface string ("WiFi", "Bluetooth", etc.) */
 #define IF_MAX_LEN (10)
@@ -22,12 +24,13 @@ Loading *loading = NULL;
  * packet is received and we're waiting for an updated MAC.
  */
 void wendigo_scene_setup_mac_update_complete(void *context) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_update_complete()");
     /* Disable the callback - the update either worked or it didn't,
      * in either case we no longer need to subscribe to MAC packets. */
     wendigo_set_mac_rcvd_callback(NULL);
     WendigoApp *app = (WendigoApp *)context;
     if (app == NULL) {
-        // TODO: Error
+        wendigo_log(MSG_ERROR, "wendigo_scene_setup_mac_update_complete() called with NULL context.");
         return;
     }
     /* Set interface string */
@@ -60,18 +63,10 @@ void wendigo_scene_setup_mac_update_complete(void *context) {
                 "%s MAC Updated!", result_if_text);
     }
     wendigo_display_popup(app, popup_header_text, popup_text);
-    // TODO: Is this sufficient? 1) popup callback will display WendigoAppViewSetupMAC, 2) back event isn't fired, keeping us in this scene
-    //scene_manager_handle_back_event(app->scene_manager);
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_update_complete()");
 }
 
-// TODO: This function is currently unused
-void wendigo_scene_setup_mac_popup_callback(void *context) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_popup_callback()");
-    WendigoApp *app = (WendigoApp*)context;
-    scene_manager_previous_scene(app->scene_manager);
-    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_popup_callback()");
-}
-
+/** Callback invoked when the save button is pressed on the byte input */
 void wendigo_scene_setup_mac_input_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_input_callback()");
     /* Finished with the MAC dialogue */
@@ -94,7 +89,6 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
         if (!mac_changed) {
             /* The MAC is different, but I don't know what it's different from */
             FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_input_callback() - Invalid MAC changed, going BACK.");
-            //scene_manager_handle_back_event(app->scene_manager);
             scene_manager_previous_scene(app->scene_manager);
             return;
         }
@@ -109,12 +103,15 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
     } else {
         /* MAC not changed */
         FURI_LOG_T(WENDIGO_TAG, "End wendio_scene_setup_mac_input_callback() - MAC unchanged, going BACK.");
-        //scene_manager_handle_back_event(app->scene_manager);
         scene_manager_previous_scene(app->scene_manager);
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_input_callback()");
 }
 
+/** Callback invoked when the contents of the byte input are changed.
+ * Here, we check to see whether the displayed MAC is mutable. If it
+ * isn't the user's changes are overwritten with a fresh copy of the MAC.
+ */
 void wendigo_scene_setup_mac_changed_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_changed_callback()");
     WendigoApp *app = context;
@@ -125,6 +122,11 @@ void wendigo_scene_setup_mac_changed_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_changed_callback()");
 }
 
+/** Function called when the scene is being launched. Requests interface MACs if
+ * they're uninitialised (the setup scene requests MACs whether or not they're
+ * initialised, doing it here feels like it would be too late). If necessary, a
+ * loading widget will be displayed until a MAC packet is received.
+ */
 void wendigo_scene_setup_mac_on_enter(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_on_enter()");
     WendigoApp *app = context;
@@ -150,7 +152,7 @@ void wendigo_scene_setup_mac_on_enter(void *context) {
     }
     /* Pause for 100ms and check whether we've received MACs yet */
     while (!app->interfaces[app->active_interface].initialised) {
-        furi_delay_ms(100); // TODO: Review frequency (and whether it's sensible to send a new request 10 times a second)
+        furi_delay_ms(100); // TODO: Review frequency
         wendigo_mac_query(app);
     } /* Hooray - We finished! */
 
@@ -165,13 +167,13 @@ void wendigo_scene_setup_mac_on_enter(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_on_enter()");
 }
 
+/* Declaring this function is part of the macro spaghetti defined in wendigo_scene_config.h
+ * so this function needs to exist. */
 bool wendigo_scene_setup_mac_on_event(void *context, SceneManagerEvent event) {
-    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_setup_mac_on_event()");
-    //
+    FURI_LOG_T(WENDIGO_TAG, "Start + End wendigo_scene_setup_mac_on_event()");
     UNUSED(context);
     UNUSED(event);
-    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_setup_mac_on_event()");
-    return false;
+    return false; /* This function never consumes any events */
 }
 
 void wendigo_scene_setup_mac_on_exit(void *context) {

@@ -1221,6 +1221,14 @@ uint16_t parseBufferVersion(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     return packetLen;
 }
 
+/** Parses a MAC packet and updates app->interfaces[]. The packet can contain zero or more
+ * MACs. Packet structure:
+ * * Preamble (4 bytes)
+ * * Interface count (1 byte), then for each interface
+ *   * Interface type (1 byte, WendigoMAC enum)
+ *   * Interface MAC (6 bytes)
+ * * Packet terminator (4 bytes)
+ */
 uint16_t parseBufferMAC(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferMAC()");
     if (packetLen < (2 * PREAMBLE_LEN)) {
