@@ -98,6 +98,8 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
             scene_manager_previous_scene(app->scene_manager);
             return;
         }
+        /* Save the interface being changed so I can check it later */
+        updated_interface = app->active_interface;
         memcpy(updated_mac, view_bytes, MAC_BYTES);
         wendigo_mac_set(app, app->active_interface, updated_mac, wendigo_scene_setup_mac_update_complete);
         /* Wait for completion */

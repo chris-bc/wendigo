@@ -1250,6 +1250,7 @@ uint16_t parseBufferMAC(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
         /* Get the interface type */
         memcpy(&thisIface, packet + offset, sizeof(uint8_t));
         ++offset;
+        /* Get the MAC */
         memcpy(thisMac, packet + offset, MAC_BYTES);
         offset += MAC_BYTES;
         if (thisIface == WENDIGO_MAC_WIFI) {

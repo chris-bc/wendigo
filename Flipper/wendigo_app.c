@@ -67,6 +67,7 @@ void wendigo_mac_set(WendigoApp *app, InterfaceType type,
     }
     bytes_to_string(mac_bytes, MAC_BYTES, macStr);
     snprintf(cmd, 28, "mac %d %s\n", ifType, macStr);
+    FURI_LOG_I("wendigo_mac_set()", "Sending command \"%s\"", cmd);
     wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd));
     free(macStr);
     free(cmd);
