@@ -52,13 +52,6 @@ typedef enum {
     ACTION_INVALID
 } ActionType;
 
-typedef enum {
-    MAC_BASE = 0,
-    MAC_WIFI,
-    MAC_BLUETOOTH,
-    MACS_COUNT
-} MacType;
-
 /* Globals for state management */
 const char *TAG = "WENDIGO";
 ActionType scanStatus[DEF_SCAN_COUNT] = { ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE, ACTION_DISABLE };
@@ -87,8 +80,8 @@ esp_err_t wendigo_string_to_bytes(char *strMac, uint8_t *bMac);
 esp_err_t outOfMemory();
 uint8_t wendigo_supported_features();
 esp_err_t wendigo_display_mac();
-esp_err_t wendigo_set_mac(MacType type, uint8_t mac[MAC_BYTES]);
-esp_err_t wendigo_get_mac(MacType type, uint8_t mac[MAC_BYTES]);
+esp_err_t wendigo_set_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]);
+esp_err_t wendigo_get_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]);
 
 void print_star(int size, bool newline);
 void print_space(int size, bool newline);

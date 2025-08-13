@@ -56,11 +56,13 @@ void wendigo_mac_set(WendigoApp *app, InterfaceType type,
     switch (type) {
         case IF_BLE:
         case IF_BT_CLASSIC:
-            ifType = SCAN_BLE;
+            ifType = WENDIGO_MAC_BLUETOOTH;
             break;
         case IF_WIFI:
+            ifType = WENDIGO_MAC_WIFI;
+            break;
         default:
-            ifType = SCAN_WIFI_AP;
+            ifType = WENDIGO_MAC_BASE;
             break;
     }
     bytes_to_string(mac_bytes, MAC_BYTES, macStr);

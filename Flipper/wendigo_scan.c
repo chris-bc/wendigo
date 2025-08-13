@@ -1252,14 +1252,19 @@ uint16_t parseBufferMAC(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
         ++offset;
         memcpy(thisMac, packet + offset, MAC_BYTES);
         offset += MAC_BYTES;
-        if (thisIface == SCAN_WIFI_AP) {
+        if (thisIface == WENDIGO_MAC_WIFI) {
             memcpy(app->interfaces[IF_WIFI].mac_bytes, thisMac, MAC_BYTES);
             app->interfaces[IF_WIFI].initialised = true;
-        } else if (thisIface == SCAN_BLE) {
+        } else if (thisIface == WENDIGO_MAC_BLUETOOTH) {
             memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, thisMac, MAC_BYTES);
             memcpy(app->interfaces[IF_BLE].mac_bytes, thisMac, MAC_BYTES);
             app->interfaces[IF_BT_CLASSIC].initialised = true;
             app->interfaces[IF_BLE].initialised = true;
+        } else if (thisIface == WENDIGO_MAC_BASE) {
+            /* Custom MAC isn't reflected in the get_mac function we're
+             * using, but SoftAP is base MAC + 1, Bluetooth base MAC + 2.
+             * Calculate them. */
+            // TODO: Update MAC retrieval to also include base MAC, and figure out how to display it effectively
         } else {
             wendigo_log_with_packet(MSG_WARN,
                 "MAC packet specifies unknown interface.",

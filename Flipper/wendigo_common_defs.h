@@ -87,9 +87,12 @@
     #define WENDIGO_TAG     "WENDIGO"
 #endif
 
-#define MAX_SSID_LEN    32
-#define MAC_STRLEN      17
-#define MAC_BYTES       6
+/* A warning about this being defined in ESP-IDF appeared out of nowhere */
+#ifndef MAX_SSID_LEN
+    #define MAX_SSID_LEN    (32)
+#endif
+#define MAC_STRLEN          (17)
+#define MAC_BYTES           (6)
 
 /* enum ScanType being replaced with uint8_t */
 extern const uint8_t SCAN_HCI;
@@ -124,6 +127,14 @@ typedef enum SupportedHardwareMask {
     HW_WIFI_SUPPORTED       = 3,
     HW_BT_SUPPORTED         = 12
 } SupportedHardwareMask;
+
+/** Enum to specify MACs for retrieval and updating */
+typedef enum {
+    WENDIGO_MAC_BASE = 0,
+    WENDIGO_MAC_WIFI,
+    WENDIGO_MAC_BLUETOOTH,
+    WENDIGO_MACS_COUNT
+} WendigoMAC;
 
 typedef struct {
     uint16_t uuid16;

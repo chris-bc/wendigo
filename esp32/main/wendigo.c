@@ -294,7 +294,7 @@ esp_err_t cmd_channel(int argc, char **argv) {
 
 /** Get or change the MAC(s) associated with the ESP32.
  * Syntax: "macs [ <type> [ <mac> ] ]", where:
- *  * <type> is 1 for WiFi, 2 for Bluetooth, 0 for Base MAC
+ *  * <type> is 1 for WiFi, 2 for Bluetooth, 5 for Base MAC
  *    (WiFi MAC is Base MAC + 1, Bluetooth is Base MAC + 2)
  *  * <mac> is a 6-byte array.
  * Returns ESP_OK when successful
@@ -305,7 +305,7 @@ esp_err_t cmd_mac(int argc, char **argv) {
      * * if count > 1, argv[1] must be < MACS_COUNT
      * * if count == 3, argv[2] must be a MAC
      */
-    uint8_t interface = 255;
+    uint8_t interface = WENDIGO_MACS_COUNT;
     uint8_t *macBytes = NULL;
     if (argc > 3) {
         // TODO: Log error
@@ -314,7 +314,9 @@ esp_err_t cmd_mac(int argc, char **argv) {
     if (argc > 1) {
         char *endPtr;
         interface = strtol(argv[1], &endPtr, 10);
-        if (endPtr == argv[1] || interface >= MACS_COUNT) {
+        if (endPtr == argv[1] || (interface != WENDIGO_MAC_BASE &&
+                interface != WENDIGO_MAC_WIFI &&
+                interface != WENDIGO_MAC_BLUETOOTH)) {
             /* No number, or the wrong number, found */
             // TODO: Log error
             return ESP_ERR_INVALID_ARG;

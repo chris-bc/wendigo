@@ -19,8 +19,7 @@ uint8_t updated_mac[MAC_BYTES];
 Loading *loading = NULL;
 
 /** Callback invoked by the UART receiver thread when a MAC
- * packet is received.
- * TODO: This handles changing the MAC fine, but once changed causes popup to display on every MAC packet
+ * packet is received and we're waiting for an updated MAC.
  */
 void wendigo_scene_setup_mac_update_complete(void *context) {
     WendigoApp *app = (WendigoApp *)context;
@@ -79,7 +78,7 @@ void wendigo_scene_setup_mac_input_callback(void *context) {
 
     /* Did the user change the MAC? */
     if (memcmp(view_bytes, app->interfaces[app->active_interface].mac_bytes, MAC_BYTES)) {
-        /* MAC was changed - Update ESP32's MAC */
+        /* MAC was changed - Figure out which radio is having its MAC changed */
         bool mac_changed;;
         switch (app->active_interface) {
             case IF_BT_CLASSIC:

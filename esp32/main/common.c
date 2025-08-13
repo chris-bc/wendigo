@@ -11,48 +11,39 @@ uint8_t BANNER_WIDTH = 62;
 /** Retrieve the specified MAC address. mac[] must be an initialised
  * byte array of length MAC_BYTES (6).
  */
-esp_err_t wendigo_get_mac(MacType type, uint8_t mac[MAC_BYTES]) {
-    if (type == MACS_COUNT || !memcmp(mac, nullMac, MAC_BYTES)) {
+esp_err_t wendigo_get_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]) {
+    if (type == WENDIGO_MACS_COUNT || !memcmp(mac, nullMac, MAC_BYTES)) {
         // TODO: Error log
         return ESP_ERR_INVALID_ARG;
     }
-    uint8_t ifType;
-    switch (type) {
-        case MAC_WIFI:
-            ifType = ESP_MAC_WIFI_SOFTAP;
-            break;
-        case MAC_BLUETOOTH:
-            ifType = ESP_MAC_BT;
-            break;
-        case MAC_BASE:
-        default:
-            // TODO: Think more on the best way to handle this
-            ifType = ESP_MAC_BASE;
-            break;
+    uint8_t ifType = type;
+    if (type == WENDIGO_MAC_BASE) {
+        /* This is 5 but I want to be able to use WENDIGO_MACS_COUNT */
+        ifType = ESP_MAC_BASE;
     }
     return esp_read_mac(mac, ifType);
 }
 
 /** Set the specified MAC address to the specified value.
- * Permitted values are defined by the MacType enum. ESP32 supports
+ * Permitted values are defined by the WendigoMAC enum. ESP32 supports
  * separate MACs for ethernet, STA and AP. Currently Wendigo only
  * uses the device in SoftAP mode.
  * Returns ESP_OK on success.
  */
-esp_err_t wendigo_set_mac(MacType type, uint8_t mac[MAC_BYTES]) {
-    if (type == MACS_COUNT || !memcmp(mac, nullMac, MAC_BYTES)) {
+esp_err_t wendigo_set_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]) {
+    if (type == WENDIGO_MACS_COUNT || !memcmp(mac, nullMac, MAC_BYTES)) {
         // TODO: log error
         return ESP_ERR_INVALID_ARG;
     }
     uint8_t ifType;
     switch (type) {
-        case MAC_WIFI:
+        case WENDIGO_MAC_WIFI:
             ifType = ESP_MAC_WIFI_SOFTAP;
             break;
-        case MAC_BLUETOOTH:
+        case WENDIGO_MAC_BLUETOOTH:
             ifType = ESP_MAC_BT;
             break;
-        case MAC_BASE:
+        case WENDIGO_MAC_BASE:
         default:
             ifType = ESP_MAC_BASE;
             break;
@@ -64,7 +55,7 @@ esp_err_t wendigo_set_mac(MacType type, uint8_t mac[MAC_BYTES]) {
  * Packet format is:
  * * Preamble (4 bytes)
  * * Interface count (1 byte). For each interface:
- *   * Type (1 byte, SCAN_WIFI_AP or SCAN_BLE)
+ *   * Type (1 byte, WENDIGO_MAC_WIFI or WENDIGO_MAC_BLUETOOTH)
  *   * MAC (6 bytes)
  * * Terminator (4 bytes)
  */
@@ -75,10 +66,10 @@ esp_err_t wendigo_display_mac_uart(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTE
         return outOfMemory();
     }
     memcpy(packet, PREAMBLE_MAC, PREAMBLE_LEN);
-    packet[WENDIGO_OFFSET_MAC_IF_COUNT] = 0x02;
-    packet[WENDIGO_OFFSET_MAC_BT_TYPE] = (uint8_t)SCAN_BLE;
+    packet[WENDIGO_OFFSET_MAC_IF_COUNT] = 0x02; // TODO: Change to 3 when base MAC is added
+    packet[WENDIGO_OFFSET_MAC_BT_TYPE] = (uint8_t)WENDIGO_MAC_BLUETOOTH;
     memcpy(packet + WENDIGO_OFFSET_MAC_BT_MAC, bda, MAC_BYTES);
-    packet[WENDIGO_OFFSET_MAC_WIFI_TYPE] = (uint8_t)SCAN_WIFI_AP;
+    packet[WENDIGO_OFFSET_MAC_WIFI_TYPE] = (uint8_t)WENDIGO_MAC_WIFI;
     memcpy(packet + WENDIGO_OFFSET_MAC_WIFI_MAC, wifi, MAC_BYTES);
     memcpy(packet + WENDIGO_OFFSET_MAC_TERMINATOR, PACKET_TERM, PREAMBLE_LEN);
     /* Send the packet */
@@ -119,8 +110,8 @@ esp_err_t wendigo_display_mac_interactive(uint8_t wifi[MAC_BYTES], uint8_t bda[M
 esp_err_t wendigo_display_mac() {
     uint8_t wifi[MAC_BYTES];
     uint8_t bda[MAC_BYTES];
-    esp_err_t result = wendigo_get_mac(MAC_WIFI, wifi);
-    result |= wendigo_get_mac(MAC_BLUETOOTH, bda);
+    esp_err_t result = wendigo_get_mac(WENDIGO_MAC_WIFI, wifi);
+    result |= wendigo_get_mac(WENDIGO_MAC_BLUETOOTH, bda);
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
         return result || wendigo_display_mac_interactive(wifi, bda);
     } else {
