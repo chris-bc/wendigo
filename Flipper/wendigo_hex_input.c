@@ -31,7 +31,7 @@ typedef struct {
     Wendigo_TextInputValidatorCallback validator_callback;
     void *validator_callback_context;
     FuriString *validator_text;
-    bool valadator_message_visible;
+    bool validator_message_visible;
 } Wendigo_TextInputModel;
 
 static const uint8_t keyboard_origin_x = 5;
@@ -204,7 +204,7 @@ static void wendigo_hex_input_view_draw_callback(Canvas *canvas, void *_model) {
             }
         }
     }
-    if (model->valadator_message_visible) {
+    if (model->validator_message_visible) {
         canvas_set_font(canvas, FontSecondary);
         canvas_set_color(canvas, ColorWhite);
         canvas_draw_box(canvas, 8, 10, 110, 48);
@@ -285,7 +285,7 @@ static void wendigo_hex_input_handle_ok(
         if (model->validator_callback &&
                 (!model->validator_callback(
                 model->text_buffer, model->validator_text, model->validator_callback_context))) {
-            model->valadator_message_visible = true;
+            model->validator_message_visible = true;
             furi_timer_start(wendigo_text_input->timer, furi_kernel_get_tick_frequency() * 4);
         } else if (model->callback != 0 && text_length > 0) {
             model->callback(model->callback_context);
@@ -316,8 +316,8 @@ static bool wendigo_hex_input_view_input_callback(InputEvent *event, void *conte
     Wendigo_TextInputModel *model = view_get_model(wendigo_text_input->view);
 
     if ((!(event->type == InputTypePress) && !(event->type == InputTypeRelease)) &&
-            model->valadator_message_visible) {
-        model->valadator_message_visible = false;
+            model->validator_message_visible) {
+        model->validator_message_visible = false;
         consumed = true;
     } else if (event->type == InputTypeShort) {
         consumed = true;
@@ -404,7 +404,7 @@ void wendigo_hex_input_timer_callback(void *context) {
     with_view_model(
         wendigo_text_input->view,
         Wendigo_TextInputModel * model,
-        { model->valadator_message_visible = false; }, // TODO: Look into this (validator is misspelled)
+        { model->validator_message_visible = false; },
         true);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_timer_callback()");
 }
@@ -472,7 +472,7 @@ void wendigo_hex_input_reset(Wendigo_TextInput *wendigo_text_input) {
             model->validator_callback = NULL;
             model->validator_callback_context = NULL;
             furi_string_reset(model->validator_text);
-            model->valadator_message_visible = false;
+            model->validator_message_visible = false;
         },
         true);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_hex_input_reset()");

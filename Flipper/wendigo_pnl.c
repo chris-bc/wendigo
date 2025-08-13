@@ -243,56 +243,6 @@ uint8_t get_networks_for_device(WendigoApp *app, wendigo_device *dev, char ***re
     return nets_count;
 }
 
-// TODO: May not actually need this function?
-// CAUTION: This function is incomplete, usused and has not been tested
-uint16_t get_all_networks(WendigoApp *app) {
-    FURI_LOG_T(WENDIGO_TAG, "Start get_all_networks()");
-    char **nets;
-    int16_t count = 0;
-    /* Input validation */
-    if (devices == NULL || devices_count == 0 || app == NULL) {
-        FURI_LOG_T(WENDIGO_TAG, "End get_all_networks() - Invalid arguments.");
-        return count;
-    }
-    /* First find the size of our array */
-    for (uint16_t i = 0; i < devices_count; ++i) {
-        if (devices[i] != NULL && devices[i]->scanType == SCAN_WIFI_STA) {
-            count += count_networks_for_device(devices[i]);
-        }
-    }
-    if (count == 0) {
-        FURI_LOG_T(WENDIGO_TAG, "End get_all_networks() - No networks.");
-        return count;
-    }
-    nets = malloc(sizeof(char *) * count);
-    if (nets == NULL) {
-        char *msg = malloc(sizeof(char) * 44);
-        if (msg == NULL) {
-            wendigo_log(MSG_ERROR, "Failed to allocate memory to stringify PNLs.");
-        } else {
-            snprintf(msg, 44, "Failed to allocatte memory for %d PNLs.", count);
-            wendigo_log(MSG_ERROR, msg);
-            free(msg);
-        }
-        FURI_LOG_T(WENDIGO_TAG, "End get_all_networks() - Can't allocate SSID array.");
-        return 0;
-    }
-    /* Call get_networks_for_device() on each device and concatenate their results */
-    char **dev_nets;
-    uint8_t dev_count;
-    for (uint16_t i = 0; i < devices_count; ++i) {
-        if (devices[i] != NULL && devices[i]->scanType == SCAN_WIFI_STA) {
-            dev_count = get_networks_for_device(app, devices[i], &dev_nets);
-            if (dev_count > 0 && dev_nets != NULL) {
-                /* Copy dev_nets into nets */
-                // TODO Maintain an index into nets[].
-            }
-        }
-    }
-    FURI_LOG_T(WENDIGO_TAG, "End get_all_networks()");
-    return 0;
-}
-
 /** Search for a PreferredNetwork representing the specified SSID, creating
  * the PreferredNetwork if it does not exist and returning a reference to it.
  * Returns NULL if the SSID is not in networks[] and additional memory could
@@ -358,13 +308,13 @@ PreferredNetwork *fetch_or_create_pnl(char *ssid, PNL_Result *result) {
 
 /** Search the specified PreferredNetwork for a device containing the
  * specified MAC. Returns pnl->device_count if not found.
- * TODO: If pnl is NULL this function will cause a NULL reference exception.
- *       I couldn't think of an elegant way to handle that condition other
- *       than refactoring PNL_Result to include an index, and that's too much
- *       work to do at the moment.
  */
 uint8_t pnl_index_of_mac(PreferredNetwork *pnl, uint8_t mac[MAC_BYTES]) {
     FURI_LOG_T(WENDIGO_TAG, "Start pnl_index_of_mac()");
+    if (pnl == NULL || pnl->devices == NULL) {
+        wendigo_log(MSG_ERROR, "pnl_index_of_mac() called with NULL arguments.");
+        return 0;
+    }
     uint8_t idx;
     for (idx = 0; idx < pnl->device_count &&
         (pnl->devices[idx] == NULL ||
@@ -375,11 +325,13 @@ uint8_t pnl_index_of_mac(PreferredNetwork *pnl, uint8_t mac[MAC_BYTES]) {
 
 /** Search the specified PreferredNetwork for a device with the same MAC as
  * the specified device. Returns pnl->device_count if not found.
- * TODO: If pnl is NULL this function will cause a NULL reference exception.
- *       See above.
  */
 uint8_t pnl_index_of_device(PreferredNetwork *pnl, wendigo_device *dev) {
     FURI_LOG_T(WENDIGO_TAG, "Start+End pnl_index_of_device()");
+    if (dev == NULL || pnl == NULL || pnl->devices == NULL) {
+        wendigo_log(MSG_ERROR, "pnl_index_of_device() called with NULL arguments.");
+        return 0;
+    }
     return pnl_index_of_mac(pnl, dev->mac);
 }
 

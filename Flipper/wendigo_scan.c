@@ -71,23 +71,6 @@ uint16_t end_of_packet(uint8_t *theBytes, uint16_t size) {
     return result;
 }
 
-/** Returns the index of the first occurrence of `\n` in `theString`, searching
- *  the first `size` characters. Returns size if not found (which is outside the
- *  array bounds).
- *  TODO: This function is a candidate for deletion now that packets use an
- *  alternate packet terminator
- */
-uint16_t bytes_contains_newline(uint8_t *theBytes, uint16_t size) {
-    FURI_LOG_T(WENDIGO_TAG, "Start bytes_contains_newline()");
-    if (theBytes == NULL) {
-        return size;
-    }
-    uint16_t result = 0;
-    for (; result < size && theBytes[result] != '\n'; ++result) { }
-    FURI_LOG_T(WENDIGO_TAG, "End bytes_contains_newline()");
-    return result;
-}
-
 /** Send the status command to ESP32 */
 void wendigo_esp_status(WendigoApp *app) {
     char cmd[] = "s\n";
@@ -798,7 +781,9 @@ uint16_t parseBufferBluetooth(WendigoApp *app, uint8_t *packet, uint16_t packetL
     }
     wendigo_device *dev = malloc(sizeof(wendigo_device));
     if (dev == NULL) {
-        // TODO: Panic. For now just skip the device
+        wendigo_log_with_packet(MSG_ERROR,
+            "parseBufferBluetooth(): Unable to allocate memory for a wendigo_device, skipping packet.",
+            packet, packetLen);
         return packetLen;
     }
     dev->radio.bluetooth.bdname = NULL;
@@ -1025,7 +1010,6 @@ uint16_t parseBufferWifiAp(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
 
 uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferWifiSta()");
-    // TODO: Refactor packet length to uint16_t
     /* This flag allows us to skip validation that the packet is the correct
      * length. Used when the Preferred Network List can't be malloc()d, to
      * allow the rest of the packet to be used. */
@@ -1166,8 +1150,7 @@ uint16_t parseBufferWifiSta(WendigoApp *app, uint8_t *packet, uint16_t packetLen
         }
     }
     if (short_pkt) {
-        // TODO: Log error
-        wendigo_log(MSG_ERROR, "STA packet too short to extract PNL.");
+        wendigo_log_with_packet(MSG_ERROR, "STA packet too short to extract PNL.", packet, packetLen);
         if (pnl_idx > 0) {
             for (uint8_t i = 0; i < pnl_idx; ++i) {
                 if (dev->radio.sta.saved_networks[i] != NULL) {
@@ -1208,8 +1191,15 @@ uint16_t parseBufferVersion(WendigoApp *app, uint8_t *packet, uint16_t packetLen
     uint16_t messageLen = endSeq + 26 + strlen(FLIPPER_WENDIGO_VERSION);
     char *versionStr = realloc(wendigo_popup_text, sizeof(char) * messageLen);
     if (versionStr == NULL) {
-        // TODO: Panic
-        // For now just consume this message
+        char *msg = malloc(sizeof(char) * 59);
+        if (msg == NULL) {
+            wendigo_log_with_packet(MSG_ERROR, "Unable to reallocate memory to display version packet.", packet, packetLen);
+        } else {
+            snprintf(msg, 59, "Unable to reallocate %d bytes to display version packet.", sizeof(char) * messageLen);
+            wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
+            free(msg);
+        }
+        // Consume this message
         return endSeq + PREAMBLE_LEN;
     }
     wendigo_popup_text = versionStr;
@@ -1287,7 +1277,6 @@ uint16_t parseBufferMAC(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     }
     /* Invoke the 'MAC received' callback if there is one */
     wendigo_mac_rcvd_callback(app);
-    // TODO: I'd prefer to have this on a different thread from the UART RX - pub/sub for receiver/parser!
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferMAC()");
     return packetLen;
 }
@@ -1454,8 +1443,7 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     WendigoApp *app = context;
 
     /* Get a mutex lock on the buffer */
-    // TODO: I'm assuming it's relatively safe to ignore the result here
-    furi_mutex_acquire(app->bufferMutex, FuriWaitForever);
+    furi_check(furi_mutex_acquire(app->bufferMutex, FuriWaitForever));
 
     /* Extend the buffer if necessary */
     if (bufferLen + len >= bufferCap) {
@@ -1465,8 +1453,14 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
         FURI_LOG_D(WENDIGO_TAG, "Expanding buffer from %d to %d", bufferCap, newCapacity);
         /* Will this exceed the maximum capacity? */
         if (newCapacity > BUFFER_MAX_SIZE) {
-            // TODO: Come up with an alternate way to do this
-            FURI_LOG_D(WENDIGO_TAG, "Buffer too large");
+            /* The buffer has reached the maximum-configured size. This is an exceptional circumstance,
+             * it doesn't need to be handled elegantly - The only time I've heard of it happening was
+             * someone running Flipper-Wendigo with an ESP32 running Marauder. Marauder was sending data
+             * to Flipper, but a packet terminator was never received and the stack eventually overflowed.
+             */
+            FURI_LOG_D(WENDIGO_TAG, "Buffer too large, resetting...");
+            bzero(buffer, bufferCap);
+            bufferLen = 0;
             /* Release mutex before returning */
             furi_mutex_release(app->bufferMutex);
             return;
