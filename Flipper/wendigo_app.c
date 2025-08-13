@@ -39,6 +39,7 @@ void wendigo_set_mac_rcvd_callback(void (*update_callback)(void *)) {
 /** Ask ESP32-Wendigo to change the MAC for the specified interface. */
 void wendigo_mac_set(WendigoApp *app, InterfaceType type,
         uint8_t mac_bytes[MAC_BYTES], void (*update_callback)(void *)) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_mac_set()");
     mac_rcvd_callback = update_callback;
     char *cmd = malloc(sizeof(char) * 28);
     char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
@@ -67,7 +68,7 @@ void wendigo_mac_set(WendigoApp *app, InterfaceType type,
     }
     bytes_to_string(mac_bytes, MAC_BYTES, macStr);
     snprintf(cmd, 28, "mac %d %s\n", ifType, macStr);
-    FURI_LOG_I("wendigo_mac_set()", "Sending command \"%s\"", cmd);
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_mac_set() - Sending command \"%s\"", cmd);
     wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd));
     free(macStr);
     free(cmd);
