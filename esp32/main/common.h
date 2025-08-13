@@ -79,6 +79,7 @@ esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac);
 esp_err_t wendigo_string_to_bytes(char *strMac, uint8_t *bMac);
 esp_err_t outOfMemory();
 uint8_t wendigo_supported_features();
+bool wendigo_is_supported(SupportedHardwareMask feature);
 esp_err_t wendigo_display_mac();
 esp_err_t wendigo_set_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]);
 esp_err_t wendigo_get_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]);

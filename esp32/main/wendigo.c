@@ -361,31 +361,10 @@ esp_err_t cmd_mac(int argc, char **argv) {
  *  * Metrics of device caches
  */
 esp_err_t cmd_status(int argc, char **argv) {
-    // TODO: Refactor to use wendigo_supported_features()
-    #if defined(CONFIG_DECODE_UUIDS)
-        bool uuidDictionarySupported = true;
-    #else
-        bool uuidDictionarySupported = false;
-    #endif
-    #if defined(CONFIG_BT_CLASSIC_ENABLED)
-        bool btClassicSupported = true;
-    #else
-        bool btClassicSupported = false;
-    #endif
-    #if defined(CONFIG_BT_BLE_ENABLED)
-        bool btBLESupported = true;
-    #else
-        bool btBLESupported = false;
-    #endif
-    #if defined(CONFIG_ESP_WIFI_ENABLED) || defined(CONFIG_ESP_HOST_WIFI_ENABLED)
-        bool wifiSupported = true;
-    #else
-        bool wifiSupported = false;
-    #endif
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-        display_status_interactive(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
+        display_status_interactive();
     } else {
-        display_status_uart(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
+        display_status_uart();
     }
     return ESP_OK;
 }

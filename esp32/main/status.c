@@ -85,8 +85,12 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
     }
 }
 
-void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupported,
-                                bool btBLESupported, bool wifiSupported) {
+void display_status_interactive() {
+    uint8_t supported = wendigo_supported_features();
+    bool uuidDictionarySupported = ((supported & HW_BT_UUID_DICTIONARY) == HW_BT_UUID_DICTIONARY);
+    bool btClassicSupported = ((supported & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED);
+    bool btBLESupported = ((supported & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED);
+    bool wifiSupported = ((supported & HW_WIFI_SUPPORTED) != 0);
     const char *uuidDictionary = (uuidDictionarySupported) ? STRING_YES : STRING_NO;
     const char *btClassicSupport = (btClassicSupported) ? STRING_YES : STRING_NO;
     const char *btBLESupport = (btBLESupported) ? STRING_YES : STRING_NO;
@@ -141,7 +145,6 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
     print_row_end(4);
     print_empty_row(53);
     print_star(53, true);
-    // TODO: Device counts
 }
 
 /** Send status information to Flipper Zero.
@@ -154,8 +157,13 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
  *  * The attribute value (the terminating '\0' is ommitted)
  *  The packet is terminated with 4 bytes of 0xAA and 4 bytes of 0xFF.
  */
-void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
-                                bool btBLESupported, bool wifiSupported) {
+void display_status_uart() {
+    /* Get features supported by the ESP32 chip */
+    uint8_t supported = wendigo_supported_features();
+    bool uuidDictionarySupported = ((supported & HW_BT_UUID_DICTIONARY) == HW_BT_UUID_DICTIONARY);
+    bool btClassicSupported = ((supported & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED);
+    bool btBLESupported = ((supported & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED);
+    bool wifiSupported = ((supported & HW_WIFI_SUPPORTED) != 0);
     initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
 
     if (xSemaphoreTake(uartMutex, portMAX_DELAY)) { /* Wait for the talking stick */

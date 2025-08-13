@@ -50,11 +50,8 @@ esp_err_t wendigo_set_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]) {
     }
     /* Only change MAC if the specified interface is supported */
     uint8_t supported = wendigo_supported_features();
-    if ((ifType == ESP_MAC_BT && ((supported & HW_BLE_SUPPORTED) != HW_BLE_SUPPORTED) &&
-            ((supported & HW_BT_CLASSIC_SUPPORTED) != HW_BT_CLASSIC_SUPPORTED)) ||
-            (ifType == ESP_MAC_WIFI_SOFTAP &&
-            ((supported & HW_WIFI_24_SUPPORTED) != HW_WIFI_24_SUPPORTED) &&
-            ((supported & HW_WIFI_5_SUPPORTED) != HW_WIFI_5_SUPPORTED))) {
+    if ((ifType == ESP_MAC_BT && ((supported & HW_BT_SUPPORTED) == 0)) ||
+            (ifType == ESP_MAC_WIFI_SOFTAP && ((supported & HW_WIFI_SUPPORTED) == 0))) {
         ESP_LOGE(TAG, "wendigo_set_mac(): This chip does not supported %s.",
             (ifType == ESP_MAC_BT) ? "Bluetooth" : "WiFi");
         return ESP_ERR_NOT_SUPPORTED;
@@ -79,12 +76,10 @@ esp_err_t wendigo_display_mac_uart(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTE
     uint8_t supported = wendigo_supported_features();
     /* Count the number of interfaces supported by this chip */
     uint8_t supportedCount = 0;
-    if (((supported & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED) ||
-            ((supported & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED)) {
+    if ((supported & HW_BT_SUPPORTED) != 0) {
         ++supportedCount;
     }
-    if (((supported & HW_WIFI_24_SUPPORTED) == HW_WIFI_24_SUPPORTED) ||
-            ((supported & HW_WIFI_5_SUPPORTED) == HW_WIFI_5_SUPPORTED)) {
+    if ((supported & HW_WIFI_SUPPORTED) != 0) {
         ++supportedCount;
     }
     // TODO: Include base MAC later
@@ -94,15 +89,13 @@ esp_err_t wendigo_display_mac_uart(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTE
      * have one or two MACs to send. */
     uint8_t offset = WENDIGO_OFFSET_MAC_IF_COUNT + 1;
     /* Is Bluetooth supported? */
-    if (((supported & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED) ||
-            ((supported & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED)) {
+    if ((supported & HW_BT_SUPPORTED) != 0) {
         packet[offset++] = (uint8_t)WENDIGO_MAC_BLUETOOTH;
         memcpy(packet + offset, bda, MAC_BYTES);
         offset += MAC_BYTES;
     }
     /* Is WiFi supported? */
-    if (((supported & HW_WIFI_24_SUPPORTED) == HW_WIFI_24_SUPPORTED) ||
-            ((supported & HW_WIFI_5_SUPPORTED) == HW_WIFI_5_SUPPORTED)) {
+    if ((supported & HW_WIFI_SUPPORTED) != 0) {
         packet[offset++] = (uint8_t)WENDIGO_MAC_WIFI;
         memcpy(packet + offset, wifi, MAC_BYTES);
         offset += MAC_BYTES;
@@ -132,8 +125,7 @@ esp_err_t wendigo_display_mac_interactive(uint8_t wifi[MAC_BYTES], uint8_t bda[M
     print_empty_row(BANNER_WIDTH);
     print_row_start(7);
     /* Only display MACs if the chip supports the interface */
-    if (((supported & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED) ||
-            ((supported & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED)) {
+    if ((supported & HW_BT_SUPPORTED) != 0) {
         result |= mac_bytes_to_string(bda, macStr);
     } else {
         snprintf(macStr, MAC_STRLEN + 1, "Not Supported.");
@@ -142,8 +134,7 @@ esp_err_t wendigo_display_mac_interactive(uint8_t wifi[MAC_BYTES], uint8_t bda[M
     print_row_end(7);
     print_row_start(7);
     /* Check whether WiFi is supported */
-    if (((supported & HW_WIFI_24_SUPPORTED) == HW_WIFI_24_SUPPORTED) ||
-            ((supported & HW_WIFI_5_SUPPORTED) == HW_WIFI_5_SUPPORTED)) {
+    if ((supported & HW_WIFI_SUPPORTED) != 0) {
         result |= mac_bytes_to_string(wifi, macStr);
     } else {
         snprintf(macStr, MAC_STRLEN + 1, "Not Supported.");
@@ -164,15 +155,13 @@ esp_err_t wendigo_display_mac() {
     /* Check hardware support for WiFi & Bluetooth before trying to get its MAC */
     uint8_t supportedFeatures = wendigo_supported_features();
     /* Get the MAC if the chip supports WiFi */
-    if (((supportedFeatures & HW_WIFI_24_SUPPORTED) == HW_WIFI_24_SUPPORTED) ||
-            ((supportedFeatures & HW_WIFI_5_SUPPORTED) == HW_WIFI_5_SUPPORTED)) {
+    if ((supportedFeatures & HW_WIFI_SUPPORTED) != 0) {
         result |= wendigo_get_mac(WENDIGO_MAC_WIFI, wifi);
     } else {
         memcpy(wifi, nullMac, MAC_BYTES);
     }
     /* Get the BDA if the chip supports Bluetooth */
-    if (((supportedFeatures & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED) ||
-            ((supportedFeatures & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED)) {
+    if ((supportedFeatures & HW_BT_SUPPORTED) != 0) {
         result |= wendigo_get_mac(WENDIGO_MAC_BLUETOOTH, bda);
     } else {
         memcpy(bda, nullMac, MAC_BYTES);
@@ -683,4 +672,10 @@ uint8_t wendigo_supported_features() {
     #endif
     // TODO: Where is 5G defined?
     return result;
+}
+
+/** Check whether the specified hardware feature is supported by the chip */
+bool wendigo_is_supported(SupportedHardwareMask feature) {
+    uint8_t supported = wendigo_supported_features();
+    return ((supported & feature) == feature);
 }
