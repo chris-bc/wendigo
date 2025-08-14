@@ -76,3 +76,4 @@ typedef struct DeviceListInstance {
 * enum wifi_2g_channel_bit_t
 * enum wifi_5g_channel_bit_t
 
+malloc(sizeof(uint8_t *)) vs. malloc(sizeof(uint8_t)) approx line 1471
