@@ -79,8 +79,10 @@ void wendigo_esp_status(WendigoApp *app) {
 
 /** Send the version command to ESP32 */
 void wendigo_version(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_version()");
     char cmd[] = "v\n";
     wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd) + 1);
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_version()");
 }
 
 /** Enable or disable Wendigo scanning on the specified interface.
@@ -1441,7 +1443,38 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     WendigoApp *app = context;
 
     /* Get a mutex lock on the buffer */
-    furi_check(furi_mutex_acquire(app->bufferMutex, FuriWaitForever));
+    FuriStatus status = furi_mutex_acquire(app->bufferMutex, FuriWaitForever);
+    if (status != FuriStatusOk) {
+        uint8_t statusLen = 29;
+        char *statusStr = malloc(statusLen);
+        if (statusStr == NULL) {
+            // TODO: Convert to wendigo_log() after it supports variable arguments
+            FURI_LOG_W("wendigo_scan_handle_rx_data_cb()",
+                "furi_mutex_acquire() returned %d, unable to allocate %d bytes to display a string representation.",
+                status, statusLen);
+        } else {
+            furi_status_to_string(status, statusStr, statusLen);
+            statusStr[statusLen - 1] = '\0'; /* Just in case */
+            // wendigo_scan_handle_rx_data_cb(): furi_mutex_acquire() returned %s. 66+strlen
+            uint8_t msgLen = 66;
+            if (statusStr != NULL) {
+                msgLen += strlen(statusStr);
+            }
+            char *msg = malloc(msgLen);
+            if (msg == NULL) {
+                FURI_LOG_W("wendigo_scan_handle_rx_data_cb()",
+                    "furi_mutex_acquire() returned %s and Wendigo was unable to allocate %d bytes for log message.",
+                    (statusStr == NULL) ? "NULL" : statusStr, msgLen);
+            } else {
+                snprintf(msg, msgLen,
+                    "wendigo_scan_handle_rx_data_cb(): furi_mutex_acquire() returned %s.",
+                    statusStr);
+                wendigo_log(MSG_WARN, msg);
+                free(msg);
+            }
+            free(statusStr);
+        }
+    }
 
     /* Extend the buffer if necessary */
     if (bufferLen + len >= bufferCap) {

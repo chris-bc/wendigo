@@ -199,3 +199,4 @@ void wendigo_set_mac_rcvd_callback(void (*update_callback)(void *));
 void wendigo_mac_set(WendigoApp *app, InterfaceType type,
     uint8_t mac_bytes[MAC_BYTES], void (*update_callback)(void *));
 void wendigo_mac_rcvd_callback(WendigoApp *app);
+char *furi_status_to_string(FuriStatus status, char *result, uint8_t resultLen);

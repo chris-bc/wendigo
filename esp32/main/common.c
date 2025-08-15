@@ -104,7 +104,7 @@ esp_err_t wendigo_display_mac_uart(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTE
     /* Send the packet */
     esp_err_t result = ESP_OK;
     if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
-        send_bytes(packet, offset);
+        send_bytes(packet, offset + PREAMBLE_LEN);
         xSemaphoreGive(uartMutex);
     } else {
         result = ESP_ERR_INVALID_STATE;

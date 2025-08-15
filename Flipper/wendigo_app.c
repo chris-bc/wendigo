@@ -391,3 +391,52 @@ void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes) {
     p_out[-1] = 0;
     FURI_LOG_T(WENDIGO_TAG, "End bytes_to_string()");
 }
+
+/** Return a human-readable representation of a FuriStatus value. The provided
+ * string `result` should be an initialised string with capacity `resultLen`.
+ * result should have a sufficient length to cater for the statuses that are
+ * expected to be received, although the result will be truncated to stay within
+ * the specified length.
+ * The maximum string length returned by this function (excluding the terminating
+ * NULL byte) is 28, however for practical purposes - unless you're developing new
+ * functions that use this function - can be considered to be 22.
+ * The resulting string is copied into result, and a pointer to result is provided
+ * as the return value.
+ */
+char *furi_status_to_string(FuriStatus status, char *result, uint8_t resultLen) {
+    FURI_LOG_T(WENDIGO_TAG, "Start furi_status_to_string()");
+    if (result == NULL || strlen(result) == 0 || resultLen == 0) {
+        wendigo_log(MSG_ERROR, "Invalid arguments provided to furi_status_to_string()");
+        FURI_LOG_T(WENDIGO_TAG, "End furi_status_to_string()");
+        return NULL;
+    }
+    bzero(result, resultLen);
+    switch (status) {
+        case FuriStatusOk:
+            strncpy(result, "OK", resultLen);
+            break;
+        case FuriStatusError:
+            strncpy(result, "Error", resultLen);
+            break;
+        case FuriStatusErrorTimeout:
+            strncpy(result, "Error: Timeout", resultLen);
+            break;
+        case FuriStatusErrorResource:
+            strncpy(result, "Resource Not Available", resultLen);
+            break;
+        case FuriStatusErrorParameter:
+            strncpy(result, "Parameter Error", resultLen);
+            break;
+        case FuriStatusErrorNoMemory:
+            strncpy(result, "Out of Memory", resultLen);
+            break;
+        case FuriStatusErrorISR:
+            strncpy(result, "Cannot be called from an ISR", resultLen);
+            break;
+        default:
+            strncpy(result, "Unknown Error", resultLen);
+            break;
+    }
+    FURI_LOG_T(WENDIGO_TAG, "End furi_status_to_string()");
+    return result;
+}
