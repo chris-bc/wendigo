@@ -3,6 +3,7 @@
 This section is a running list of current priorities.
 
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
+* [ ] Add "m" command as a shortcut to mac
 * [ ] BUG: Wendigo "hangs" after several minutes of scanning
   * [ ] Scanning for a short period, stopping it, and spending a long time exploring discovered devices doesn't cause any issues so this is definitely related to scanning
   * [ ] Could the UART thread be deadlocked?
@@ -20,6 +21,10 @@ This section is a running list of current priorities.
   * [ ] Package the packet, along with its length, into a struct and add the struct to a message queue
   * [ ] A new worker, running on a new thread, will wake up when an item is in the queue and this thread will parse the packet and make necessary changes to the data model.
   * [ ] This reduces the time the UART receiver is doing things other than receiving UART.
+* [ ] Channel command overwrites enabled channels when setting channels
+  * [ ] This approach is preferable when the client is always an application, but inconvenient in interactive mode
+  * [ ] Make it possible to select/deselect a subset of channels at a time
+  * [ ] Don't change the current implementation (too much) because it's a simple integration for Flipper-Wendigo
 * [X] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped - Use a single menu option that changes its text, similar to Tag/Untag.
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
