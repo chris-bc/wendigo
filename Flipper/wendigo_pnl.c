@@ -113,17 +113,14 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
             if (new_networks == NULL) {
                 strncpy(networks[networks_count].ssid, devices[i]->radio.sta.saved_networks[j],
                     strlen(devices[i]->radio.sta.saved_networks[j]));
-                // TODO: Once bugs are addressed, test to confirm that the following 2 lines can be removed
                 networks[networks_count].device_count = 0;
                 networks[networks_count].devices = NULL;
                 new_networks = &(networks[networks_count++]);
             }
             /* Is devices[i] in new_networks->devices[]? */
             uint8_t devIdx;
-            // TODO: Should I just compare pointer addresses instead of MAC?
             for (devIdx = 0; devIdx < new_networks->device_count &&
-                (new_networks->devices[devIdx] == NULL ||
-                    memcmp(new_networks->devices[devIdx]->mac, devices[i]->mac, MAC_BYTES));
+                new_networks->devices[devIdx] != devices[i];
                 ++devIdx) { }
             if (devIdx == new_networks->device_count) {
                 /* Append devices[i] to new_networks->devices[] */
