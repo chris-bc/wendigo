@@ -27,7 +27,7 @@ This means:
 * The command takes one optional parameter
 * If provided, the parameter can be the digit 0, 1, or 2.
 
-The [Commands]("ESP32-Wendigo-Commands.md#commands") section of this document describes all available commands.
+The [Commands](ESP32-Wendigo-Commands.md#commands) section of this document describes all available commands.
 
 <a id="connecting"></a>
 #### Connecting to ESP32-Wendigo
