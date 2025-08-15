@@ -38,7 +38,7 @@ The [Commands](ESP32-Wendigo-Commands.md#commands) section of this document desc
 
   ```I (3783) WENDIGO: Enabling Interactive Mode...Done.```
 
-At this point you can run any Wendigo command. Refer to the [Commands]("#commands") section to explore your nearby radio spectra, but as a starting point try these:
+At this point you can run any Wendigo command. Refer to the [Commands](ESP32-Wendigo-Commands.md#commands) section to explore your nearby radio spectra, but as a starting point try these:
 * ```b[le] 1``` (Start BLE scanning)
 * Wait for around a minute and then run ```b[le] 0``` (disable BLE scanning)
 * ```s[tatus]``` (Display status information about the device and discovered devices)
