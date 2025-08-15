@@ -103,7 +103,7 @@ At a high level, these are Wendigo's features - Both implemented and planned:
 * Put this list into Wigle to get a good idea where the device's owner lives, works and plays
 * [X] Display all networks that probes were received for and support browsing from probed SSIDs to the Stations that probed for them.
 * [ ] 5GHz WiFi channels ([requires ESP32-C5](https://www.aliexpress.com/item/1005009128201189.html))
-* [ ] Change Bluetooth BDA and WiFi MAC
+* [X] Change Bluetooth BDA and WiFi MAC
 * [ ] Use Flipper Zero's LED to indicate events
 
 More might come after this - Or it might not. My previous Flipper app, [Gravity](https://github.com/chris-bc/flipper-gravity), tried to include everything including the kitchen sink, and as a result it did everything poorly. My primary goal with Wendigo is a quick and easy way to do reconnaissance and extract as much information as possible from a device(s), displaying everything using native Flipper UI components.
@@ -116,11 +116,26 @@ More might come after this - Or it might not. My previous Flipper app, [Gravity]
 
 <a id ="whats-new-050"></a>
 
-### v0.5.0 (So far)
+### v0.5.0
 
 * Because crowded areas get poor results running BLE and WiFi simultaneously, restructured menu to simplify running one or the other.
-* (TODO) Additional packets: associate, authenticate
-* (TODO) BT services
+* Partial implementation of dditional 802.11 packets
+  * Association request
+  * Association response
+  * Reassociation request
+  * Reassociation response
+  * Currently only extracting basic device information, needs further attention to extract SSID and potentially other attributes.
+* View and change the ESP32 WiFi MAC and Bluetooth Device Address (BDA - Bluetooth's equivalent of a MAC)
+* Probe ESP32 for supported features, including:
+  * Bluetooth Classic
+  * Bluetooth Low Energy
+  * WiFi (2.4GHz)
+  * WiFi (5GHz)
+  * Bluetooth UUID dictionary (ESP32-Wendigo can be configured to exclude this if storage is limited)
+* MAC get/set functions will only get or set the MAC for a supported interface
+* Refactoring all functions to use this will take some time.
+
+The stability of this release isn't brilliant - After a few minutes of scanning the application "hangs". I was initially reluctant to release this, but I wanted to merge the MAC features into the main branch before starting to debug it, and I have a feeling this problem was present in v0.4.0. Hopefully v0.5.1 will follow shortly.
 
 <a id="whats-new-040"></a>
 
@@ -433,8 +448,8 @@ This section is a running list of current priorities.
   * [ ] ESP32 service transmission
   * [ ] Flipper service parsing
   * [ ] Flipper service data model
-* [ ] Settings
-  * [ ] Retrieve and change MACs
+* [X] Settings
+  * [X] Retrieve and change MACs
   * [X] Enable/Disable channels
 * [ ] Display device details
   * [ ] Update details when device updated

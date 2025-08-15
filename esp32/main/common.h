@@ -7,6 +7,7 @@
 #include <esp_wifi.h>
 #include <esp_wifi_types.h>
 #include <esp_gap_ble_api.h>
+#include "esp_mac.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -17,7 +18,7 @@
 
 #include "wendigo_common_defs.h"
 
-#define WENDIGO_VERSION "0.4.0"
+#define WENDIGO_VERSION "0.5.0"
 
 /* Macro to mark a variable as unused to prevent compiler warnings */
 #ifndef UNUSED
@@ -65,6 +66,7 @@ SemaphoreHandle_t uartMutex;
 /* Device caches accessible across Wendigo */
 extern uint16_t devices_count;
 extern wendigo_device *devices;
+extern uint8_t BANNER_WIDTH;
 
 /* Device factories */
 wendigo_device *wendigo_new_device(uint8_t *mac);
@@ -76,9 +78,17 @@ esp_err_t wendigo_bytes_to_string(uint8_t *bytes, char *string, int byteCount);
 esp_err_t mac_bytes_to_string(uint8_t *bMac, char *strMac);
 esp_err_t wendigo_string_to_bytes(char *strMac, uint8_t *bMac);
 esp_err_t outOfMemory();
+uint8_t wendigo_supported_features();
+bool wendigo_is_supported(SupportedHardwareMask feature);
+esp_err_t wendigo_display_mac();
+esp_err_t wendigo_set_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]);
+esp_err_t wendigo_get_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]);
 
 void print_star(int size, bool newline);
 void print_space(int size, bool newline);
+void print_row_start(int spaces);
+void print_row_end(int spaces);
+void print_empty_row(int lineLength);
 void repeat_bytes(uint8_t byte, uint8_t count);
 void send_bytes(uint8_t *bytes, uint8_t size);
 void send_end_of_packet();

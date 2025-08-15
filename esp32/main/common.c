@@ -5,6 +5,174 @@ uint16_t devices_count = 0;
 uint16_t devices_capacity = 0;
 wendigo_device *devices;
 
+/** Banner width when in interactive mode */
+uint8_t BANNER_WIDTH = 62;
+
+/** Retrieve the specified MAC address. mac[] must be an initialised
+ * byte array of length MAC_BYTES (6).
+ */
+esp_err_t wendigo_get_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]) {
+    if (type == WENDIGO_MACS_COUNT || !memcmp(mac, nullMac, MAC_BYTES)) {
+        ESP_LOGE(TAG, "wendigo_get_mac() called with invalid arguments.");
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint8_t ifType = type;
+    if (type == WENDIGO_MAC_BASE) {
+        /* This is 5 but I want to be able to use WENDIGO_MACS_COUNT */
+        ifType = ESP_MAC_BASE;
+    }
+    return esp_read_mac(mac, ifType);
+}
+
+/** Set the specified MAC address to the specified value.
+ * Permitted values are defined by the WendigoMAC enum. ESP32 supports
+ * separate MACs for ethernet, STA and AP. Currently Wendigo only
+ * uses the device in SoftAP mode.
+ * Returns ESP_OK on success.
+ */
+esp_err_t wendigo_set_mac(WendigoMAC type, uint8_t mac[MAC_BYTES]) {
+    if (type == WENDIGO_MACS_COUNT || !memcmp(mac, nullMac, MAC_BYTES)) {
+        ESP_LOGE(TAG, "wendigo_set_mac() called with invalid arguments.");
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint8_t ifType;
+    switch (type) {
+        case WENDIGO_MAC_WIFI:
+            ifType = ESP_MAC_WIFI_SOFTAP;
+            break;
+        case WENDIGO_MAC_BLUETOOTH:
+            ifType = ESP_MAC_BT;
+            break;
+        case WENDIGO_MAC_BASE:
+        default:
+            ifType = ESP_MAC_BASE;
+            break;
+    }
+    /* Only change MAC if the specified interface is supported */
+    uint8_t supported = wendigo_supported_features();
+    if ((ifType == ESP_MAC_BT && ((supported & HW_BT_SUPPORTED) == 0)) ||
+            (ifType == ESP_MAC_WIFI_SOFTAP && ((supported & HW_WIFI_SUPPORTED) == 0))) {
+        ESP_LOGE(TAG, "wendigo_set_mac(): This chip does not supported %s.",
+            (ifType == ESP_MAC_BT) ? "Bluetooth" : "WiFi");
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    return esp_iface_mac_addr_set(mac, ifType);
+}
+
+/** Send a Wendigo packet containing the specified MACs.
+ * Packet format is:
+ * * Preamble (4 bytes)
+ * * Interface count (1 byte). For each interface:
+ *   * Type (1 byte, WENDIGO_MAC_WIFI or WENDIGO_MAC_BLUETOOTH)
+ *   * MAC (6 bytes)
+ * * Terminator (4 bytes)
+ */
+esp_err_t wendigo_display_mac_uart(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTES]) {
+    uint8_t packet_len = WENDIGO_OFFSET_MAC_TERMINATOR + PREAMBLE_LEN + 1;
+    uint8_t *packet = malloc(packet_len);
+    if (packet == NULL) {
+        return outOfMemory();
+    }
+    uint8_t supported = wendigo_supported_features();
+    /* Count the number of interfaces supported by this chip */
+    uint8_t supportedCount = 0;
+    if ((supported & HW_BT_SUPPORTED) != 0) {
+        ++supportedCount;
+    }
+    if ((supported & HW_WIFI_SUPPORTED) != 0) {
+        ++supportedCount;
+    }
+    // TODO: Include base MAC later
+    memcpy(packet, PREAMBLE_MAC, PREAMBLE_LEN);
+    packet[WENDIGO_OFFSET_MAC_IF_COUNT] = supportedCount;
+    /* Set up an offset to step through the rest of the packet because we might
+     * have one or two MACs to send. */
+    uint8_t offset = WENDIGO_OFFSET_MAC_IF_COUNT + 1;
+    /* Is Bluetooth supported? */
+    if ((supported & HW_BT_SUPPORTED) != 0) {
+        packet[offset++] = (uint8_t)WENDIGO_MAC_BLUETOOTH;
+        memcpy(packet + offset, bda, MAC_BYTES);
+        offset += MAC_BYTES;
+    }
+    /* Is WiFi supported? */
+    if ((supported & HW_WIFI_SUPPORTED) != 0) {
+        packet[offset++] = (uint8_t)WENDIGO_MAC_WIFI;
+        memcpy(packet + offset, wifi, MAC_BYTES);
+        offset += MAC_BYTES;
+    }
+    memcpy(packet + offset, PACKET_TERM, PREAMBLE_LEN);
+    /* Send the packet */
+    esp_err_t result = ESP_OK;
+    if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
+        send_bytes(packet, offset + PREAMBLE_LEN);
+        xSemaphoreGive(uartMutex);
+    } else {
+        result = ESP_ERR_INVALID_STATE;
+    }
+    free(packet);
+    return result;
+}
+
+/** Display the device's MAC addresses to an interactive console */
+esp_err_t wendigo_display_mac_interactive(uint8_t wifi[MAC_BYTES], uint8_t bda[MAC_BYTES]) {
+    char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
+    if (macStr == NULL) {
+        return outOfMemory();
+    }
+    esp_err_t result = ESP_OK;
+    uint8_t supported = wendigo_supported_features();
+    print_star(BANNER_WIDTH, true);
+    print_empty_row(BANNER_WIDTH);
+    print_row_start(7);
+    /* Only display MACs if the chip supports the interface */
+    if ((supported & HW_BT_SUPPORTED) != 0) {
+        result |= mac_bytes_to_string(bda, macStr);
+    } else {
+        snprintf(macStr, MAC_STRLEN + 1, "Not Supported.");
+    }
+    printf("Bluetooth Device Address: %20s", macStr);
+    print_row_end(7);
+    print_row_start(7);
+    /* Check whether WiFi is supported */
+    if ((supported & HW_WIFI_SUPPORTED) != 0) {
+        result |= mac_bytes_to_string(wifi, macStr);
+    } else {
+        snprintf(macStr, MAC_STRLEN + 1, "Not Supported.");
+    }
+    printf("WiFi Access Point: %27s", macStr);
+    print_row_end(7);
+    print_empty_row(BANNER_WIDTH);
+    print_star(BANNER_WIDTH, true);
+    return result;
+}
+
+/** Displays ESP32's WiFi and Bluetooth MACs as long as the ESP32 supports
+ * both. Otherwise only supported MACs will be displayed. */
+esp_err_t wendigo_display_mac() {
+    uint8_t wifi[MAC_BYTES];
+    uint8_t bda[MAC_BYTES];
+    esp_err_t result = ESP_OK;
+    /* Check hardware support for WiFi & Bluetooth before trying to get its MAC */
+    uint8_t supportedFeatures = wendigo_supported_features();
+    /* Get the MAC if the chip supports WiFi */
+    if ((supportedFeatures & HW_WIFI_SUPPORTED) != 0) {
+        result |= wendigo_get_mac(WENDIGO_MAC_WIFI, wifi);
+    } else {
+        memcpy(wifi, nullMac, MAC_BYTES);
+    }
+    /* Get the BDA if the chip supports Bluetooth */
+    if ((supportedFeatures & HW_BT_SUPPORTED) != 0) {
+        result |= wendigo_get_mac(WENDIGO_MAC_BLUETOOTH, bda);
+    } else {
+        memcpy(bda, nullMac, MAC_BYTES);
+    }
+    if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+        return result || wendigo_display_mac_interactive(wifi, bda);
+    } else {
+        return result || wendigo_display_mac_uart(wifi, bda);
+    }
+}
+
 /** Locates a device with the MAC of the specified device in devices[] cache.
  * Returns a pointer to the object in devices[] if found, NULL otherwise.
  */
@@ -383,6 +551,7 @@ void print_star(int size, bool newline) {
         putc('\n', stdout);
     }
 }
+
 void print_space(int size, bool newline) {
     for (int i = 0; i < size; ++i) {
         putc(' ', stdout);
@@ -390,6 +559,22 @@ void print_space(int size, bool newline) {
     if (newline) {
         putc('\n', stdout);
     }
+}
+
+void print_row_start(int spaces) {
+    print_star(1, false);
+    print_space(spaces, false);
+}
+
+void print_row_end(int spaces) {
+    print_space(spaces, false);
+    print_star(1, true);
+}
+
+void print_empty_row(int lineLength) {
+    print_star(1, false);
+    print_space(lineLength - 2, false);
+    print_star(1, true);
 }
 
 /** Display a simple out of memory message and set error code */
@@ -463,4 +648,34 @@ void send_bytes(uint8_t *bytes, uint8_t size) {
 void send_end_of_packet() {
     send_bytes(PACKET_TERM, PREAMBLE_LEN);
     fflush(stdout);
+}
+
+/** Check which device-specific features are supported and
+ * return the sum of each feature's SupportedHardwareMask
+ * value.
+ */
+uint8_t wendigo_supported_features() {
+    uint8_t result = 0;
+    #if defined(CONFIG_DECODE_UUIDS)
+        result += HW_BT_UUID_DICTIONARY;
+    #endif
+    #if defined(CONFIG_BT_CLASSIC_ENABLED)
+        result += HW_BT_CLASSIC_SUPPORTED;
+    #endif
+    #if defined(CONFIG_BT_BLE_ENABLED)
+        result += HW_BLE_SUPPORTED;
+    #endif
+    #if defined(CONFIG_ESP_WIFI_ENABLED) || \
+            defined(CONFIG_ESP_HOST_WIFI_ENABLED) || \
+            defined(CONFIG_ESP32_WIFI_ENABLED)
+        result += HW_WIFI_24_SUPPORTED;
+    #endif
+    // TODO: Where is 5G defined?
+    return result;
+}
+
+/** Check whether the specified hardware feature is supported by the chip */
+bool wendigo_is_supported(SupportedHardwareMask feature) {
+    uint8_t supported = wendigo_supported_features();
+    return ((supported & feature) == feature);
 }

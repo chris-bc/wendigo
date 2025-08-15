@@ -451,7 +451,7 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
 void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
   FURI_LOG_D(WENDIGO_TAG, "Start wendigo_scene_device_list_update()");
   /* This will also cater for a NULL dev */
-  if (!wendigo_device_is_displayed(dev)) { // TODO: This cannot be relied upon with DEVICE_CUSTOM
+  if (!wendigo_device_is_displayed(dev)) {
     return;
   }
   char *name;

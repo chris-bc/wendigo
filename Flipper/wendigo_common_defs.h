@@ -50,8 +50,13 @@
 
  #define WENDIGO_OFFSET_CHANNEL_COUNT           (4)
  #define WENDIGO_OFFSET_CHANNELS                (5)
- #define WENDIGO_OFFSET_MAC_WIFI                (4)
- #define WENDIGO_OFFSET_MAC_BLUETOOTH           (10)
+
+ #define WENDIGO_OFFSET_MAC_IF_COUNT            (4)
+ #define WENDIGO_OFFSET_MAC_BT_TYPE             (5)
+ #define WENDIGO_OFFSET_MAC_BT_MAC              (6)
+ #define WENDIGO_OFFSET_MAC_WIFI_TYPE           (12)
+ #define WENDIGO_OFFSET_MAC_WIFI_MAC            (13)
+ #define WENDIGO_OFFSET_MAC_TERMINATOR          (19)
 
  #ifdef IS_FLIPPER_APP
     typedef enum {
@@ -82,9 +87,12 @@
     #define WENDIGO_TAG     "WENDIGO"
 #endif
 
-#define MAX_SSID_LEN    32
-#define MAC_STRLEN      17
-#define MAC_BYTES       6
+/* A warning about this being defined in ESP-IDF appeared out of nowhere */
+#ifndef MAX_SSID_LEN
+    #define MAX_SSID_LEN    (32)
+#endif
+#define MAC_STRLEN          (17)
+#define MAC_BYTES           (6)
 
 /* enum ScanType being replaced with uint8_t */
 extern const uint8_t SCAN_HCI;
@@ -107,6 +115,26 @@ typedef enum DeviceMask {
     DEVICE_CUSTOM           = 32,
     DEVICE_ALL              = 15
 } DeviceMask;
+
+/** Enum bitmask that defines supported hardware features */
+typedef enum SupportedHardwareMask {
+    HW_WIFI_24_SUPPORTED    = 1,
+    HW_WIFI_5_SUPPORTED     = 2,
+    HW_BT_CLASSIC_SUPPORTED = 4,
+    HW_BLE_SUPPORTED        = 8,
+    HW_BT_UUID_DICTIONARY   = 16,
+    /* If logical-and with the following values is non-zero they're supported */
+    HW_WIFI_SUPPORTED       = 3,
+    HW_BT_SUPPORTED         = 12
+} SupportedHardwareMask;
+
+/** Enum to specify MACs for retrieval and updating */
+typedef enum {
+    WENDIGO_MAC_BASE = 0,
+    WENDIGO_MAC_WIFI,
+    WENDIGO_MAC_BLUETOOTH,
+    WENDIGO_MACS_COUNT
+} WendigoMAC;
 
 typedef struct {
     uint16_t uuid16;
@@ -185,6 +213,7 @@ extern uint8_t PREAMBLE_WIFI_STA[];
 extern uint8_t PREAMBLE_CHANNELS[];
 extern uint8_t PREAMBLE_STATUS[];
 extern uint8_t PREAMBLE_VER[];
+extern uint8_t PREAMBLE_MAC[];
 extern uint8_t PACKET_TERM[];
 extern uint8_t nullMac[];
 extern uint8_t broadcastMac[];

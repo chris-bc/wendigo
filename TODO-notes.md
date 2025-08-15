@@ -1,7 +1,7 @@
 REMOVED * Fix interactive mode display bug by only updating lastSeen if the required period has elapsed - Kludgey, but it'll probably never be used anyway - And Flipper creates its own timestamp so it won't affect Flipper-Wendigo
 
 * Check whether 802.11 data packets can be sent between stations - Currently the parser assumes that a STA will only be sending a data packet to an AP
-* Add parsers for association and authentication packets
+* (Partially complete - MACs only) Add parsers for association and authentication packets
 
 * wendigo_add_device()
   * Acquire device mutex when realloc()ing and when appending
@@ -12,6 +12,27 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
   * Otherwise uses furi_string_set_str to update it
     * That must be buggy, so NULL the header in _on_enter()
     * Done for device_list, pnl_list, setup_channel, setup, start & status
+
+#### Extendud scan duration causing FZ to "hang"
+
+* Stopping scanning after a minute doesn't result in the error, no matter how much you explore the results
+* May or may not be consistent, but after stopping scanning and spending a few minutes exploring results, when I exiting Wendigo, returning to the FZ favourites menu, FZ hung. Memory leak?
+
+#### Device list scene improvements
+
+* AP & STA display says "1 Networks" and "1 Stations" - remove the 's'
+* Selected option is not remembered when launching a sub-view
+  * e.g. Selecting a STA, viewing its PNL, and returning to the device list will reset the selected option from "x Networks" to "WiFi STA"
+  * Given device list views are often nested, this can't be implemented using the same technique as other views.
+  * Add information to DeviceListInstance to allow the view to be fully restored
+    * Something like ```selected_device_index``` and ```selected_option_index[deviceCount]```
+
+#### Use a message queue and a new worker to separate the UART receiver from the packet parser
+
+* Handoff between buffer callback and parsePacket()
+* Once a complete packet is found, it is already moved to a standalone byte array.
+* Package that into a struct along with the packet length
+* Add this as a message on the queue
 
 #### WIFI & BT MACS
 * esp_wifi_get_mac(WIFI_IF_AP, macBytes)
@@ -25,7 +46,7 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 * esp_err_t esp_iface_mac_addr_set(bytes, ESP_MAC_WIFI_SOFTAP)
 * esp_base_mac_addr_set()
 * esp_err_t esp_read_mac(bytes, type)
-* ESP_MAC_WIFI_STA, ESP_MAC_WIFI_SOFTAP, ESP_MAC_BT
+* ESP_MAC_WIFI_STA, ESP_MAC_WIFI_SOFTAP, ESP_MAC_BT, ESP_MAC_BASE
 * in "esp_chip_info.h"
 
 * esp_ble_gap_read_rssi(bda)?!?
@@ -76,3 +97,4 @@ typedef struct DeviceListInstance {
 * enum wifi_2g_channel_bit_t
 * enum wifi_5g_channel_bit_t
 
+malloc(sizeof(uint8_t *)) vs. malloc(sizeof(uint8_t)) approx line 1471

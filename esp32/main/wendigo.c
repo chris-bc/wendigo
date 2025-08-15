@@ -292,6 +292,68 @@ esp_err_t cmd_channel(int argc, char **argv) {
     }
 }
 
+/** Get or change the MAC(s) associated with the ESP32.
+ * Syntax: "macs [ <type> [ <mac> ] ]", where:
+ *  * <type> is 1 for WiFi, 2 for Bluetooth, 5 for Base MAC
+ *    (WiFi MAC is Base MAC + 1, Bluetooth is Base MAC + 2)
+ *  * <mac> is a 6-byte array.
+ * Returns ESP_OK when successful
+ */
+esp_err_t cmd_mac(int argc, char **argv) {
+    /* Validate arguments:
+     * * count <= 3 (e.g. mac 1 00:00:00:00:00:00)
+     * * if count > 1, argv[1] must be < MACS_COUNT
+     * * if count == 3, argv[2] must be a MAC
+     */
+    uint8_t interface = WENDIGO_MACS_COUNT;
+    uint8_t *macBytes = NULL;
+    if (argc > 3) {
+        // TODO: Log error
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (argc > 1) {
+        char *endPtr;
+        interface = strtol(argv[1], &endPtr, 10);
+        if (endPtr == argv[1] || (interface != WENDIGO_MAC_BASE &&
+                interface != WENDIGO_MAC_WIFI &&
+                interface != WENDIGO_MAC_BLUETOOTH)) {
+            /* No number, or the wrong number, found */
+            // TODO: Log error
+            return ESP_ERR_INVALID_ARG;
+        }
+        if (argc == 3) {
+            macBytes = malloc(sizeof(uint8_t) * MAC_BYTES);
+            if (macBytes == NULL) {
+                // TODO: Log error
+                return outOfMemory();
+            }
+            if (wendigo_string_to_bytes(argv[2], macBytes) != ESP_OK) {
+                // TODO: Error
+                free(macBytes);
+                return ESP_ERR_INVALID_ARG;
+            }
+        }
+    }
+    /* We've validated arguments, & retrieved interface and MAC as needed */
+    esp_err_t result = ESP_OK;
+    if (argc == 3) {
+        /* Set the MAC for the specified interface(s) */
+        ESP_LOGI(TAG, "Setting interface %d to %02x:%02x:%02x:%02x:%02x:%02x.",
+            interface, macBytes[0], macBytes[1], macBytes[2], macBytes[3],
+            macBytes[4], macBytes[5]);
+        result = wendigo_set_mac(interface, macBytes);
+        if (result == ESP_OK) {
+            ESP_LOGI(TAG, "Changed ok");
+        } else {
+            ESP_LOGI(TAG, "Error %d: %s", result, esp_err_to_name(result));
+        }
+        free(macBytes);
+    }
+    /* Display MAC after changing as confirmation */
+    result |= wendigo_display_mac();
+    return result;
+}
+
 /** The `status` command is intended to provide an overall picture of ESP32-Wendigo's current state:
  *  * Support for each radio
  *  * Scanning status for each radio
@@ -299,30 +361,10 @@ esp_err_t cmd_channel(int argc, char **argv) {
  *  * Metrics of device caches
  */
 esp_err_t cmd_status(int argc, char **argv) {
-    #if defined(CONFIG_DECODE_UUIDS)
-        bool uuidDictionarySupported = true;
-    #else
-        bool uuidDictionarySupported = false;
-    #endif
-    #if defined(CONFIG_BT_CLASSIC_ENABLED)
-        bool btClassicSupported = true;
-    #else
-        bool btClassicSupported = false;
-    #endif
-    #if defined(CONFIG_BT_BLE_ENABLED)
-        bool btBLESupported = true;
-    #else
-        bool btBLESupported = false;
-    #endif
-    #if defined(CONFIG_ESP_WIFI_ENABLED) || defined(CONFIG_ESP_HOST_WIFI_ENABLED)
-        bool wifiSupported = true;
-    #else
-        bool wifiSupported = false;
-    #endif
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-        display_status_interactive(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
+        display_status_interactive();
     } else {
-        display_status_uart(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
+        display_status_uart();
     }
     return ESP_OK;
 }

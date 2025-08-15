@@ -134,6 +134,9 @@ void wendigo_scene_setup_on_enter(void *context) {
     WendigoApp *app = context;
     app->current_view = WendigoAppViewSetup;
 
+    /* Refresh the MAC and BDA from the ESP32. */
+    wendigo_mac_query(app);
+
     variable_item_list_set_enter_callback(app->var_item_list,
         wendigo_scene_setup_var_list_enter_callback, app);
 

@@ -24,6 +24,7 @@ esp_err_t cmd_version(int argc, char **argv);
 esp_err_t cmd_interactive(int argc, char **argv);
 esp_err_t cmd_tag(int argc, char **argv);
 esp_err_t cmd_focus(int argc, char **argv);
+esp_err_t cmd_mac(int argc, char **argv);
 
 void invalid_command(char *cmd, char *arg, char *syntax);
 void display_syntax(char *command);
@@ -32,7 +33,7 @@ ActionType parseCommand(int argc, char **argv);
 ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr);
 void wendigo_set_logging(esp_log_level_t level);
 
-#define CMD_COUNT 18
+#define CMD_COUNT 19
 esp_console_cmd_t commands[CMD_COUNT] = {
     {
         .command = "h",
@@ -124,6 +125,12 @@ esp_console_cmd_t commands[CMD_COUNT] = {
         .hint = "Toggle Interactive Mode",
         .help = "Toggle i[nteractive] mode",
         .func = cmd_interactive
+    },
+    {
+        .command = "mac",
+        .hint = "mac [ <type> [ <mac> ] ]",
+        .help = "Get/Set MACs",
+        .func = cmd_mac
     }
 };
 

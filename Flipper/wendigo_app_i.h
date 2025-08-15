@@ -21,7 +21,7 @@
 
 #define IS_FLIPPER_APP           (1)
 /* TODO: Find a way to extract fap_version from application.fam */
-#define FLIPPER_WENDIGO_VERSION  "0.4.0"
+#define FLIPPER_WENDIGO_VERSION  "0.5.0"
 
 #include "wendigo_common_defs.h"
 #include "wendigo_pnl.h"
@@ -82,6 +82,7 @@ typedef struct {
     bool active;
     bool mutable;
     bool scanning;
+    bool initialised;
 } WendigoRadio;
 
 typedef struct {
@@ -117,6 +118,7 @@ typedef enum {
     WendigoAppViewSetup,        /* This doesn't have an associated view but is used as a flag in app->current_view */
     WendigoAppViewSetupMAC,
     WendigoAppViewSetupChannel,
+    WendigoAppViewLoading,
     WendigoAppViewPopup,
 } WendigoAppView;
 
@@ -192,3 +194,9 @@ void wendigo_display_popup(WendigoApp *app, char *header, char*body);
 void wendigo_uart_set_binary_cb(Wendigo_Uart *uart);
 void wendigo_uart_set_console_cb(Wendigo_Uart *uart);
 void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes);
+void wendigo_mac_query(WendigoApp *app);
+void wendigo_set_mac_rcvd_callback(void (*update_callback)(void *));
+void wendigo_mac_set(WendigoApp *app, InterfaceType type,
+    uint8_t mac_bytes[MAC_BYTES], void (*update_callback)(void *));
+void wendigo_mac_rcvd_callback(WendigoApp *app);
+char *furi_status_to_string(FuriStatus status, char *result, uint8_t resultLen);

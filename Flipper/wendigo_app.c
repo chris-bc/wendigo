@@ -15,6 +15,74 @@ extern void wendigo_scene_device_list_free();
 /* Cleanup function for wendigo_scene_pnl_list.c */
 extern void wendigo_scene_pnl_list_free();
 
+/** Ask ESP32-Wendigo to provide MAC details about its interfaces. */
+void wendigo_mac_query(WendigoApp *app) {
+    wendigo_uart_tx(app->uart, (uint8_t *)"mac\n", 5);
+}
+/** Function pointer to notify when a MAC packet is received */
+void (*mac_rcvd_callback)(void *);
+
+/** Call the MAC received callback */
+void wendigo_mac_rcvd_callback(WendigoApp *app) {
+    if (mac_rcvd_callback != NULL && app != NULL) {
+        mac_rcvd_callback(app);
+    }
+}
+
+/** Set the callback invoked when a MAC packet is
+ * received. NULL to disable.
+ */
+void wendigo_set_mac_rcvd_callback(void (*update_callback)(void *)) {
+    mac_rcvd_callback = update_callback;
+}
+
+/** Ask ESP32-Wendigo to change the MAC for the specified interface. */
+void wendigo_mac_set(WendigoApp *app, InterfaceType type,
+        uint8_t mac_bytes[MAC_BYTES], void (*update_callback)(void *)) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_mac_set()");
+    mac_rcvd_callback = update_callback;
+    char *cmd = malloc(sizeof(char) * 28);
+    char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
+    if (cmd == NULL || macStr == NULL) {
+        // Unable to allocate %d bytes for MAC and 28 bytes for a command to change MAC. 68
+        char *msg = malloc(sizeof(char) * 80);
+        if (msg == NULL) {
+            wendigo_log(MSG_ERROR, "Unable to allocate memory required to change MAC.");
+        } else {
+            snprintf(msg, 80, "Unable to allocate %d bytes for MAC and %d bytes for command to change MAC.",
+                sizeof(char) * (MAC_STRLEN + 1), sizeof(char) * 28);
+            wendigo_log(MSG_ERROR, msg);
+            free(msg);
+        }
+        if (cmd != NULL) {
+            free(cmd);
+        }
+        if (macStr != NULL) {
+            free(macStr);
+        }
+        return;
+    }
+    uint8_t ifType;
+    switch (type) {
+        case IF_BLE:
+        case IF_BT_CLASSIC:
+            ifType = WENDIGO_MAC_BLUETOOTH;
+            break;
+        case IF_WIFI:
+            ifType = WENDIGO_MAC_WIFI;
+            break;
+        default:
+            ifType = WENDIGO_MAC_BASE;
+            break;
+    }
+    bytes_to_string(mac_bytes, MAC_BYTES, macStr);
+    snprintf(cmd, 28, "mac %d %s\n", ifType, macStr);
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_mac_set() - Sending command \"%s\"", cmd);
+    wendigo_uart_tx(app->uart, (uint8_t *)cmd, strlen(cmd));
+    free(macStr);
+    free(cmd);
+}
+
 static bool wendigo_app_custom_event_callback(void *context, uint32_t event) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_custom_event_callback()");
     furi_assert(context);
@@ -54,16 +122,34 @@ static void wendigo_app_tick_event_callback(void *context) {
 //    FURI_LOG_T(WENDIGO_TAG, "End wendigo_app_tick_event_callback()");
 }
 
-/* Generic handler for app->popup that restores the previous view */
+/** Return the view, registered with the view dispatcher, that's associated
+ * with the specified "logical" view. For example, the main, setup, status,
+ * and other menus all use the central WendigoAppViewVarItemList.
+ */
+WendigoAppView wendigo_appview_for_view(WendigoAppView logicalView) {
+    WendigoAppView result;
+    switch (logicalView) {
+        case WendigoAppViewVarItemList:
+        case WendigoAppViewStatus:
+        case WendigoAppViewSetup:
+        case WendigoAppViewSetupChannel:
+        case WendigoAppViewPNLList:
+            result = WendigoAppViewVarItemList;
+            break;
+        default:
+            result = logicalView;
+            break;
+    }
+    return result;
+}
+
+/** Generic handler for app->popup that restores the previous view */
 void wendigo_popup_callback(void *context) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_popup_callback()");
     WendigoApp *app = (WendigoApp *)context;
-    bool done = scene_manager_previous_scene(app->scene_manager);
-    if (!done) {
-        /* No previous scene - Start the main menu scene */
-        // TODO: Alongside wendigo_display_popup() (below), restore the scene that was actually running prior to the popup
-        scene_manager_next_scene(app->scene_manager, WendigoSceneStart);
-    }
+    WendigoAppView view = wendigo_appview_for_view(app->current_view);
+    popup_reset(app->popup);
+    view_dispatcher_switch_to_view(app->view_dispatcher, view);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_popup_callback()");
 }
 
@@ -75,12 +161,10 @@ void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
     popup_set_header(app->popup, header, 64, 3, AlignCenter, AlignTop);
     popup_set_text(app->popup, newBody, 64, 22, AlignCenter, AlignTop);
     popup_set_icon(app->popup, -1, -1, NULL); // TODO: Find a fun icon to use
-    popup_set_timeout(app->popup, 5000); // was 2000
+    popup_set_timeout(app->popup, 3000); // was 2000
     popup_enable_timeout(app->popup);
     popup_set_callback(app->popup, wendigo_popup_callback);
     popup_set_context(app->popup, app);
-    // TODO: Check which scene is active so we can restore it later. For now assuming we're on the main menu.
-    scene_manager_set_scene_state(app->scene_manager, WendigoSceneStart, app->selected_menu_index);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_display_popup()");
 }
@@ -92,13 +176,11 @@ void wendigo_interface_init(WendigoApp *app) {
         app->interfaces[i].active = true;
         app->interfaces[i].mutable = true;
         app->interfaces[i].scanning = false;
+        app->interfaces[i].initialised = false;
     }
-    // TODO: Retrieve actual MAC
-    const uint8_t mac_wifi[MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xac};
-    const uint8_t mac_bt[MAC_BYTES] = {0xa6, 0xe0, 0x57, 0x4f, 0x57, 0xaf};
-    memcpy(app->interfaces[IF_WIFI].mac_bytes, mac_wifi, MAC_BYTES);
-    memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, mac_bt, MAC_BYTES);
-    memcpy(app->interfaces[IF_BLE].mac_bytes, mac_bt, MAC_BYTES);
+    memcpy(app->interfaces[IF_WIFI].mac_bytes, nullMac, MAC_BYTES);
+    memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, nullMac, MAC_BYTES);
+    memcpy(app->interfaces[IF_BLE].mac_bytes, nullMac, MAC_BYTES);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_interface_init()");
 }
 
@@ -308,4 +390,53 @@ void bytes_to_string(uint8_t *bytes, uint16_t bytesCount, char *strBytes) {
     }
     p_out[-1] = 0;
     FURI_LOG_T(WENDIGO_TAG, "End bytes_to_string()");
+}
+
+/** Return a human-readable representation of a FuriStatus value. The provided
+ * string `result` should be an initialised string with capacity `resultLen`.
+ * result should have a sufficient length to cater for the statuses that are
+ * expected to be received, although the result will be truncated to stay within
+ * the specified length.
+ * The maximum string length returned by this function (excluding the terminating
+ * NULL byte) is 28, however for practical purposes - unless you're developing new
+ * functions that use this function - can be considered to be 22.
+ * The resulting string is copied into result, and a pointer to result is provided
+ * as the return value.
+ */
+char *furi_status_to_string(FuriStatus status, char *result, uint8_t resultLen) {
+    FURI_LOG_T(WENDIGO_TAG, "Start furi_status_to_string()");
+    if (result == NULL || strlen(result) == 0 || resultLen == 0) {
+        wendigo_log(MSG_ERROR, "Invalid arguments provided to furi_status_to_string()");
+        FURI_LOG_T(WENDIGO_TAG, "End furi_status_to_string()");
+        return NULL;
+    }
+    bzero(result, resultLen);
+    switch (status) {
+        case FuriStatusOk:
+            strncpy(result, "OK", resultLen);
+            break;
+        case FuriStatusError:
+            strncpy(result, "Error", resultLen);
+            break;
+        case FuriStatusErrorTimeout:
+            strncpy(result, "Error: Timeout", resultLen);
+            break;
+        case FuriStatusErrorResource:
+            strncpy(result, "Resource Not Available", resultLen);
+            break;
+        case FuriStatusErrorParameter:
+            strncpy(result, "Parameter Error", resultLen);
+            break;
+        case FuriStatusErrorNoMemory:
+            strncpy(result, "Out of Memory", resultLen);
+            break;
+        case FuriStatusErrorISR:
+            strncpy(result, "Cannot be called from an ISR", resultLen);
+            break;
+        default:
+            strncpy(result, "Unknown Error", resultLen);
+            break;
+    }
+    FURI_LOG_T(WENDIGO_TAG, "End furi_status_to_string()");
+    return result;
 }

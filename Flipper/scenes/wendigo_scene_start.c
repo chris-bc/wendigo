@@ -234,12 +234,9 @@ static void wendigo_scene_start_var_list_change_callback(VariableItem *item) {
             (option_index == SCAN_BT_IDX && (!app->interfaces[IF_BT_CLASSIC].scanning ||
                 !app->interfaces[IF_BLE].scanning))) {
             optionStarting = true;
-        } else {
-            optionStarting = false;
-        }
-        if (optionStarting) {
             optionLen += strlen(SCAN_START_STR);
         } else {
+            optionStarting = false;
             optionLen += strlen(SCAN_STOP_STR);
         }
         char *optionStr = malloc(sizeof(char) * optionLen);

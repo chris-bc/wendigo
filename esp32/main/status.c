@@ -33,20 +33,6 @@ enum StatusAttributes {
     ATTR_WIFI_AP_COUNT,
 };
 
-void print_status_row_start(int spaces) {
-    print_star(1, false);
-    print_space(spaces, false);
-}
-void print_status_row_end(int spaces) {
-    print_space(spaces, false);
-    print_star(1, true);
-}
-void print_empty_row(int lineLength) {
-    print_star(1, false);
-    print_space(lineLength - 2, false);
-    print_star(1, true);
-}
-
 /** Prepares data for display by the status command.
  * The function populates attribute_values[].
  */
@@ -99,8 +85,12 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
     }
 }
 
-void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupported,
-                                bool btBLESupported, bool wifiSupported) {
+void display_status_interactive() {
+    uint8_t supported = wendigo_supported_features();
+    bool uuidDictionarySupported = ((supported & HW_BT_UUID_DICTIONARY) == HW_BT_UUID_DICTIONARY);
+    bool btClassicSupported = ((supported & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED);
+    bool btBLESupported = ((supported & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED);
+    bool wifiSupported = ((supported & HW_WIFI_SUPPORTED) != 0);
     const char *uuidDictionary = (uuidDictionarySupported) ? STRING_YES : STRING_NO;
     const char *btClassicSupport = (btClassicSupported) ? STRING_YES : STRING_NO;
     const char *btBLESupport = (btBLESupported) ? STRING_YES : STRING_NO;
@@ -111,51 +101,50 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
 
     print_star(53, true);
     print_empty_row(53);
-    print_status_row_start(14);
+    print_row_start(14);
     printf("Wendigo version %7s", WENDIGO_VERSION);
-    print_status_row_end(14);
+    print_row_end(14);
     print_empty_row(53);
-    print_status_row_start(5);
+    print_row_start(5);
     printf("Chris Bennetts-Cash   github.com/chris-bc");
-    print_status_row_end(5);
+    print_row_end(5);
     print_empty_row(53);
     print_empty_row(53);
-    print_status_row_start(4);
+    print_row_start(4);
     printf("Compiled with Bluetooth Dictionary: %7s", uuidDictionary);
-    print_status_row_end(4);
-    print_status_row_start(4);
+    print_row_end(4);
+    print_row_start(4);
     printf("Bluetooth Classic Supported: %14s", btClassicSupport);
-    print_status_row_end(4);
-    print_status_row_start(4);
+    print_row_end(4);
+    print_row_start(4);
     printf("Bluetooth Low Energy Supported: %11s", btBLESupport);
-    print_status_row_end(4);
-    print_status_row_start(4);
+    print_row_end(4);
+    print_row_start(4);
     printf("WiFi Supported: %27s", wifiSupport);
-    print_status_row_end(4);
-    print_status_row_start(4);
+    print_row_end(4);
+    print_row_start(4);
     printf("Bluetooth Classic Scanning: %15s", (!btClassicSupported) ? STRING_NA : (scanStatus[SCAN_HCI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
-    print_status_row_end(4);
-    print_status_row_start(4);
+    print_row_end(4);
+    print_row_start(4);
     printf("Bluetooth Low Energy Scanning: %12s", (!btBLESupported) ? STRING_NA : (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
-    print_status_row_end(4);
-    print_status_row_start(4);
+    print_row_end(4);
+    print_row_start(4);
     printf("WiFi Scanning: %28s", (!wifiSupported) ? STRING_NA : (scanStatus[SCAN_WIFI_AP] == ACTION_ENABLE || scanStatus[SCAN_WIFI_STA] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
-    print_status_row_end(4);
-    print_status_row_start(4); // 43 total
+    print_row_end(4);
+    print_row_start(4); // 43 total
     printf("BT Classic Devices: %23d", classicDeviceCount);
-    print_status_row_end(4);
-    print_status_row_start(4);
+    print_row_end(4);
+    print_row_start(4);
     printf("BT Low Energy Devices: %20d", leDeviceCount);
-    print_status_row_end(4);
-    print_status_row_start(4);
+    print_row_end(4);
+    print_row_start(4);
     printf("WiFi Access Points: %23d", wifiAPCount);
-    print_status_row_end(4);
-    print_status_row_start(4);
+    print_row_end(4);
+    print_row_start(4);
     printf("WiFi Stations: %28d", wifiSTACount);
-    print_status_row_end(4);
+    print_row_end(4);
     print_empty_row(53);
     print_star(53, true);
-    // TODO: Device counts
 }
 
 /** Send status information to Flipper Zero.
@@ -168,8 +157,13 @@ void display_status_interactive(bool uuidDictionarySupported, bool btClassicSupp
  *  * The attribute value (the terminating '\0' is ommitted)
  *  The packet is terminated with 4 bytes of 0xAA and 4 bytes of 0xFF.
  */
-void display_status_uart(bool uuidDictionarySupported, bool btClassicSupported,
-                                bool btBLESupported, bool wifiSupported) {
+void display_status_uart() {
+    /* Get features supported by the ESP32 chip */
+    uint8_t supported = wendigo_supported_features();
+    bool uuidDictionarySupported = ((supported & HW_BT_UUID_DICTIONARY) == HW_BT_UUID_DICTIONARY);
+    bool btClassicSupported = ((supported & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED);
+    bool btBLESupported = ((supported & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED);
+    bool wifiSupported = ((supported & HW_WIFI_SUPPORTED) != 0);
     initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
 
     if (xSemaphoreTake(uartMutex, portMAX_DELAY)) { /* Wait for the talking stick */
