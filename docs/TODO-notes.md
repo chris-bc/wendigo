@@ -16,7 +16,7 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 #### Extendud scan duration causing FZ to "hang"
 
 * Stopping scanning after a minute doesn't result in the error, no matter how much you explore the results
-* May or may not be consistent, but after stopping scanning and spending a few minutes exploring results, when I exiting Wendigo, returning to the FZ favourites menu, FZ hung. Memory leak?
+* May or may not be consistent, but after stopping scanning and spending a few minutes exploring results, upon exiting Wendigo and expecting return to the FZ favourites menu, FZ hung. Memory leak?
 
 #### Device list scene improvements
 

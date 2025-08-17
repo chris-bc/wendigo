@@ -85,6 +85,43 @@ void wendigo_version(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_version()");
 }
 
+/** This callback is called by app->scan_timer. If a Wendigo packet
+ * hasn't been received in the last 3 seconds it sends commands to
+ * restart scanning, on the assumption that the ESP32 has reset.
+ */
+static void wendigo_scan_timer_callback(void *context) {
+    furi_assert(context);
+    WendigoApp *app = (WendigoApp *)context;
+    if (app->is_scanning) {
+        uint32_t now = furi_hal_rtc_get_timestamp();
+        if (now - app->last_packet > ESP32_POLL_INTERVAL) {
+            for (uint8_t i = 0; i < IF_COUNT; ++i) {
+                if (app->interfaces[i].scanning) {
+                    wendigo_set_scanning_interface(app, i, true);
+                }
+            }
+        }
+    }
+}
+
+void wendigo_start_scan_timer(WendigoApp *app) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_start_scan_timer()");
+    if (app == NULL) {
+        wendigo_log(MSG_ERROR, "End wendigo_start_scan_timer() - Invalid arguments.");
+        return;
+    }
+    if (app->scan_timer == NULL) {
+        app->scan_timer = furi_timer_alloc(wendigo_scan_timer_callback, FuriTimerTypePeriodic, app);
+    }
+    if (app->scan_timer == NULL) {
+        wendigo_log(MSG_ERROR, "Failed to create scan poll timer.");
+        return;
+    }
+    if (furi_timer_is_running(app->scan_timer) == 0) {
+        furi_timer_start(app->scan_timer, furi_ms_to_ticks(ESP32_POLL_INTERVAL * 1000));
+    }
+}
+
 /** Enable or disable Wendigo scanning on the specified interface.
  * interface->active determines whether the interface can be enabled,
  * if this is false the interface will not be started regardless of
@@ -96,6 +133,9 @@ void wendigo_set_scanning_interface(WendigoApp *app, InterfaceType interface, bo
         wendigo_log(MSG_ERROR, "wendigo_set_scanning_interface() called with invalid arguments");
         return;
     }
+    /* Start the scan polling timer if it's not already running */
+    wendigo_start_scan_timer(app);
+
     const uint8_t CMD_LEN = 5; // e.g. "b 1\n\0"
     char cmdString[CMD_LEN];
     uint8_t arg = (app->interfaces[interface].active && starting) ? 1 : 0;
@@ -1479,7 +1519,7 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     /* Extend the buffer if necessary */
     if (bufferLen + len >= bufferCap) {
         /* Extend it by the larger of len and BUFFER_INC_CAPACITY_BY bytes to avoid constant realloc()s */
-        uint8_t increase_by = (len > BUFFER_INC_CAPACITY_BY) ? len : BUFFER_INC_CAPACITY_BY;
+        uint16_t increase_by = (len > BUFFER_INC_CAPACITY_BY) ? len : BUFFER_INC_CAPACITY_BY;
         uint16_t newCapacity = bufferCap + increase_by;
         FURI_LOG_D(WENDIGO_TAG, "Expanding buffer from %d to %d", bufferCap, newCapacity);
         /* Will this exceed the maximum capacity? */
@@ -1554,7 +1594,7 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
         new_packetSize[packetsCount] = packetLen;
         new_packets[packetsCount] = malloc(packetLen);
         if (new_packets[packetsCount] == NULL) {
-            /* Bugger, free arrays and quit */
+            /* Bugger, continue with what we've gotten so far */
             char *errorMsg = malloc(57);
             if (errorMsg == NULL) {
                 wendigo_log_with_packet(MSG_ERROR,
@@ -1569,6 +1609,16 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
             }
             /* Since we can't allocate more memory exit the loop now */
             interrupted = true;
+            /* First shrink packets[] and packetSize[] back to their previous size */
+            uint8_t **new_packets2 = realloc(new_packets, sizeof(uint8_t *) * packetsCount);
+            uint16_t *new_packetSize2 = realloc(new_packetSize, sizeof(uint16_t) * packetsCount);
+            if (new_packets2 == NULL || new_packetSize2 == NULL) {
+                /* Because this is shrinking in place it's tempting to not even check for failure */
+                wendigo_log(MSG_ERROR, "UART RX: Unable to shrink packets[] and packetSize[] after a failed malloc().");
+            } else {
+                new_packets = new_packets2;
+                new_packetSize = new_packetSize2;
+            }
             break;
         }
         memcpy(new_packets[packetsCount], packet, packetLen);
@@ -1587,6 +1637,7 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
         /* Not having a start or end packet sequence is a start - Check for all NULL
          * bytes in buffer */
         // TODO: Improve on that by searching backwards through buffer to find something that can't be a preamble, and removing everything prior
+        //       Could also look for any "islands" of bytes that are too short to be a packet
         bool bytesFound = false;
         for (uint16_t i = 0; i < bufferLen && !bytesFound; ++i) {
             if (buffer[i] != 0) {
@@ -1631,6 +1682,9 @@ void wendigo_free_uart_buffer() {
 }
 
 void wendigo_log(MsgType logType, char *message) {
+    if (message == NULL) {
+        return;
+    }
     switch (logType) {
         case MSG_ERROR:
             FURI_LOG_E(WENDIGO_TAG, message);
@@ -1658,14 +1712,20 @@ void wendigo_log_with_packet(MsgType logType, char *message, uint8_t *packet,
         return;
     }
     uint16_t messageLen = 3 * packet_size;
-    if (message != NULL) {
+    uint8_t commentLen;
+    if (message == NULL) {
+        commentLen = 0;
+    } else {
         messageLen += strlen(message) + 1;
+        commentLen = strlen(message) + 1; /* Account for the newline */
     }
     char *finalMessage = malloc(messageLen);
     if (finalMessage != NULL) {
-        memcpy(finalMessage, message, strlen(message));
-        finalMessage[strlen(message)] = '\n';
-        bytes_to_string(packet, packet_size, finalMessage + strlen(message) + 1);
+        if (message != NULL) {
+            memcpy(finalMessage, message, strlen(message)); // Breaks when message is NULL. So do the next 2 lines
+            finalMessage[strlen(message)] = '\n';
+        }
+        bytes_to_string(packet, packet_size, finalMessage + commentLen);
     }
     /* Just in case my counting is out */
     finalMessage[messageLen - 1] = '\0';

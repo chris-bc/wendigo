@@ -111,13 +111,6 @@ static void wendigo_app_tick_event_callback(void *context) {
 //    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_tick_event_callback()");
     furi_assert(context);
     WendigoApp *app = context;
-    if (app->is_scanning) {
-        /* Is it time to poll ESP32 to ensure it's still scanning? */
-        uint32_t now = furi_hal_rtc_get_timestamp();
-        if (now - app->last_packet > ESP32_POLL_INTERVAL * 1000) { // TODO: Docs say seconds but that IS NOT seconds! Test to confirm this is 3 seconds
-            wendigo_set_scanning_active(app, true);
-        }
-    }
     scene_manager_handle_tick_event(app->scene_manager);
 //    FURI_LOG_T(WENDIGO_TAG, "End wendigo_app_tick_event_callback()");
 }
@@ -292,6 +285,9 @@ WendigoApp *wendigo_app_alloc() {
 void wendigo_app_free(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_free()");
     furi_assert(app);
+
+    furi_timer_stop(app->scan_timer);
+    furi_timer_free(app->scan_timer);
 
     // Views
     view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewVarItemList);

@@ -176,6 +176,8 @@ struct WendigoApp {
     FuriMutex *bufferMutex;
     FuriMutex *devicesMutex;
     FuriMutex *pnlMutex;
+    /* Timer to poll the ESP32 if packets have stopped being received */
+    FuriTimer *scan_timer;
 
     const char *selected_tx_string;
     bool is_command;

@@ -296,7 +296,7 @@ void wendigo_scene_start_on_enter(void *context) {
             item_indexes[menu_items_num++] = i;
             if (i == SETUP_IDX && app->is_scanning) {
                 variable_item_set_locked(item, true, LOCKED_MSG);
-            } else if (i == SCAN_IDX) {
+            } else if (i == SCAN_IDX && app->selected_option_index[i] < SCAN_STATUS_IDX) {
                 /* Update the selected interface based on scanning status */
                 bool scanning;
                 if (app->selected_option_index[i] == SCAN_WIFI_IDX) {
