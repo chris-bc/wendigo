@@ -6,6 +6,7 @@ extern void wendigo_scene_device_detail_set_device(wendigo_device *d);
 extern void wendigo_scene_pnl_list_set_device(wendigo_device *d, WendigoApp *app);
 /** Internal method - I don't wan't to move all calling functions below it */
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem *item);
+double _elapsedTime(uint32_t *from, uint32_t *to, char *elapsedStr, uint8_t strlen);
 
 /** TODO: For some obscene reason the ifndef barrier isn't stopping these
  *  from showing up in every single object file. No longer shared.
@@ -148,7 +149,116 @@ void wendigo_scene_device_list_free() {
   }
 }
 
-/** Tihs alternative version of wendigo_device_is_displayed() is less efficient
+/** Update display for the specified VariableItem.
+ * Updates all transient attributes for the specified device list
+ * VariableItem - lastSeen, RSSI, saved_networks_count,
+ * stations_count, STA's AP, authMode, etc.
+ * YAGNI: This function does not validate that the provided
+ * VariableItem is currently displayed.
+ */
+void wendigo_scene_device_list_update_variableItem(VariableItem *item) {
+  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_update_variableItem");
+  if (item == NULL) {
+    wendigo_log(MSG_ERROR, "End wendigo_scene_device_list_update_variableItem - Context is NULL.");
+    return;
+  }
+  wendigo_device *dev = (wendigo_device *)variable_item_get_context(item);
+  WendigoApp *app = dev->app;
+  if (app == NULL) {
+    wendigo_log(MSG_TRACE, "End wendigo_scene_device_list_update_variableItem - wendigo_device->app is NULL.");
+    return;
+  }
+
+  // TODO: Name
+  char optionValue[MAX_SSID_LEN + 1];
+  uint8_t itemIdx = variable_item_get_current_value_index(item);
+  uint32_t now = furi_hal_rtc_get_timestamp();
+  bzero(optionValue, MAX_SSID_LEN + 1);
+  if (((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      itemIdx == WendigoOptionBTLastSeen) || (dev->scanType == SCAN_WIFI_AP &&
+      itemIdx == WendigoOptionAPLastSeen) || (dev->scanType == SCAN_WIFI_STA &&
+      itemIdx == WendigoOptionSTALastSeen)) {
+    /* Update lastSeen for this device */
+    _elapsedTime(&(dev->lastSeen), &now, optionValue, sizeof(optionValue));
+  } else if (((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      itemIdx == WendigoOptionBTRSSI) || (dev->scanType == SCAN_WIFI_AP &&
+      itemIdx == WendigoOptionAPRSSI) || (dev->scanType == SCAN_WIFI_STA &&
+      itemIdx == WendigoOptionSTARSSI)) {
+    /* Update RSSI for the current device */
+    snprintf(optionValue, sizeof(optionValue), "%d dB", dev->rssi);
+  } else if (dev->scanType == SCAN_WIFI_AP &&
+      itemIdx == WendigoOptionAPStaCount) {
+    /* Update stations_count for the current device */
+    snprintf(optionValue, sizeof(optionValue), "%d Station%s",
+      dev->radio.ap.stations_count,
+      (dev->radio.ap.stations_count == 1) ? "" : "s");
+  } else if (dev->scanType == SCAN_WIFI_AP &&
+      itemIdx == WendigoOptionAPAuthMode) {
+    /* Update authMode for the current device */
+    uint8_t mode = dev->radio.ap.authmode;
+    if (mode > WIFI_AUTH_MAX) {
+      mode = WIFI_AUTH_MAX;
+    }
+    snprintf(optionValue, sizeof(optionValue), "%s",
+      wifi_auth_mode_strings[mode]);
+  } else if (dev->scanType == SCAN_WIFI_STA &&
+      itemIdx == WendigoOptionSTASavedNetworks) {
+    /* Update saved_networks_count for the current device */
+    snprintf(optionValue, sizeof(optionValue), "%d Network%s",
+      dev->radio.sta.saved_networks_count,
+      (dev->radio.sta.saved_networks_count == 1) ? "" : "s");
+  } else if (dev->scanType == SCAN_WIFI_STA &&
+      itemIdx == WendigoOptionSTAAP) {
+    /* Update displayed AP for the current device */
+    if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
+      /* AP has a MAC - Do we have the AP in the cache? */
+      uint16_t apIdx = device_index_from_mac(dev->radio.sta.apMac);
+      if (apIdx == devices_count || devices == NULL ||
+          devices[apIdx] == NULL || devices[apIdx]->scanType !=
+          SCAN_WIFI_AP || devices[apIdx]->radio.ap.ssid[0] == '\0') {
+        /* Either we don't have the AP in the cache or we don't have an
+         * SSID for the AP - Display the MAC */
+        bytes_to_string(dev->radio.sta.apMac, MAC_BYTES, optionValue);
+      } else {
+        /* We have an SSID for the AP */
+        snprintf(optionValue, sizeof(optionValue), "%s",
+          devices[apIdx]->radio.ap.ssid);
+      }
+    } else {
+      /* We don't know the AP */
+      snprintf(optionValue, sizeof(optionValue), "AP Unknown");
+    }
+  } else if (((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      itemIdx == WendigoOptionBTTagUntag) || (dev->scanType == SCAN_WIFI_AP &&
+      itemIdx == WendigoOptionAPTagUntag) || (dev->scanType == SCAN_WIFI_STA &&
+      itemIdx == WendigoOptionSTATagUntag)) {
+    snprintf(optionValue, sizeof(optionValue), "%s", (dev->tagged) ? "Untag" : "Tag");
+  } else if (((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      itemIdx == WendigoOptionBTScanType) || (dev->scanType == SCAN_WIFI_AP &&
+      itemIdx == WendigoOptionAPScanType) || (dev->scanType == SCAN_WIFI_STA &&
+      itemIdx == WendigoOptionSTAScanType)) {
+    snprintf(optionValue, sizeof(optionValue), "%s",
+      (dev->scanType == SCAN_HCI) ? "BT Classic"
+      : (dev->scanType == SCAN_BLE) ? "BLE"
+      : (dev->scanType == SCAN_WIFI_AP) ? "WiFi AP"
+      : (dev->scanType == SCAN_WIFI_STA) ? "WiFi STA" : "Unknown Device");
+  } else if ((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      itemIdx == WendigoOptionBTCod) {
+    snprintf(optionValue, sizeof(optionValue), "%s",
+      dev->radio.bluetooth.cod_str);
+  } else if (dev->scanType == SCAN_WIFI_AP && itemIdx == WendigoOptionAPChannel) {
+    snprintf(optionValue, sizeof(optionValue), "Ch. %d", dev->radio.ap.channel);
+  } else if (dev->scanType == SCAN_WIFI_STA && itemIdx == WendigoOptionSTAChannel) {
+    snprintf(optionValue, sizeof(optionValue), "Ch. %d", dev->radio.sta.channel);
+  }
+  if (optionValue[0] != '\0') {
+    /* We've updated the current device's selected option */
+    variable_item_set_current_value_text(item, optionValue);
+  }
+  FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_update_variableItem");
+}
+
+/** This alternative version of wendigo_device_is_displayed() is less efficient
  * than the original, but works correctly when the displayed device mask
  * includes DEVICE_CUSTOM.
  * This function is called automatically by wendigo_device_is_displayed() if
@@ -613,7 +723,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     /* Add a new item */
     dev->view = variable_item_list_add(
         app->devices_var_item_list, (name == NULL) ? "(Unknown)" : name,
-        optionsCount, wendigo_scene_device_list_var_list_change_callback, app);
+        optionsCount, wendigo_scene_device_list_var_list_change_callback, dev);
     /* And set selected option */
     variable_item_set_current_value_index(dev->view, optionIndex);
     variable_item_set_current_value_text(dev->view, optionValue);
@@ -719,7 +829,7 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
     if (current_devices.devices[i] != NULL && item_str != NULL && options_count > 0) {
       current_devices.devices[i]->view = variable_item_list_add(
           app->devices_var_item_list, item_str, options_count,
-          wendigo_scene_device_list_var_list_change_callback, app);
+          wendigo_scene_device_list_var_list_change_callback, current_devices.devices[i]);
     }
     /* free item_str if we malloc'd it */
     if (free_item_str && item_str != NULL) {
@@ -924,122 +1034,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem *item) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_var_list_change_callback()");
   furi_assert(item);
-
-  /* app->device_list_selected_menu_index should reliably point to the selected
-     menu item. Use that to obtain the wendigo_device* */
-  WendigoApp *app = variable_item_get_context(item);
-  app->device_list_selected_menu_index =
-      variable_item_list_get_selected_item_index(app->devices_var_item_list);
-  wendigo_device *menu_item = wendigo_scene_device_list_selected_device(item);
-
-  if (menu_item != NULL) {
-    uint8_t option_index = variable_item_get_current_value_index(item);
-    furi_assert(option_index < MAX_OPTIONS);
-    /* Update the current option label */
-    char tempStr[MAX_SSID_LEN + 1];
-    bzero(tempStr, MAX_SSID_LEN + 1);
-    if (((menu_item->scanType == SCAN_HCI || menu_item->scanType == SCAN_BLE) &&
-          option_index == WendigoOptionBTRSSI) ||
-        (menu_item->scanType == SCAN_WIFI_AP &&
-          option_index == WendigoOptionAPRSSI) ||
-        (menu_item->scanType == SCAN_WIFI_STA &&
-          option_index == WendigoOptionSTARSSI)) {
-      snprintf(tempStr, sizeof(tempStr), "%d dB", menu_item->rssi);
-    } else if (((menu_item->scanType == SCAN_HCI ||
-                  menu_item->scanType == SCAN_BLE) &&
-                  option_index == WendigoOptionBTTagUntag) ||
-                (menu_item->scanType == SCAN_WIFI_AP &&
-                  option_index == WendigoOptionAPTagUntag) ||
-                (menu_item->scanType == SCAN_WIFI_STA &&
-                  option_index == WendigoOptionSTATagUntag)) {
-      snprintf(tempStr, sizeof(tempStr), "%s", (menu_item->tagged) ? "Untag"
-                                                                    : "Tag");
-    } else if (((menu_item->scanType == SCAN_HCI ||
-                  menu_item->scanType == SCAN_BLE) &&
-                  option_index == WendigoOptionBTScanType) ||
-                (menu_item->scanType == SCAN_WIFI_AP &&
-                  option_index == WendigoOptionAPScanType) ||
-                (menu_item->scanType == SCAN_WIFI_STA &&
-                  option_index == WendigoOptionSTAScanType)) {
-      snprintf(tempStr, sizeof(tempStr), "%s",
-        (menu_item->scanType == SCAN_HCI)           ? "BT Classic"
-          : (menu_item->scanType == SCAN_BLE)       ? "BLE"
-          : (menu_item->scanType == SCAN_WIFI_AP)   ? "WiFi AP"
-          : (menu_item->scanType == SCAN_WIFI_STA)  ? "WiFi STA"
-                                                    : "Unknown Device");
-    } else if (((menu_item->scanType == SCAN_HCI ||
-                  menu_item->scanType == SCAN_BLE) &&
-                  option_index == WendigoOptionBTLastSeen) ||
-                (menu_item->scanType == SCAN_WIFI_AP &&
-                  option_index == WendigoOptionAPLastSeen) ||
-                (menu_item->scanType == SCAN_WIFI_STA &&
-                  option_index == WendigoOptionSTALastSeen)) {
-      elapsedTime(menu_item, tempStr, sizeof(tempStr));
-    } else if ((menu_item->scanType == SCAN_HCI ||
-                  menu_item->scanType == SCAN_BLE) &&
-                  option_index == WendigoOptionBTCod) {
-      snprintf(tempStr, sizeof(tempStr), "%s", menu_item->radio.bluetooth.cod_str);
-    } else if (menu_item->scanType == SCAN_WIFI_AP &&
-                option_index == WendigoOptionAPChannel) {
-      snprintf(tempStr, sizeof(tempStr), "Ch. %d", menu_item->radio.ap.channel);
-    } else if (menu_item->scanType == SCAN_WIFI_STA &&
-                option_index == WendigoOptionSTAChannel) {
-      snprintf(tempStr, sizeof(tempStr), "Ch. %d", menu_item->radio.sta.channel);
-    } else if (menu_item->scanType == SCAN_WIFI_AP &&
-                option_index == WendigoOptionAPAuthMode) {
-      uint8_t mode = menu_item->radio.ap.authmode;
-      if (mode > WIFI_AUTH_MAX) {
-        mode = WIFI_AUTH_MAX;
-      }
-      snprintf(tempStr, sizeof(tempStr), "%s", wifi_auth_mode_strings[mode]);
-    } else if (menu_item->scanType == SCAN_WIFI_AP &&
-              option_index == WendigoOptionAPStaCount) {
-      snprintf(tempStr, sizeof(tempStr), "%d Stations",
-              menu_item->radio.ap.stations_count);
-    } else if (menu_item->scanType == SCAN_WIFI_STA &&
-              option_index == WendigoOptionSTASavedNetworks) {
-      snprintf(tempStr, sizeof(tempStr), "%d Networks",
-              menu_item->radio.sta.saved_networks_count);
-    } else if (menu_item->scanType == SCAN_WIFI_STA &&
-                option_index == WendigoOptionSTAAP) {
-      /* Use SSID if available, otherwise MAC */
-      uint16_t apIdx = device_index_from_mac(menu_item->radio.sta.apMac);
-      if (apIdx == devices_count || devices == NULL ||
-          devices[apIdx] == NULL || devices[apIdx]->radio.ap.ssid[0] == '\0') {
-        /* Couldn't find the AP, or found the AP with no SSID */
-        if (memcmp(menu_item->radio.sta.apMac, nullMac, MAC_BYTES)) {
-          /* We have a MAC */
-          bytes_to_string(menu_item->radio.sta.apMac, MAC_BYTES, tempStr);
-        } else {
-          /* No MAC */
-          snprintf(tempStr, sizeof(tempStr), "AP Unknown");
-        }
-      } else {
-        /* We have an SSID */
-        snprintf(tempStr, sizeof(tempStr), "%s", devices[apIdx]->radio.ap.ssid);
-      }
-    } else {
-      char *msg = malloc(sizeof(char) * (68 + MAC_STRLEN));
-      char *macStr = malloc(sizeof(char) * (1 + MAC_STRLEN));
-      if (msg != NULL && macStr != NULL) {
-        bytes_to_string(menu_item->mac, MAC_BYTES, macStr);
-        snprintf(msg, 68 + MAC_STRLEN,
-                "Invalid scanType (%d) / optionIndex (%d) combination for device %s.",
-                menu_item->scanType, option_index, macStr);
-        wendigo_log(MSG_ERROR, msg);
-      }
-      if (msg != NULL) {
-        free(msg);
-      }
-      if (macStr != NULL) {
-        free(macStr);
-      }
-    }
-    /* Update the current option's text if we set tempStr */
-    if (tempStr[0] != '\0') {
-      variable_item_set_current_value_text(item, tempStr);
-    }
-  }
+  wendigo_scene_device_list_update_variableItem(item);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_var_list_change_callback()");
 }
 
@@ -1114,97 +1109,6 @@ bool wendigo_scene_device_list_on_event(void *context,
     app->device_list_selected_menu_index =
         variable_item_list_get_selected_item_index(app->devices_var_item_list);
     consumed = true;
-
-    /* Update displayed value for any device where the currently-selected
-     * option is subject to change - lastSeen, RSSI, saved_networks_count,
-     * stations_count, STA's AP, or authMode.
-     * All attributes except lastSeen are only updated if scanning is active.
-     */
-    char optionValue[MAX_SSID_LEN + 1];
-    uint32_t now = furi_hal_rtc_get_timestamp();
-    for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
-      if (current_devices.devices != NULL && current_devices.devices[i] != NULL &&
-          current_devices.devices[i]->view != NULL) {
-        bzero(optionValue, MAX_SSID_LEN + 1);
-        if (((current_devices.devices[i]->scanType == SCAN_HCI ||
-            current_devices.devices[i]->scanType == SCAN_BLE) &&
-            variable_item_get_current_value_index(current_devices.devices[i]->view) ==
-                WendigoOptionBTLastSeen) ||
-            (current_devices.devices[i]->scanType == SCAN_WIFI_AP &&
-            variable_item_get_current_value_index(current_devices.devices[i]->view) ==
-                WendigoOptionAPLastSeen) ||
-            (current_devices.devices[i]->scanType == SCAN_WIFI_STA &&
-            variable_item_get_current_value_index(current_devices.devices[i]->view) ==
-                WendigoOptionSTALastSeen)) {
-          /* Update lastSeen for this device */
-          _elapsedTime(&(current_devices.devices[i]->lastSeen), &now, optionValue,
-                      sizeof(optionValue));
-        } else if (app->is_scanning && (((current_devices.devices[i]->scanType ==
-            SCAN_HCI || current_devices.devices[i]->scanType == SCAN_BLE) &&
-            variable_item_get_current_value_index(current_devices.devices[i]->view) ==
-            WendigoOptionBTRSSI) || (current_devices.devices[i]->scanType ==
-            SCAN_WIFI_AP && variable_item_get_current_value_index(
-              current_devices.devices[i]->view) == WendigoOptionAPRSSI) ||
-            (current_devices.devices[i]->scanType == SCAN_WIFI_STA &&
-            variable_item_get_current_value_index(current_devices.devices[i]->view) ==
-            WendigoOptionSTARSSI))) {
-          /* Update RSSI for the current device */
-          snprintf(optionValue, sizeof(optionValue), "%d dB",
-            current_devices.devices[i]->rssi);
-        } else if (app->is_scanning && current_devices.devices[i]->scanType ==
-            SCAN_WIFI_AP && variable_item_get_current_value_index(
-              current_devices.devices[i]->view) == WendigoOptionAPStaCount) {
-          /* Update stations_count for the current device */
-          snprintf(optionValue, sizeof(optionValue), "%d Stations",
-              current_devices.devices[i]->radio.ap.stations_count);
-        } else if (app->is_scanning && current_devices.devices[i]->scanType ==
-            SCAN_WIFI_AP && variable_item_get_current_value_index(
-              current_devices.devices[i]->view) == WendigoOptionAPAuthMode) {
-          /* Update authMode for the current device */
-          uint8_t mode = current_devices.devices[i]->radio.ap.authmode;
-          if (mode > WIFI_AUTH_MAX) {
-            mode = WIFI_AUTH_MAX;
-          }
-          snprintf(optionValue, sizeof(optionValue), "%s",
-            wifi_auth_mode_strings[mode]);
-        } else if (app->is_scanning && current_devices.devices[i]->scanType ==
-            SCAN_WIFI_STA && variable_item_get_current_value_index(
-              current_devices.devices[i]->view) == WendigoOptionSTASavedNetworks) {
-          /* Update saved_networks_count for the current device */
-          snprintf(optionValue, sizeof(optionValue), "%d Networks",
-            current_devices.devices[i]->radio.sta.saved_networks_count);
-        } else if (app->is_scanning && current_devices.devices[i]->scanType ==
-            SCAN_WIFI_STA && variable_item_get_current_value_index(
-              current_devices.devices[i]->view) == WendigoOptionSTAAP) {
-          /* Update displayed AP for the current device */
-          if (memcmp(current_devices.devices[i]->radio.sta.apMac, nullMac, MAC_BYTES)) {
-            /* AP has a MAC - Do we have the AP in the cache? */
-            uint16_t apIdx = device_index_from_mac(
-              current_devices.devices[i]->radio.sta.apMac);
-            if (apIdx == devices_count || devices == NULL ||
-                devices[apIdx] == NULL || devices[apIdx]->scanType !=
-                SCAN_WIFI_AP || devices[apIdx]->radio.ap.ssid[0] == '\0') {
-              /* Either we don't have the AP in the cache or we don't have an
-               * SSID for the AP - Display the MAC */
-              bytes_to_string(current_devices.devices[i]->radio.sta.apMac, MAC_BYTES,
-                optionValue);
-            } else {
-              /* We have an SSID for the AP */
-              snprintf(optionValue, sizeof(optionValue), "%s",
-                devices[apIdx]->radio.ap.ssid);
-            }
-          } else {
-            /* We don't know the AP */
-            snprintf(optionValue, sizeof(optionValue), "AP Unknown");
-          }
-        }
-        if (optionValue[0] != '\0') {
-          /* We've updated the current device's selected option */
-          variable_item_set_current_value_text(current_devices.devices[i]->view,
-                                              optionValue);
-        }
-      }
-    }
   }
 //  FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_on_event()");
   return consumed;

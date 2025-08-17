@@ -1,6 +1,5 @@
 #include "wendigo_scan.h"
 #include "wendigo_app_i.h"
-#include "wendigo_common_defs.h"
 
 uint8_t *buffer = NULL;
 uint16_t bufferLen = 0; // 65535 should be plenty of length
@@ -444,6 +443,7 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev) {
     /* Don't copy tagged status - A new device is not tagged. */
     new_device->tagged = false;
     new_device->view = dev->view; /* Copy the view pointer if we have one, NULL if we don't */
+    new_device->app = app;        /* Give the device a reference to app so it can find itself in the UI */
     /* ESP32 doesn't know the real time/date so overwrite the lastSeen value.
        time_t is just another way of saying long long int, so casting is OK */
     new_device->lastSeen = furi_hal_rtc_get_timestamp();

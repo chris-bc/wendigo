@@ -196,6 +196,7 @@ typedef struct wendigo_device {
     #ifdef IS_FLIPPER_APP
         uint32_t lastSeen;
         VariableItem *view;
+        void *app; /* Model change: Device knows its app context */
     #else
         struct timeval lastSeen;
     #endif
