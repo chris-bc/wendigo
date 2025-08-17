@@ -120,6 +120,12 @@ More might come after this - Or it might not. My previous Flipper app, [Gravity]
 
 <a id ="whats-new-050"></a>
 
+### v0.5.1
+
+Released for Flipper-Wendigo only - Latest ESP32-Wendigo is still v0.5.0.
+
+Fixes stability issues with v0.5.0. Further improvements coming soon!
+
 ### v0.5.0
 
 * Because crowded areas get poor results running BLE and WiFi simultaneously, restructured menu to simplify running one or the other.
