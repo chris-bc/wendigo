@@ -13,10 +13,15 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
     * That must be buggy, so NULL the header in _on_enter()
     * Done for device_list, pnl_list, setup_channel, setup, start & status
 
-#### Extendud scan duration causing FZ to "hang"
+#### Extended scan duration causing FZ to "hang"
 
 * Stopping scanning after a minute doesn't result in the error, no matter how much you explore the results
-* May or may not be consistent, but after stopping scanning and spending a few minutes exploring results, when I exiting Wendigo, returning to the FZ favourites menu, FZ hung. Memory leak?
+* May or may not be consistent, but after stopping scanning and spending a few minutes exploring results, upon exiting Wendigo and expecting return to the FZ favourites menu, FZ hung. Memory leak?
+* [X] Crash resulting from a BusFault resolved by moving the scanning poll into a FuriTimer
+* [ ] Buffer utilisation appears to be poor - New function to clean the buffer better. Look for islands of bytes that can be cleared, amongst others.
+* [ ] UsageFault arising from wendigo_device objects that have a view which is now invalid
+  * Go over strategy for view setting and clearing again
+  * Refactor device list view implementation - Instead of VariableItems having WendigoApp as context, have wendigo_device, and add a pointer to the app to the device
 
 #### Device list scene improvements
 
