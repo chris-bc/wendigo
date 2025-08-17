@@ -1,4 +1,5 @@
 #include "../wendigo_scan.h"
+#include <furi.h>
 
 /** Public method from wendigo_scene_device_detail.c */
 extern void wendigo_scene_device_detail_set_device(wendigo_device *d);
@@ -16,6 +17,10 @@ char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2",
     "WPA3 Enterprise 192-bit", "WPA3 EXT", "WPA3 EXT Mixed Mode", "DPP",
     "WPA3 Enterprise", "WPA3 Enterprise Transition", "Unknown"};
 
+FuriTimer *deviceTimer = NULL;
+
+/** Frequency that device attributes are updated */
+#define DEVICE_REFRESH_MS (300)
 
 /** Enum to index the options menu for devices */
 enum wendigo_device_list_bt_options {
@@ -256,6 +261,47 @@ void wendigo_scene_device_list_update_variableItem(VariableItem *item) {
     variable_item_set_current_value_text(item, optionValue);
   }
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_update_variableItem");
+}
+
+/** This function is called periodically to update all device views on the
+ * device list.
+ */
+void wendigo_scene_device_list_timer_callback(void *context) {
+  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_timer_callback()");
+  WendigoApp *app = (WendigoApp *)context;
+  if (app == NULL || current_devices.devices == NULL) {
+    wendigo_log(MSG_ERROR, "End wendigo_scene_device_list_timer_callback() - NULL arguments.");
+    return;
+  }
+  for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
+    if (current_devices.devices[i] != NULL &&
+        current_devices.devices[i]->view != NULL) {
+      wendigo_scene_device_list_update_variableItem(current_devices.devices[i]->view);
+    }
+  }
+}
+
+/** Start (or restart) the device timer with the specified duration */
+bool wendigo_start_device_timer(WendigoApp *app, FuriTimer *timer, uint16_t millis) {
+  if (app == NULL) {
+    wendigo_log(MSG_ERROR, "End wendigo_start_device_timer() - Invalid arguments.");
+    return false;
+  }
+  if (timer == NULL) {
+    timer = furi_timer_alloc(wendigo_scene_device_list_timer_callback,
+      FuriTimerTypePeriodic, app);
+  }
+  if (timer == NULL) {
+    wendigo_log(MSG_ERROR, "End wendigo_start_device_timer() - Unable to initialise timer.");
+    return false;
+  }
+  /* Stop the timer if it's running because we might have a new duration
+   * or callback. */
+  if (furi_timer_is_running(timer) == 1) {
+      furi_timer_stop(timer);
+  }
+  furi_timer_start(timer, furi_ms_to_ticks(millis));
+  return (furi_timer_is_running(timer) == 1);
 }
 
 /** This alternative version of wendigo_device_is_displayed() is less efficient
@@ -1049,6 +1095,8 @@ void wendigo_scene_device_list_on_enter(void *context) {
   WendigoApp *app = context;
   app->current_view = current_devices.view;
 
+  wendigo_start_device_timer(app, deviceTimer, DEVICE_REFRESH_MS);
+
   /* Reset and re-populate the list */
   wendigo_scene_device_list_redraw(app);
 
@@ -1149,6 +1197,11 @@ void wendigo_scene_device_list_on_exit(void *context) {
         stack = stackAfterPop;
       }
       --stack_counter;
+    }
+    if (deviceTimer != NULL) {
+      furi_timer_stop(deviceTimer);
+      furi_timer_free(deviceTimer);
+      deviceTimer = NULL;
     }
     app->leaving_scene = false;
   }

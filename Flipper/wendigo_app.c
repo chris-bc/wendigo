@@ -8,7 +8,8 @@
 
 /* UART rx callback for Console Output scene */
 extern void wendigo_console_output_handle_rx_data_cb(uint8_t *buf, size_t len, void *context);
-
+/* Timer callback for device list */
+extern void wendigo_scene_device_list_timer_callback(void *context);
 /* Initialiser and terminator for wendigo_scene_device_list.c */
 extern void wendigo_scene_device_list_init(void *config);
 extern void wendigo_scene_device_list_free();
