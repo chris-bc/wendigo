@@ -202,3 +202,6 @@ void wendigo_mac_set(WendigoApp *app, InterfaceType type,
     uint8_t mac_bytes[MAC_BYTES], void (*update_callback)(void *));
 void wendigo_mac_rcvd_callback(WendigoApp *app);
 char *furi_status_to_string(FuriStatus status, char *result, uint8_t resultLen);
+bool wendigo_preamble_contains_at_index(uint8_t c, uint8_t index);
+bool wendigo_preamble_contains(uint8_t c);
+bool wendigo_preamble_matches(uint8_t *str, uint8_t len);

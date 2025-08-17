@@ -1428,6 +1428,46 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     return offset + PREAMBLE_LEN;
 }
 
+/** Attempt to clear the specified buffer by NULLing all bytes that are more
+ * than PREAMBLE_LEN bytes before bufLen.
+ * It will then attempt to NULL further bytes by removing any that can't
+ * contribute to a packet preamble.
+ * Returns true if the entire buffer was successfully set to NULL.
+ */
+bool wendigo_clear_buffer(uint8_t *buf, uint16_t bufLen) {
+    bool result = true;
+    uint16_t idx = 0;
+    if (bufLen >= PREAMBLE_LEN) {
+        /* Since there is no preamble in the buffer, and the buffer long enough
+         * for a preamble, it stands to reason that at most PREAMBLE_LEN - 1
+         * bytes need to be kept. */
+        idx = bufLen - PREAMBLE_LEN + 1;
+        bzero(buf, idx);
+    }
+    /* buf now has at most 3 bytes beginning at buf[idx]. Check whether these
+     * bytes can form part of a preamble */
+    // How far below the end is idx? bufLen-idx
+    for (; idx < bufLen && result; ++idx) {
+        if (wendigo_preamble_matches(buf + idx, bufLen - idx)) {
+            /* Log a message when this happens, at least during testing */
+            uint8_t byteCount = (bufLen - idx);
+            char *msg = malloc(48 + (3 * byteCount)); // Found potential preamble, not clearing buffer: X
+            if (msg == NULL) {
+                wendigo_log(MSG_INFO, "Found possible preamble in buffer, not clearing all bytes.");
+            } else {
+                snprintf(msg, 48 + (3 * byteCount), "Found potential preamble, not clearing buffer: ");
+                bytes_to_string(buf + idx, byteCount, msg + 47);
+                wendigo_log(MSG_INFO, msg);
+                free(msg);
+            }
+            result = false;
+        } else {
+            buf[idx] = 0;
+        }
+    }
+    return result;
+}
+
 /** When the end of a packet is reached this function is called to parse the
  *  buffer and take the appropriate action. We expect to see one of the
  * packet preambles defined in wendigo_common_defs.c
@@ -1636,17 +1676,9 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     }
     /* Have we been able to empty the buffer? */
     if (!interrupted && startIdx == bufferLen && endIdx == bufferLen) {
-        /* Not having a start or end packet sequence is a start - Check for all NULL
-         * bytes in buffer */
-        // TODO: Improve on that by searching backwards through buffer to find something that can't be a preamble, and removing everything prior
-        //       Could also look for any "islands" of bytes that are too short to be a packet
-        bool bytesFound = false;
-        for (uint16_t i = 0; i < bufferLen && !bytesFound; ++i) {
-            if (buffer[i] != 0) {
-                bytesFound = true;
-            }
-        }
-        if (!bytesFound) {
+        /* Not having a start or end packet sequence is a start - look deeper */
+        bool bufferEmpty = wendigo_clear_buffer(buffer, bufferLen);
+        if (bufferEmpty) {
             // FURI_LOG_D("wendigo_scan_handle_rx_data_cb()",
             //     "Buffer is empty, resetting bufferLen");
             bufferLen = 0;

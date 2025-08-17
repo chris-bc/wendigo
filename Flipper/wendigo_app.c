@@ -436,3 +436,39 @@ char *furi_status_to_string(FuriStatus status, char *result, uint8_t resultLen) 
     FURI_LOG_T(WENDIGO_TAG, "End furi_status_to_string()");
     return result;
 }
+
+/** Test whether the specified character could be part of any packet preamble
+ * at the specified index.
+ */
+bool wendigo_preamble_contains_at_index(uint8_t c, uint8_t index) {
+    if (index < PREAMBLE_LEN) {
+        return (c == PREAMBLE_BT_BLE[index] || c == PREAMBLE_WIFI_AP[index] ||
+            c == PREAMBLE_WIFI_STA[index] || c == PREAMBLE_CHANNELS[index] ||
+            c == PREAMBLE_STATUS[index] || c == PREAMBLE_VER[index] ||
+            c == PREAMBLE_MAC[index]);
+    }
+    return false;
+}
+
+/** Test whether the specified substring could be the start of a preamble */
+bool wendigo_preamble_matches(uint8_t *str, uint8_t len) {
+    return !(memcmp(str, PREAMBLE_BT_BLE, len) &&
+        memcmp(str, PREAMBLE_WIFI_AP, len) &&
+        memcmp(str, PREAMBLE_WIFI_STA, len) &&
+        memcmp(str, PREAMBLE_CHANNELS, len) &&
+        memcmp(str, PREAMBLE_STATUS, len) &&
+        memcmp(str, PREAMBLE_VER, len) &&
+        memcmp(str, PREAMBLE_MAC, len));
+}
+
+/** Test whether the specified character is contained anywhere within a
+ * packet preamble.
+ */
+bool wendigo_preamble_contains(uint8_t c) {
+    for (uint8_t i = 0; i < PREAMBLE_LEN; ++i) {
+        if (wendigo_preamble_contains_at_index(c, i)) {
+            return true;
+        }
+    }
+    return false;
+}
