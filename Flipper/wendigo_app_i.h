@@ -134,6 +134,7 @@ typedef struct DeviceListInstance {
   WendigoAppView view;
   char devices_msg[MAX_SSID_LEN + 18]; // Space for "Clients of MAX_SSID_LEN"
   bool free_devices; // Do we need to free devices[] when we're done with it?
+  uint8_t *selected_option_index;
 } DeviceListInstance;
 
 struct WendigoApp {

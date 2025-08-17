@@ -1,5 +1,5 @@
+#include "../wendigo_app_i.h"
 #include "../wendigo_scan.h"
-#include <furi.h>
 
 /** Public method from wendigo_scene_device_detail.c */
 extern void wendigo_scene_device_detail_set_device(wendigo_device *d);
