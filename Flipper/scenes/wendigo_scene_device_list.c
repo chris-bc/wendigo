@@ -1198,6 +1198,7 @@ void wendigo_scene_device_list_on_exit(void *context) {
       }
       --stack_counter;
     }
+    /* Stop & free the refresh timer if it's running */
     if (deviceTimer != NULL) {
       furi_timer_stop(deviceTimer);
       furi_timer_free(deviceTimer);

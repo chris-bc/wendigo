@@ -15,18 +15,18 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 
 #### Extended scan duration causing FZ to "hang"
 
-* Stopping scanning after a minute doesn't result in the error, no matter how much you explore the results
+* [X] Stopping scanning after a minute doesn't result in the error, no matter how much you explore the results
 * May or may not be consistent, but after stopping scanning and spending a few minutes exploring results, upon exiting Wendigo and expecting return to the FZ favourites menu, FZ hung. Memory leak?
 * [X] Crash resulting from a BusFault resolved by moving the scanning poll into a FuriTimer
 * [X] Buffer utilisation appears to be poor - New function to clean the buffer better. Look for islands of bytes that can be cleared, amongst others.
 * [ ] UsageFault arising from wendigo_device objects that have a view which is now invalid
-  * Go over strategy for view setting and clearing again
-  * Refactor device list view implementation - Instead of VariableItems having WendigoApp as context, have wendigo_device, and add a pointer to the app to the device
+  * [ ] Go over strategy for view setting and clearing again
+  * [X] Refactor device list view implementation - Instead of VariableItems having WendigoApp as context, have wendigo_device, and add a pointer to the app to the device
 
 #### Device list scene improvements
 
-* AP & STA display says "1 Networks" and "1 Stations" - remove the 's'
-* Selected option is not remembered when launching a sub-view
+* [X] AP & STA display says "1 Networks" and "1 Stations" - remove the 's'
+* [ ] Selected option is not remembered when launching a sub-view
   * e.g. Selecting a STA, viewing its PNL, and returning to the device list will reset the selected option from "x Networks" to "WiFi STA"
   * Given device list views are often nested, this can't be implemented using the same technique as other views.
   * Add information to DeviceListInstance to allow the view to be fully restored
