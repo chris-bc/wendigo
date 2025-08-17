@@ -1575,14 +1575,16 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
     uint8_t **packets = NULL;
     uint16_t *packetSize = NULL;
     uint8_t packetsCount = 0;
+    uint8_t **new_packets = NULL;
+    uint16_t *new_packetSize = NULL;
     bool interrupted = false;
     while (startIdx < endIdx && endIdx < bufferLen && !interrupted) {
         /* We have a complete packet - extract it for parsing */
         packetLen = endIdx - startIdx + 1;
         packet = buffer + startIdx;
         /* Copy the packet into packets[] so we can deal with it later */
-        uint8_t **new_packets = realloc(packets, sizeof(uint8_t *) * (packetsCount + 1));
-        uint16_t *new_packetSize = realloc(packetSize, sizeof(uint16_t) * (packetsCount + 1));
+        new_packets = realloc(packets, sizeof(uint8_t *) * (packetsCount + 1));
+        new_packetSize = realloc(packetSize, sizeof(uint16_t) * (packetsCount + 1));
         if (new_packets == NULL || new_packetSize == NULL) {
             wendigo_log_with_packet(MSG_ERROR,
                 "UART RX: Unable to allocate memory for packets cache.",
