@@ -105,7 +105,6 @@ void wendigo_scene_device_list_init(void *config) {
         if (msg == NULL) {
           wendigo_log(MSG_ERROR, "Unable to allocate memory for DeviceListInstance initialiser.");
         } else {
-          // Unable to allocate %d bytes for DeviceListInstance initialiser.
           snprintf(msg, 68, "Unable to allocate %d bytes for DeviceListInstance initialiser.",
             (sizeof(wendigo_device *) + 1) * cfg->devices_count); /* +1 accounts for selected_option_index */
           wendigo_log(MSG_ERROR, msg);
@@ -395,28 +394,42 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
     /* Re-initialise current_devices */
     current_devices.view = WendigoAppViewDeviceList;
     current_devices.devices_mask = DEVICE_ALL;
-    if (current_devices.devices_count > 0 && current_devices.devices != NULL &&
-        current_devices.free_devices) {
-      free(current_devices.devices);
+    if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
+      if (current_devices.free_devices) {
+        free(current_devices.devices);
+      }
+      if (current_devices.selected_option_index != NULL) {
+        free(current_devices.selected_option_index);
+      }
     }
     current_devices.devices = NULL;
+    current_devices.selected_option_index = NULL;
     current_devices.devices_count = 0;
     current_devices.free_devices = true;
     return;
   }
   // TODO: Do I need a mutex over current_devices?
   wendigo_device **new_devices;
+  uint8_t *new_selected_option_index;
   if (current_devices.free_devices) {
     new_devices = realloc(current_devices.devices,
       sizeof(wendigo_device *) * deviceList->devices_count);
+    new_selected_option_index = realloc(
+      current_devices.selected_option_index,
+      deviceList->devices_count);
   } else {
     if (deviceList->devices_count > 0) {
       new_devices = malloc(sizeof(wendigo_device *) * deviceList->devices_count);
+      new_selected_option_index = realloc(
+        current_devices.selected_option_index,
+        deviceList->devices_count);
     } else {
       new_devices = NULL;
+      new_selected_option_index = NULL;
     }
   }
-  if (new_devices == NULL && deviceList->devices_count > 0) {
+  if ((new_devices == NULL || new_selected_option_index == NULL) &&
+      deviceList->devices_count > 0) {
     /* Log error but proceed if unable to allocate memory for device array */
     char *msg = malloc(sizeof(char) * 49);
     if (msg == NULL) {
@@ -434,7 +447,15 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
       if (current_devices.free_devices) {
         free(current_devices.devices);
       }
+      if (current_devices.selected_option_index != NULL) {
+        free(current_devices.selected_option_index);
+      }
       current_devices.devices = NULL;
+      current_devices.selected_option_index = NULL;
+    } else if (current_devices.devices_count > 0 &&
+        current_devices.selected_option_index != NULL) {
+      free(current_devices.selected_option_index);
+      current_devices.selected_option_index = NULL;
     }
   } else {
     if (new_devices == NULL) {
@@ -444,8 +465,18 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
       memcpy(new_devices, deviceList->devices,
         sizeof(wendigo_device *) * deviceList->devices_count);
       current_devices.devices_count = deviceList->devices_count;
+      if (deviceList->selected_option_index != NULL) {
+        /* Copy selected options across */
+        memcpy(new_selected_option_index,
+          deviceList->selected_option_index,
+          deviceList->devices_count);
+      } else {
+        /* Initialise options with zeroes */
+        bzero(new_selected_option_index, deviceList->devices_count);
+      }
     }
     current_devices.devices = new_devices;
+    current_devices.selected_option_index = new_selected_option_index;
   }
   current_devices.view = deviceList->view;
   current_devices.devices_mask = deviceList->devices_mask;
@@ -852,6 +883,8 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
   uint8_t options_index;
   bool free_item_str = false;
   wendigo_scene_device_list_set_current_devices_mask(current_devices.devices_mask);
+  /* If current_devices.selected_option_index isn't initialised, do that now */
+  // TODO
   /* Set header text for the list if specified. NULL first to prevent text-over-text */
   variable_item_list_set_header(app->devices_var_item_list, NULL);
   if (current_devices.devices_msg[0] != '\0') {
@@ -873,6 +906,8 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
         free_item_str = true;
       }
       options_count = WendigoOptionsBTCount;
+      /* Set selected_option_index */
+      // TODO
       options_index = WendigoOptionBTScanType;
       /* Label with SSID if it's an AP and we have an SSID */
     } else if (current_devices.devices[i] != NULL &&
@@ -984,6 +1019,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     current_devices.free_devices = true;
     current_devices.devices_count = 0;
     current_devices.devices = NULL;
+    current_devices.selected_option_index = NULL;
     bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
     char *deviceName = malloc(sizeof(char) * (MAX_SSID_LEN + 1));
     if (deviceName == NULL) {
@@ -998,21 +1034,33 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       current_devices.view = WendigoAppViewAPSTAs;
       if (item->radio.ap.stations_count > 0) {
         current_devices.devices = malloc(sizeof(wendigo_device *) * item->radio.ap.stations_count);
+        current_devices.selected_option_index = malloc(item->radio.ap.stations_count);
       }
-      if (item->radio.ap.stations_count > 0 && current_devices.devices == NULL) {
+      if (item->radio.ap.stations_count > 0 && (current_devices.devices == NULL ||
+          current_devices.selected_option_index == NULL)) {
         char *msg = malloc(sizeof(char) * 56);
         if (msg == NULL) {
           wendigo_log(MSG_ERROR,
             "Unable to allocate memory to display AP's stations.");
         } else {
+          /* +1 below to account for selected_option_index */
           snprintf(msg, 56,
             "Unable to allocate %d bytes to display AP's stations.",
-            sizeof(wendigo_device *) * item->radio.ap.stations_count);
+            (sizeof(wendigo_device *) + 1) * item->radio.ap.stations_count);
           wendigo_log(MSG_ERROR, msg);
           free(msg);
         }
         wendigo_display_popup(app, "Out of memory", "Unable to allocate memory for AP's stations.");
         current_devices.devices_count = 0;
+        /* Check whether either were successfully allocated */
+        if (current_devices.devices != NULL) {
+          free(current_devices.devices);
+          current_devices.devices = NULL;
+        }
+        if (current_devices.selected_option_index != NULL) {
+          free(current_devices.selected_option_index);
+          current_devices.selected_option_index = NULL;
+        }
       } else { /* There are no stations to display or malloc() succeeded */
         current_devices.free_devices = true; /* Don't forget to only free if stations_count > 0 as well */
         /* Loop through item->radio.ap.stations, adding devices with the
@@ -1025,7 +1073,9 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
           idx_sta = device_index_from_mac(item->radio.ap.stations[idx_src]);
           if (idx_sta < devices_count) {
             /* The station exists in the cache - add it to current_devices */
-            current_devices.devices[idx_dest++] = devices[idx_sta];
+            current_devices.devices[idx_dest] = devices[idx_sta];
+            /* We're displaying stations so default to RSSI */
+            current_devices.selected_option_index[idx_dest++] = WendigoOptionSTARSSI;
           }
         }
         /* If there were stations not in the cache, current_devices will have empty
@@ -1035,6 +1085,11 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
           if (tmp_devices != NULL) {
             /* If realloc() worked, just set devices[] to tmp_devices[] */
             current_devices.devices = tmp_devices;
+          }
+          /* Also shrink selected_option_index[] */
+          uint8_t *new_options = realloc(current_devices.selected_option_index, idx_dest);
+          if (new_options != NULL) {
+            current_devices.selected_option_index = new_options;
           }
         }
         /* Set devices_count whether or not we had to shrink devices[] */
@@ -1076,6 +1131,13 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
           /* Found the AP in the device cache - Display just it */
           current_devices.devices_count = 1;
           current_devices.devices = &(devices[apIdx]);
+          current_devices.selected_option_index = malloc(1);
+          if (current_devices.selected_option_index == NULL) {
+            wendigo_log(MSG_ERROR, "Unable to allocate 1 byte for AP's options.");
+          } else {
+            /* Default to displaying RSSI */
+            current_devices.selected_option_index[0] = WendigoOptionAPRSSI;
+          }
         }
       }
     } else {
@@ -1139,6 +1201,7 @@ void wendigo_scene_device_list_on_enter(void *context) {
     selected_item = 0;
   }
   variable_item_list_set_selected_item(app->devices_var_item_list, selected_item);
+  // TODO: Restore selected options...or maybe do it in redraw()?
   view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewDeviceList);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_on_enter()");
 }
@@ -1207,7 +1270,11 @@ void wendigo_scene_device_list_on_exit(void *context) {
       if (current_devices.free_devices) {
         free(current_devices.devices);
       }
+      if (current_devices.selected_option_index != NULL) {
+        free(current_devices.selected_option_index);
+      }
       current_devices.devices = NULL;
+      current_devices.selected_option_index = NULL;
       current_devices.devices_count = 0;
     }
     /* Pop the previous device list off the stack if there's one there */
