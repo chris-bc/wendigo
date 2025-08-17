@@ -129,7 +129,7 @@ Fixes stability issues with v0.5.0. Further improvements coming soon!
 ### v0.5.0
 
 * Because crowded areas get poor results running BLE and WiFi simultaneously, restructured menu to simplify running one or the other.
-* Partial implementation of dditional 802.11 packets
+* Partial implementation of additional 802.11 packets
   * Association request
   * Association response
   * Reassociation request
