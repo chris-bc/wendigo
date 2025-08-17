@@ -4,13 +4,6 @@ This section is a running list of current priorities.
 
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [ ] Add "m" command as a shortcut to mac
-* [ ] BUG: Wendigo "hangs" after several minutes of scanning
-  * [ ] Scanning for a short period, stopping it, and spending a long time exploring discovered devices doesn't cause any issues so this is definitely related to scanning
-  * [ ] Could the UART thread be deadlocked?
-  * [ ] Run with debugger and trace log to find clues
-* [ ] Device List scene uses plurals when it shouldn't
-  * [ ] 1 Networks
-  * [ ] 1 Stations
 * [ ] Device List scene doesn't remember selected options
   * [ ] e.g. Selecting a STA, viewing its probed networks, and returning to the device list will display the option "WiFi STA" rather than "x Networks".
   * [ ] Because Device Lists are often nested, the approach used elsewhere isn't suitable
@@ -21,6 +14,8 @@ This section is a running list of current priorities.
   * [ ] Package the packet, along with its length, into a struct and add the struct to a message queue
   * [ ] A new worker, running on a new thread, will wake up when an item is in the queue and this thread will parse the packet and make necessary changes to the data model.
   * [ ] This reduces the time the UART receiver is doing things other than receiving UART.
+* [ ] Finish implementation of association/reassociation packet parsers
+* [ ] Update feature-dependent functions to probe for device capabilities
 * [ ] Channel command overwrites enabled channels when setting channels
   * [ ] This approach is preferable when the client is always an application, but inconvenient in interactive mode
   * [ ] Make it possible to select/deselect a subset of channels at a time
