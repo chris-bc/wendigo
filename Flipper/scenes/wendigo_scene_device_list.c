@@ -86,6 +86,7 @@ void wendigo_scene_device_list_init(void *config) {
   bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
   if (config == NULL) {
     current_devices.devices = NULL;
+    current_devices.selected_option_index = NULL;
     current_devices.devices_count = 0;
     current_devices.devices_mask = DEVICE_ALL;
     current_devices.view = WendigoAppViewDeviceList;
@@ -98,24 +99,42 @@ void wendigo_scene_device_list_init(void *config) {
     }
     if (cfg->devices_count > 0 && cfg->devices != NULL) {
       current_devices.devices = malloc(sizeof(wendigo_device *) * cfg->devices_count);
-      if (current_devices.devices == NULL) {
+      current_devices.selected_option_index = malloc(sizeof(uint8_t) * cfg->devices_count);
+      if (current_devices.devices == NULL || current_devices.selected_option_index == NULL) {
         char *msg = malloc(sizeof(char) * 68);
         if (msg == NULL) {
           wendigo_log(MSG_ERROR, "Unable to allocate memory for DeviceListInstance initialiser.");
         } else {
           // Unable to allocate %d bytes for DeviceListInstance initialiser.
           snprintf(msg, 68, "Unable to allocate %d bytes for DeviceListInstance initialiser.",
-            sizeof(wendigo_device *) * cfg->devices_count);
+            (sizeof(wendigo_device *) + 1) * cfg->devices_count); /* +1 accounts for selected_option_index */
           wendigo_log(MSG_ERROR, msg);
           free(msg);
         }
         current_devices.devices_count = 0;
+        /* Free either of the arrays if they were allocated (we know at least one failed - maybe not both)*/
+        if (current_devices.devices != NULL) {
+          free(current_devices.devices);
+          current_devices.devices = NULL;
+        }
+        if (current_devices.selected_option_index != NULL) {
+          free(current_devices.selected_option_index);
+          current_devices.selected_option_index = NULL;
+        }
       } else {
         memcpy(current_devices.devices, cfg->devices, sizeof(wendigo_device *) * cfg->devices_count);
         current_devices.devices_count = cfg->devices_count;
+        /* Does cfg contain selected options? */
+        if (cfg->selected_option_index != NULL) {
+          memcpy(current_devices.selected_option_index,
+            cfg->selected_option_index, sizeof(uint8_t) * cfg->devices_count);
+        } else {
+          bzero(current_devices.selected_option_index, sizeof(uint8_t) * cfg->devices_count);
+        }
       }
     } else {
       current_devices.devices = NULL;
+      current_devices.selected_option_index = NULL;
       current_devices.devices_count = 0;
     }
     current_devices.devices_mask = cfg->devices_mask;
@@ -129,10 +148,14 @@ void wendigo_scene_device_list_init(void *config) {
 void wendigo_scene_device_list_free() {
   /* Clear current_devices */
   if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
+    if (current_devices.selected_option_index != NULL) {
+      free(current_devices.selected_option_index);
+    }
     if (current_devices.free_devices) {
       free(current_devices.devices);
     }
     current_devices.devices = NULL;
+    current_devices.selected_option_index = NULL;
     current_devices.devices_count = 0;
     current_devices.free_devices = true;
   }
@@ -140,10 +163,14 @@ void wendigo_scene_device_list_free() {
     /* Free components of the device stack */
     for (uint8_t i = 0; i < stack_counter; ++i) {
       if (stack[i].devices_count > 0 && stack[i].devices != NULL) {
+        if (stack[i].selected_option_index != NULL) {
+          free(stack[i].selected_option_index);
+        }
         if (stack[i].free_devices) {
           free(stack[i].devices);
         }
         stack[i].devices = NULL;
+        stack[i].selected_option_index = NULL;
         stack[i].devices_count = 0;
         stack[i].free_devices = true;
       }

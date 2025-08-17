@@ -41,6 +41,15 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
     deviceList.view = WendigoAppViewPNLDeviceList;
     deviceList.devices = networks[index].devices;
     deviceList.devices_count = networks[index].device_count;
+    /* Populate selected_option_index for the list */
+    deviceList.selected_option_index = malloc(sizeof(uint8_t) * deviceList.devices_count);
+    if (deviceList.selected_option_index == NULL) {
+        wendigo_log(MSG_ERROR, "Unable to allocate memory to cache device list's selected options.");
+    } else {
+        for (uint8_t i = 0; i < deviceList.devices_count; ++i) {
+            deviceList.selected_option_index[i] = 0;
+        }
+    }
     wendigo_scene_device_list_set_current_devices(&deviceList);
     /* Save selected menu item index so it can be restored later */
     scene_manager_set_scene_state(app->scene_manager, WendigoScenePNLList, index);
