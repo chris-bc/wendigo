@@ -1,5 +1,9 @@
 ## Wendigo Release History
 
+### v0.5.1 (Flipper only)
+
+* Resolved frequent device hangs
+
 ### v0.5.0
 
 * Because crowded areas get poor results running BLE and WiFi simultaneously, restructured menu to simplify running one or the other.
