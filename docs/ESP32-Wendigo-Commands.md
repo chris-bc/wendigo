@@ -239,6 +239,7 @@ Action ::= <Disable> | <Enable> | <Status>
 Disable ::= 0
 Enable ::= 1
 Status ::= 2
+```
 
 <a id="interactive"></a>
 #### Interactive Mode
