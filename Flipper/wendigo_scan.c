@@ -1446,12 +1446,11 @@ bool wendigo_clear_buffer(uint8_t *buf, uint16_t bufLen) {
     }
     /* buf now has at most 3 bytes beginning at buf[idx]. Check whether these
      * bytes can form part of a preamble */
-    // How far below the end is idx? bufLen-idx
     for (; idx < bufLen && result; ++idx) {
         if (wendigo_preamble_matches(buf + idx, bufLen - idx)) {
             /* Log a message when this happens, at least during testing */
             uint8_t byteCount = (bufLen - idx);
-            char *msg = malloc(48 + (3 * byteCount)); // Found potential preamble, not clearing buffer: X
+            char *msg = malloc(48 + (3 * byteCount));
             if (msg == NULL) {
                 wendigo_log(MSG_INFO, "Found possible preamble in buffer, not clearing all bytes.");
             } else {
