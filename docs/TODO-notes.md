@@ -37,8 +37,8 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
       * iterate over device_var_item_list's views to see if any match dev->view (since it seems hard to trust the cached value)
     * This could be called by a timer callback, looping through all displayed devices periodically to refresh the UI
 * **CURRENTLY UP TO** refactoring to include selected_option_index (but I don't think I added selected_device_index - is there an equivalent?)
-  * Up to displaying and updating selected option
-    * Line 908 (wendigo_scene_device_list.c)
+* [X] selected_options_index updated where needed except for
+  * [ ] ```wendigo_scene_device_list_init()``` - Currently a mish-mash of results for selected_options_index - refactor so that all paths either call ```wendigo_selected_options_init()``` or populate it from a template ```DeviceListInstance```.
 
 #### Use a message queue and a new worker to separate the UART receiver from the packet parser
 

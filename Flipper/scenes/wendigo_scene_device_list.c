@@ -7,6 +7,7 @@ extern void wendigo_scene_device_detail_set_device(wendigo_device *d);
 extern void wendigo_scene_pnl_list_set_device(wendigo_device *d, WendigoApp *app);
 /** Internal method - I don't wan't to move all calling functions below it */
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem *item);
+bool wendigo_selected_options_init(DeviceListInstance *deviceList);
 double _elapsedTime(uint32_t *from, uint32_t *to, char *elapsedStr, uint8_t strlen);
 
 /** TODO: For some obscene reason the ifndef barrier isn't stopping these
@@ -128,7 +129,9 @@ void wendigo_scene_device_list_init(void *config) {
           memcpy(current_devices.selected_option_index,
             cfg->selected_option_index, sizeof(uint8_t) * cfg->devices_count);
         } else {
-          bzero(current_devices.selected_option_index, sizeof(uint8_t) * cfg->devices_count);
+          /* Initialise the selected_options_index[] when it's first loaded */
+          // TODO Test to verify that this is not called when returning to this scene after going to another.
+          wendigo_selected_options_init(&current_devices);
         }
       }
     } else {
@@ -897,11 +900,11 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
 /** Initialise selected_option_index for the specified device list using
  * default display options.
  * This will set the selected option index for all devices in deviceList
- * to device type.
+ * to device type (i.e. scanType).
  */
-bool wendigo_selected_options_init(WendigoApp *app, DeviceListInstance *deviceList) {
+bool wendigo_selected_options_init(DeviceListInstance *deviceList) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_selected_options_init()");
-  if (app == NULL || deviceList == NULL || deviceList->devices_count == 0 ||
+  if (deviceList == NULL || deviceList->devices_count == 0 ||
       deviceList->devices == NULL) {
     wendigo_log(MSG_ERROR, "End wendigo_selected_options_init() - Invalid arguments.");
     return false;
@@ -942,11 +945,12 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
   variable_item_list_reset(app->devices_var_item_list);
   char *item_str = NULL;
   uint8_t options_count = 0;
-  uint8_t options_index;
   bool free_item_str = false;
   wendigo_scene_device_list_set_current_devices_mask(current_devices.devices_mask);
   /* If current_devices.selected_option_index isn't initialised, do that now */
-  wendigo_selected_options_init(app, &current_devices); // TODO: Do I want the result?
+  bool optionResult = wendigo_selected_options_init(&current_devices);
+  UNUSED(optionResult);
+  // TODO: Check result of this. Also ensure it won't overwrite historical selections when restoring the view
   /* Set header text for the list if specified. NULL first to prevent text-over-text */
   variable_item_list_set_header(app->devices_var_item_list, NULL);
   if (current_devices.devices_msg[0] != '\0') {
@@ -969,8 +973,7 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
       }
       options_count = WendigoOptionsBTCount;
       /* Set selected_option_index */
-      // TODO
-      options_index = WendigoOptionBTScanType;
+      // TODO - Is there anything to do for it?
       /* Label with SSID if it's an AP and we have an SSID */
     } else if (current_devices.devices[i] != NULL &&
               current_devices.devices[i]->scanType == SCAN_WIFI_AP) {
@@ -985,7 +988,6 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
         free_item_str = true;
       }
       options_count = WendigoOptionsAPCount;
-      options_index = WendigoOptionAPScanType;
       /* Otherwise use the MAC/BDA */
     } else if (current_devices.devices[i] != NULL) {
       item_str = malloc(sizeof(char) * (MAC_STRLEN + 1));
@@ -994,7 +996,6 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
       }
       free_item_str = true;
       options_count = WendigoOptionsSTACount;
-      options_index = WendigoOptionSTAScanType;
     }
     if (current_devices.devices[i] != NULL && item_str != NULL && options_count > 0) {
       current_devices.devices[i]->view = variable_item_list_add(
@@ -1005,10 +1006,12 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
     if (free_item_str && item_str != NULL) {
       free(item_str);
     }
-    /* Default to displaying scanType in options menu */
-    if (current_devices.devices[i] != NULL && current_devices.devices[i]->view != NULL) {
+    /* Display current_devices->selected_option_index[i] ... but only if it's scanType, in options menu */
+    // TODO: Yuck yuck yuck. Don't dwell though - Get it working using selected_option_index then replace all this with a function to determine the VariableItem label and option
+    if (current_devices.devices[i] != NULL && current_devices.devices[i]->view != NULL &&
+        current_devices.selected_option_index != NULL) {
       variable_item_set_current_value_index(current_devices.devices[i]->view,
-                                            options_index);
+                                            current_devices.selected_option_index[i]);
       variable_item_set_current_value_text(current_devices.devices[i]->view,
           (current_devices.devices[i]->scanType == SCAN_HCI)        ? "BT Classic"
           : (current_devices.devices[i]->scanType == SCAN_BLE)      ? "BLE"
@@ -1016,6 +1019,7 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
           : (current_devices.devices[i]->scanType == SCAN_WIFI_STA) ? "WiFi STA"
                                                                     : "Unknown");
     }
+    // TODO: wendigo_scene_device_list_
   }
   variable_item_list_set_selected_item(app->devices_var_item_list, 0);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_redraw()");
