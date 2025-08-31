@@ -4,8 +4,15 @@ This section is a running list of current priorities.
 
 * [ ] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [ ] Add "m" command as a shortcut to mac
+* [ ] BUG: Wendigo "hangs" after several minutes of scanning
+  * [ ] **Confirm this is fixed**
+  * [ ] Scanning for a short period, stopping it, and spending a long time exploring discovered devices doesn't cause any issues so this is definitely related to scanning
+  * [ ] Could the UART thread be deadlocked?
+  * [ ] Run with debugger and trace log to find clues
+* [ ] Refactor all use of ```wendigo_display_popup()``` now it can correctly restore the previous view
 * [ ] Device List scene doesn't remember selected options
   * [ ] e.g. Selecting a STA, viewing its probed networks, and returning to the device list will display the option "WiFi STA" rather than "x Networks".
+  * [ ] Also view device list, view AP, return to device list
   * [ ] Because Device Lists are often nested, the approach used elsewhere isn't suitable
   * [ ] Add ```selected_device_index``` and ```selected_option_index[deviceCount]``` to DeviceListInstance, to allow selected devices and options to be maintained through nested device lists
 * [ ] Create a new thread to parse Wendigo packets, using a Message Queue for concurrency management

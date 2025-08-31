@@ -74,7 +74,7 @@ DeviceListInstance current_devices;
 /** Prepare current_devices for use. Provides initial values for the
  * current_devices struct.
  * `config` must be either NULL or a pointer to a DeviceListInstance that
- * provides initial values for current_devices. canfig may be freed after
+ * provides initial values for current_devices. config may be freed after
  * calling - memory is allocated for  its devices if necessary - however
  * the wendigo_device instances referenced by devices[] are expected to
  * remain allocated for the duration of the scene.

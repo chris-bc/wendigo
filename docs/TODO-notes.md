@@ -31,6 +31,14 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
   * Given device list views are often nested, this can't be implemented using the same technique as other views.
   * Add information to DeviceListInstance to allow the view to be fully restored
     * Something like ```selected_device_index``` and ```selected_option_index[deviceCount]```
+  * Move option text update to a new function ```wendigo_scene_device_list_update_device(VariablItem *item)```
+    * Get app from the view's context to refresh the view
+    * What if item doesn't have a valid context?
+      * iterate over device_var_item_list's views to see if any match dev->view (since it seems hard to trust the cached value)
+    * This could be called by a timer callback, looping through all displayed devices periodically to refresh the UI
+* **CURRENTLY UP TO** refactoring to include selected_option_index (but I don't think I added selected_device_index - is there an equivalent?)
+  * Up to displaying and updating selected option
+    * Line 908 (wendigo_scene_device_list.c)
 
 #### Use a message queue and a new worker to separate the UART receiver from the packet parser
 
@@ -57,13 +65,7 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 * esp_ble_gap_read_rssi(bda)?!?
 
 #### wendigo_scene_device_list.c
-* Ensure current_devices is sound
-* Only set app->leaving_scene if a device list scene is being displayed
-  * app->current_view is one of
-    * WendigoAppViewDeviceList
-    * WendigoAppViewPNLDeviceList
-    * WendigoAppViewAPSTAs
-    * WendigoAppViewSTAAP
+* [ ] Ensure current_devices is sound
 
 #### Manage current_devices.devices[] - free or realloc
 * Often doesn't respect free_devices, but I think it's only used when setting devices to a PNL element, and I'm pretty sure devices[] is copied to a newly-allocated location for that.
