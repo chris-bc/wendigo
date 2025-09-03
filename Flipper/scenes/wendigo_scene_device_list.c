@@ -679,6 +679,13 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
   return NULL;
 }
 
+/** Update the specified single device */
+void *wendigo_scene_device_list_update_device(uint16_t new_cap, VariableItem *new_item) {
+  UNUSED(new_cap);
+  UNUSED(new_item);
+  // TODO
+}
+
 /** Update the current display to reflect a new discovery result for `dev`.
  * This function is called by the functions wendigo_add_device() and
  * wendigo_update_device() in wendigo_scan.c. When this scene and scanning are
