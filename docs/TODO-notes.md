@@ -47,6 +47,20 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 * Package that into a struct along with the packet length
 * Add this as a message on the queue
 
+#### Migrate to device list scene's VariableItem updater
+
+* [ ] Update redraw() function so that:
+  * [ ] It creates a VariableItem with the correct options count
+  * [ ] It then calls wendigo_scene_device_list_update_device() to populate the VariableItem
+* [ ] Update update() function so that:
+  * [ ] It creates the device if necessary
+  * [ ] Then calls wendigo_scene_device_list_update_device()
+* [ ] Review all other functions, particularly
+  * [ ] on_enter()
+  * [ ] on_event()
+  * [ ] list_changed()
+  * [ ] list_enter()
+
 #### WIFI & BT MACS
 * esp_wifi_get_mac(WIFI_IF_AP, macBytes)
 * esp_wifi_set_mac(ESP_IF_WIFI_AP or WIFI_IF_AP, macBytes)
