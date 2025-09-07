@@ -151,29 +151,24 @@ ActionType parseCommand(int argc, char **argv) {
     }
 }
 
-/** Tag syntax is t[ag] ( b[t] | w[ifi] ) <MAC> <ActionType>, where ActionType :== 0 | 1 | 2 (or 3 for ACTION_INVALID) */
+/** Tag syntax is t[ag] <MAC> <ActionType>, where ActionType :== 0 | 1 | 2 (or 3 for ACTION_INVALID) */
 ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr) {
-    if (argc != 4) {
+    if (argc != 3) {
         return ACTION_INVALID;
     }
-    /* argv[1] must be b, bt, w, or wifi */
-    if (strcasecmp(argv[1], "b") && strcasecmp(argv[1], "bt") &&
-        strcasecmp(argv[1], "w") && strcasecmp(argv[1], "wifi")) {
-        return ACTION_INVALID;
-    }
-    /* argv[2] must be a MAC/BDA - Check it has the right number of bytes
+    /* argv[1] must be a MAC/BDA - Check it has the right number of bytes
        (and won't buffer overflow etc).
     */
-    if (((strlen(argv[2]) + 1) / 3) != ESP_BD_ADDR_LEN) {
+    if (((strlen(argv[1]) + 1) / 3) != ESP_BD_ADDR_LEN) {
         return ACTION_INVALID;
     }
-    esp_err_t result = wendigo_string_to_bytes(argv[2], addr);
+    esp_err_t result = wendigo_string_to_bytes(argv[1], addr);
     if (result != ESP_OK) {
         return ACTION_INVALID;
     }
-    /* argv[3] must contain a valid ActionType enum */
-    uint8_t action = strtol(argv[3], NULL, 10);
-    if (strlen(argv[3]) == 1 && action < ACTION_INVALID) {
+    /* argv[2] must contain a valid ActionType enum */
+    uint8_t action = strtol(argv[2], NULL, 10);
+    if (strlen(argv[2]) == 1 && action < ACTION_INVALID) {
         return (ActionType)action;
     } else {
         return ACTION_INVALID;
