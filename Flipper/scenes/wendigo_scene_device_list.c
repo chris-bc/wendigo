@@ -679,11 +679,150 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
   return NULL;
 }
 
-/** Update the specified single device */
-void *wendigo_scene_device_list_update_device(uint16_t new_cap, VariableItem *new_item) {
-  UNUSED(new_cap);
-  UNUSED(new_item);
-  // TODO
+/** Update the specified single device's view. This function is called from
+ * the tick and list_item_changed handlers to ensure displayed information
+ * remains up to date.
+ */
+void wendigo_scene_device_list_update_device(VariableItem *new_item) {
+  FURI_LOG_D(WENDIGO_TAG, "Start wendigo_scene_device_list_update_device()");
+  /* Input validation */
+  if (new_item == NULL || variable_item_get_context(new_item) == NULL) {
+    wendigo_log(MSG_ERROR, "End wendigo_scene_device_list_update_device() - Invalid arguments.");
+    return;
+  }
+  char *name;
+  bool free_name = false;
+// TODO  uint8_t optionsCount;
+  uint8_t optionIndex;
+  char optionValue[MAX_SSID_LEN + 1];
+  bzero(optionValue, MAX_SSID_LEN + 1); /* Null out optionValue[] */
+  /* Fetch the device model from new_item's context */
+  wendigo_device *dev = variable_item_get_context(new_item);
+  /* Use dev->scanType to determine the menu item's name/label */
+  if ((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      dev->radio.bluetooth.bdname_len > 0 &&
+      dev->radio.bluetooth.bdname != NULL) {
+    /* Use bdname as name if it's a bluetooth device and we have a name */
+    name = dev->radio.bluetooth.bdname;
+  } else if (dev->scanType == SCAN_WIFI_AP &&
+      dev->radio.ap.ssid[0] != '\0') {
+    /* Use SSID if it's an AP and we have SSID */
+    name = dev->radio.ap.ssid;
+  } else {
+    /* Otherwise use MAC */
+    name = malloc(sizeof(char) * (MAC_STRLEN + 1));
+    if (name != NULL) {
+      free_name = true;
+      bytes_to_string(dev->mac, MAC_BYTES, name);
+    }
+  }
+  // TODO: Should I use selected_option_index[] instead?
+  optionIndex = variable_item_get_current_value_index(new_item);
+  /* Check which menu option new_item is displaying */
+  if (((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      optionIndex == WendigoOptionBTRSSI) || (dev->scanType == SCAN_WIFI_AP &&
+      optionIndex == WendigoOptionAPRSSI) || (dev->scanType == SCAN_WIFI_STA &&
+      optionIndex == WendigoOptionSTARSSI)) {
+    /* Update RSSI */
+    snprintf(optionValue, sizeof(optionValue), "%d dB", dev->rssi);
+  } else if (((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      optionIndex == WendigoOptionBTTagUntag) || (dev->scanType == SCAN_WIFI_AP
+      && optionIndex == WendigoOptionAPTagUntag) ||
+      (dev->scanType == SCAN_WIFI_STA &&
+      optionIndex == WendigoOptionSTATagUntag)) {
+    /* Update tag/untag */
+    snprintf(optionValue, sizeof(optionValue), "%s",
+      (dev->tagged) ? "Untag" : "Tag");
+  } else if (((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      optionIndex == WendigoOptionBTScanType) || (dev->scanType == SCAN_WIFI_AP
+      && optionIndex == WendigoOptionAPScanType) ||
+      (dev->scanType == SCAN_WIFI_STA &&
+      optionIndex == WendigoOptionSTAScanType)) {
+    /* Update scanType */
+    snprintf(optionValue, sizeof(optionValue), "%s",
+      (dev->scanType == SCAN_HCI)         ? "BT Classic"
+      : (dev->scanType == SCAN_BLE)       ? "BLE"
+      : (dev->scanType == SCAN_WIFI_AP)   ? "WiFi AP"
+      : (dev->scanType == SCAN_WIFI_STA)  ? "WiFi STA"
+                                          : "Unknown");
+  } else if (((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      optionIndex == WendigoOptionBTLastSeen) || (dev->scanType == SCAN_WIFI_AP
+      && optionIndex == WendigoOptionAPLastSeen) ||
+      (dev->scanType == SCAN_WIFI_STA &&
+      optionIndex == WendigoOptionSTALastSeen)) {
+    /* Update lastSeen */
+    elapsedTime(dev, optionValue, sizeof(optionValue));
+  } else if ((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
+      optionIndex == WendigoOptionBTCod) {
+    /* Update BT class of device */
+    snprintf(optionValue, sizeof(optionValue), "%s",
+      dev->radio.bluetooth.cod_str);
+  } else if ((dev->scanType == SCAN_WIFI_AP &&
+      optionIndex == WendigoOptionAPChannel) ||
+      (dev->scanType == SCAN_WIFI_STA &&
+      optionIndex == WendigoOptionSTAChannel)) {
+    /* Update channel */
+    snprintf(optionValue, sizeof(optionValue), "Ch. %d",
+      (dev->scanType == SCAN_WIFI_AP) ? dev->radio.ap.channel
+                                      : dev->radio.sta.channel);
+  } else if (dev->scanType == SCAN_WIFI_AP &&
+      optionIndex == WendigoOptionAPStaCount) {
+    /* Update AP's connected stations */
+    snprintf(optionValue, sizeof(optionValue), "%d Station%s",
+      dev->radio.ap.stations_count,
+      (dev->radio.ap.stations_count == 1) ? "" : "s");
+  } else if (dev->scanType == SCAN_WIFI_STA &&
+      optionIndex == WendigoOptionSTASavedNetworks) {
+    /* Update STA's saved networks */
+    snprintf(optionValue, sizeof(optionValue), "%d Network%s",
+      dev->radio.sta.saved_networks_count,
+      (dev->radio.sta.saved_networks_count == 1) ? "" : "s");
+  } else if (dev->scanType == SCAN_WIFI_AP &&
+      optionIndex == WendigoOptionAPAuthMode) {
+    /* Update AP authentication mode */
+    uint8_t mode = dev->radio.ap.authmode;
+    if (mode > WIFI_AUTH_MAX) {
+      mode = WIFI_AUTH_MAX;
+    }
+    snprintf(optionValue, sizeof(optionValue), "%s",
+      wifi_auth_mode_strings[mode]);
+  } else if (dev->scanType == SCAN_WIFI_STA &&
+      optionIndex == WendigoOptionSTAAP) {
+    /* Update STA's AP */
+    /* ... But only if we have an actual MAC for the AP */
+    if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
+      /* AP has a MAC - Do we have the AP in our cache? */
+      uint16_t apIdx = device_index_from_mac(dev->radio.sta.apMac);
+      if (apIdx == devices_count || devices == NULL || devices[apIdx] == NULL
+          || devices[apIdx]->scanType != SCAN_WIFI_AP ||
+          devices[apIdx]->radio.ap.ssid[0] == '\0') {
+        /* Either we don't have the AP in our cache or the
+         * AP's SSID is unknown - Use MAC instead */
+        bytes_to_string(dev->radio.sta.apMac, MAC_BYTES, optionValue);
+      } else {
+        /* We have an SSID for the AP */
+        snprintf(optionValue, sizeof(optionValue), "%s",
+          devices[apIdx]->radio.ap.ssid);
+      }
+    } else {
+      /* We don't know the AP */
+      snprintf(optionValue, sizeof(optionValue), "AP Unknown");
+    }
+  } else {
+    /* Error state - Nothing to do */
+  }
+
+  /* Update menu and option labels */
+  if (name != NULL && strlen(name) > 0) {
+    variable_item_set_item_label(new_item, name);
+  }
+  if (free_name) {
+    free(name);
+  }
+  if (optionValue[0] != '\0') {
+    variable_item_set_current_value_text(new_item, optionValue);
+  }
+  FURI_LOG_D(WENDIGO_TAG, "End wendigo_scene_device_list_update_device()");
 }
 
 /** Update the current display to reflect a new discovery result for `dev`.
