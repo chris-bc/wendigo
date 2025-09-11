@@ -16,6 +16,11 @@ extern void wendigo_scene_device_list_free();
 /* Cleanup function for wendigo_scene_pnl_list.c */
 extern void wendigo_scene_pnl_list_free();
 
+/* Module globals to hold popup header and body - popup copies strings by
+ * reference, so these need to be maintained until the popup closes. */
+char *popup_header = NULL;
+char *popup_body = NULL;
+
 /** Ask ESP32-Wendigo to provide MAC details about its interfaces. */
 void wendigo_mac_query(WendigoApp *app) {
     wendigo_uart_tx(app->uart, (uint8_t *)"mac\n", 5);
@@ -144,23 +149,38 @@ void wendigo_popup_callback(void *context) {
     WendigoAppView view = wendigo_appview_for_view(app->current_view);
     popup_reset(app->popup);
     view_dispatcher_switch_to_view(app->view_dispatcher, view);
+    if (popup_header != NULL) {
+        free(popup_header);
+        popup_header = NULL;
+    }
+    if (popup_body != NULL) {
+        free(popup_body);
+        popup_body = NULL;
+    }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_popup_callback()");
 }
 
 void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_display_popup()");
-    // TODO: Review and kill this
-    char *newBody = malloc(sizeof(char *) * (strlen(body) + 1));
-    strncpy(newBody, body, strlen(body) + 1);
+    /* Save the strings so they won't be freed */
+    popup_header = malloc(sizeof(char) * (strlen(header) + 1));
+    popup_body = malloc(sizeof(char) * (strlen(body) + 1));
+    if (popup_header != NULL) {
+        strncpy(popup_header, header, strlen(header) + 1);
+        header = popup_header;
+    }
+    if (popup_body != NULL) {
+        strncpy(popup_body, body, strlen(body) + 1);
+        body = popup_body;
+    }
     popup_set_header(app->popup, header, 64, 3, AlignCenter, AlignTop);
-    popup_set_text(app->popup, newBody, 64, 22, AlignCenter, AlignTop);
+    popup_set_text(app->popup, body, 64, 22, AlignCenter, AlignTop);
     popup_set_icon(app->popup, -1, -1, NULL); // TODO: Find a fun icon to use
     popup_set_timeout(app->popup, 3000); // was 2000
     popup_enable_timeout(app->popup);
     popup_set_callback(app->popup, wendigo_popup_callback);
     popup_set_context(app->popup, app);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
-    free(newBody);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_display_popup()");
 }
 
