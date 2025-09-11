@@ -1130,6 +1130,8 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem *item) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_var_list_change_callback()");
   furi_assert(item);
+  /* Update selected_option_index[] */
+  // TODO
   wendigo_scene_device_list_update_device(item);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_var_list_change_callback()");
 }
