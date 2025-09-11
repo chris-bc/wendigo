@@ -28,4 +28,5 @@ bool wendigo_add_device(WendigoApp *app, wendigo_device *dev);
 void wendigo_log(MsgType logType, char *message);
 void wendigo_log_with_packet(MsgType logType, char *message, uint8_t *packet, uint16_t packet_size);
 uint16_t device_index_from_mac(uint8_t mac[MAC_BYTES]);
+uint16_t device_index(wendigo_device *dev);
 uint8_t wendigo_index_of_string(char *str, char **array, uint8_t array_len);
