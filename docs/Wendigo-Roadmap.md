@@ -11,10 +11,11 @@ This section is a running list of current priorities.
   * [X] It creates the device if necessary
   * [X] Then calls wendigo_scene_device_list_update_device()
 * [ ] Review all other functions, particularly
-  * [ ] on_enter()
-  * [ ] on_event()
-  * [ ] list_changed()
-  * [ ] list_enter()
+  * [X] on_enter()
+  * [X] on_event()
+  * [X] list_changed()
+  * [X] list_enter()
+  * [X] Timer callback
 * [X] Check use of the function wendigo_option_text_for_id()
 * [X] Check use of the function wendigo_scene_device_list_update_variableItem()
 * [ ] BUG: Wendigo "hangs" after several minutes of scanning

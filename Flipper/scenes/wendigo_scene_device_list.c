@@ -216,8 +216,7 @@ bool wendigo_start_device_timer(WendigoApp *app, FuriTimer *timer, uint16_t mill
     wendigo_log(MSG_ERROR, "End wendigo_start_device_timer() - Unable to initialise timer.");
     return false;
   }
-  /* Stop the timer if it's running because we might have a new duration
-   * or callback. */
+  /* Stop the timer if it's running because we might have a new duration */
   if (furi_timer_is_running(timer) == 1) {
       furi_timer_stop(timer);
   }
@@ -1163,7 +1162,6 @@ void wendigo_scene_device_list_on_enter(void *context) {
     selected_item = 0;
   }
   variable_item_list_set_selected_item(app->devices_var_item_list, selected_item);
-  // TODO: Restore selected options...or maybe do it in redraw()?
   view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewDeviceList);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_on_enter()");
 }
