@@ -27,10 +27,13 @@ This section is a running list of current priorities.
 * [ ] Device List scene doesn't remember selected options
   * [ ] e.g. Selecting a STA, viewing its probed networks, and returning to the device list will display the option "WiFi STA" rather than "x Networks".
   * [ ] Also view device list, view AP, return to device list
-  * [ ] Because Device Lists are often nested, the approach used elsewhere isn't suitable
+  * [ ] Because Device Lists are often nested, the stack-based approach used elsewhere isn't suitable
   * [ ] Add ```selected_device_index``` and ```selected_option_index[deviceCount]``` to DeviceListInstance, to allow selected devices and options to be maintained through nested device lists
   * [ ] wendigo_selected_options_init() is called too often - it overwrites saved values when returning to the view
     * [ ] Have the function set default values only when the array is malloc'd
+  * [ ] BUG: device list's list_changed() callback isn't changing options
+
+
 * [ ] Create a new thread to parse Wendigo packets, using a Message Queue for concurrency management
   * [ ] Hand over responsibility from the UART Worker between buffer processing and calling ```parsePacket()```
   * [ ] When a complete packet is found we already move it into its own byte array
