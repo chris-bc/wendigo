@@ -160,6 +160,7 @@ void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
     popup_set_callback(app->popup, wendigo_popup_callback);
     popup_set_context(app->popup, app);
     view_dispatcher_switch_to_view(app->view_dispatcher, WendigoAppViewPopup);
+    free(newBody);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_display_popup()");
 }
 
