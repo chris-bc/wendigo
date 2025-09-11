@@ -679,6 +679,62 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
   return NULL;
 }
 
+/** Determine the default option index for the specified device.
+ * This function uses the specified device's scanType to determine the
+ * default option index for the device in the device list.
+ */
+uint8_t wendigo_scene_device_list_default_option(wendigo_device *dev) {
+  if (dev == NULL) {
+    return 0;
+  }
+  if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
+    return WendigoOptionBTScanType;
+  }
+  if (dev->scanType == SCAN_WIFI_AP) {
+    return WendigoOptionAPScanType;
+  }
+  if (dev->scanType == SCAN_WIFI_STA) {
+    return WendigoOptionSTAScanType;
+  }
+  /* If we reach this point we have an unknown scanType */
+  char *msg = malloc(sizeof(char) * (78 + MAC_STRLEN));
+  char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
+  if (msg == NULL || macStr == NULL) {
+    wendigo_log(MSG_ERROR,
+      "wendigo_scene_device_list_default_option(): Device has unknowne scanType");
+    if (msg != NULL) {
+      free(msg);
+    }
+    if (macStr != NULL) {
+      free(macStr);
+    }
+  } else {
+    bytes_to_string(dev->mac, MAC_BYTES, macStr);
+    snprintf(msg, 78 + MAC_STRLEN,
+      "wendigo_scene_device_list_default_option(): Device %s has unknown scanType %d.",
+      macStr, dev->scanType);
+    wendigo_log(MSG_ERROR, msg);
+    free(macStr);
+    free(msg);
+  }
+  return 0;
+}
+
+/** Determines the number of options that should be displayed for a device */
+uint8_t wendigo_scene_device_list_options_count(wendigo_device *dev) {
+  uint8_t options_count;
+  if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
+    options_count = WendigoOptionsBTCount;
+  } else if (dev->scanType == SCAN_WIFI_AP) {
+    options_count = WendigoOptionsAPCount;
+  } else if (dev->scanType == SCAN_WIFI_STA) {
+    options_count = WendigoOptionsSTACount;
+  } else {
+    options_count = 1;
+  }
+  return options_count;
+}
+
 /** Update the specified single device's view. This function is called from
  * the tick, on_enter and list_item_changed handlers to ensure displayed
  * information remains up to date.
@@ -693,10 +749,15 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
   char *name;
   bool free_name = false;
   uint8_t optionIndex = 0;
+  uint8_t dev_idx;
   char optionValue[MAX_SSID_LEN + 1];
   bzero(optionValue, MAX_SSID_LEN + 1); /* Null out optionValue[] */
   /* Fetch the device model from new_item's context */
   wendigo_device *dev = variable_item_get_context(new_item);
+  if (dev == NULL) {
+    wendigo_log(MSG_ERROR, "VariableItem has NULL context - Terminating!");
+    return;
+  }
   /* Use dev->scanType to determine the menu item's name/label */
   if ((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
       dev->radio.bluetooth.bdname_len > 0 &&
@@ -716,57 +777,39 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
     }
   }
   /* Figure out the index of the device represented by new_item in
-   * current_devices.devices[] so we can refer to selected_option_index */
-  if (dev != NULL) {
-    /* Find the index of device in current_devices.devices[] */
-    optionIndex = device_index(dev);
-    if (optionIndex == devices_count ||
-        current_devices.selected_option_index == NULL) {
-      /* Device/Option not found - Log warning & display default option */
-      char *msg = malloc(sizeof(char) * (103 + MAC_STRLEN));
-      char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
-      if (msg == NULL || macStr == NULL) {
-        wendigo_log(MSG_WARN, "wendigo_scene_device_list_update_device(): Device not found in cache, defaulting display to scanType.");
-      } else {
-        bytes_to_string(dev->mac, MAC_BYTES, macStr);
-        snprintf(msg, 103 + MAC_STRLEN, "wendigo_scene_device_list_update_device(): Device %s not found in cache, defaulting display to scanType.", macStr);
-        wendigo_log(MSG_WARN, msg);
-      }
-      if (msg != NULL) {
-        free(msg);
-        msg = NULL;
-      }
-      /* Default to displaying scanType */
-      if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-        optionIndex = WendigoOptionBTScanType;
-      } else if (dev->scanType == SCAN_WIFI_AP) {
-        optionIndex = WendigoOptionAPScanType;
-      } else if (dev->scanType == SCAN_WIFI_STA) {
-        optionIndex = WendigoOptionSTAScanType;
-      } else {
-        /* Unknown scanType (device type) */
-        if (macStr != NULL) {
-          msg = malloc(sizeof(char) * (77 + MAC_STRLEN));
-        }
-        if (msg == NULL || macStr == NULL) {
-          wendigo_log(MSG_ERROR, "wendigo_scene_device_list_update_device(): Device has unknown scanType.");
-        } else {
-          snprintf(msg, 77 + MAC_STRLEN, "wendigo_scene_device_list_update_device(): Device %s has unknown scanType %d.", macStr, dev->scanType);
-          wendigo_log(MSG_ERROR, msg);
-        }
-        if (msg != NULL) {
-          free(msg);
-        }
-        if (macStr != NULL) {
-          free(macStr);
-        }
-        /* Default to anything */
-        optionIndex = 0;
-      }
+   * current_devices.devices[] so we can refer to selected_option_index. */
+  dev_idx = custom_device_index(dev, current_devices.devices,
+    current_devices.devices_count);
+  if (dev_idx == current_devices.devices_count ||
+      current_devices.selected_option_index == NULL) {
+    /* Device/Option not found - Log warning & display default option */
+    char *msg = malloc(sizeof(char) * (103 + MAC_STRLEN));
+    char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
+    if (msg == NULL || macStr == NULL) {
+      wendigo_log(MSG_WARN,
+        "wendigo_scene_device_list_update_device(): Device not found in cache, defaulting display to scanType.");
     } else {
-      /* Found the device. Get option index from selected_option_index[] */
-      optionIndex = current_devices.selected_option_index[optionIndex];
+      bytes_to_string(dev->mac, MAC_BYTES, macStr);
+      snprintf(msg, 103 + MAC_STRLEN,
+        "wendigo_scene_device_list_update_device(): Device %s not found in cache, defaulting display to scanType.",
+        macStr);
+      wendigo_log(MSG_WARN, msg);
     }
+    if (msg != NULL) {
+      free(msg);
+      msg = NULL;
+    }
+    if (macStr != NULL) {
+      free(macStr);
+    }
+    /* Set default option */
+    optionIndex = wendigo_scene_device_list_default_option(dev);
+    if (current_devices.selected_option_index != NULL) {
+      current_devices.selected_option_index[dev_idx] = optionIndex;
+    }
+  } else {
+    /* Found the device. Get option index from selected_option_index[] */
+    optionIndex = current_devices.selected_option_index[dev_idx];
   }
 
   /* Check which menu option new_item is displaying */
@@ -887,211 +930,56 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
  * existing device.
  */
 void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
-  FURI_LOG_D(WENDIGO_TAG, "Start wendigo_scene_device_list_update()");
-  /* This will also cater for a NULL dev */
+  FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_update()");
+  /* This statement will also catch a NULL dev */
   if (!wendigo_device_is_displayed(dev)) {
     return;
   }
-  char *name;
-  bool free_name = false;
-  uint8_t optionsCount;
-  uint8_t optionIndex;
-  char optionValue[MAX_SSID_LEN + 1];
-  bzero(optionValue, MAX_SSID_LEN + 1); /* Null out optionValue[] */
-  /* Set name and options menus based on dev->scanType */
-  if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-    /* Use bdname as name if it's a bluetooth device and we have a name */
-    if (dev->radio.bluetooth.bdname_len > 0 &&
-        dev->radio.bluetooth.bdname != NULL) {
-      name = dev->radio.bluetooth.bdname;
-    } else {
-      /* Otherwise use MAC */
-      name = malloc(sizeof(char) * (MAC_STRLEN + 1));
-      free_name = true;
-      if (name != NULL) {
-        bytes_to_string(dev->mac, MAC_BYTES, name);
-      }
-    }
-    optionsCount = WendigoOptionsBTCount;
-    if (dev->view == NULL) {
-      optionIndex = WendigoOptionBTScanType;
-    } else {
-      optionIndex = variable_item_get_current_value_index(dev->view);
-    }
-    switch (optionIndex) {
-      case WendigoOptionBTRSSI:
-        snprintf(optionValue, sizeof(optionValue), "%d dB", dev->rssi);
-        break;
-      case WendigoOptionBTLastSeen:
-        elapsedTime(dev, optionValue, sizeof(optionValue));
-        break;
-      case WendigoOptionBTScanType:
-        snprintf(optionValue, sizeof(optionValue), "%s",
-          (dev->scanType == SCAN_HCI)        ? "BT Classic"
-            : (dev->scanType == SCAN_BLE)    ? "BLE"
-                                              : "Unknown");
-        break;
-      default:
-        /* I'm pretty sure I don't need to worry about static variables */
-        break;
-    }
-  } else if (dev->scanType == SCAN_WIFI_AP) {
-    if (dev->radio.ap.ssid[0] == '\0') {
-      /* No SSID - Use MAC */
-      name = malloc(sizeof(char) * (MAC_STRLEN + 1));
-      free_name = true;
-      if (name != NULL) {
-        bytes_to_string(dev->mac, MAC_BYTES, name);
-      }
-    } else {
-      /* Use access point SSID as name */
-      name = dev->radio.ap.ssid;
-    }
-    optionsCount = WendigoOptionsAPCount;
-    if (dev->view == NULL) {
-      optionIndex = WendigoOptionAPScanType;
-    } else {
-      optionIndex = variable_item_get_current_value_index(dev->view);
-    }
-    switch (optionIndex) {
-      case WendigoOptionAPRSSI:
-        snprintf(optionValue, sizeof(optionValue), "%d dB", dev->rssi);
-        break;
-      case WendigoOptionAPLastSeen:
-        elapsedTime(dev, optionValue, sizeof(optionValue));
-        break;
-      case WendigoOptionAPChannel:
-        snprintf(optionValue, sizeof(optionValue), "Ch. %d",
-                dev->radio.ap.channel);
-        break;
-      case WendigoOptionAPAuthMode:
-        uint8_t mode = dev->radio.ap.authmode;
-        if (mode > WIFI_AUTH_MAX) {
-          mode = WIFI_AUTH_MAX;
-        }
-        snprintf(optionValue, sizeof(optionValue), "%s",
-                wifi_auth_mode_strings[mode]);
-        break;
-      case WendigoOptionAPScanType:
-        snprintf(optionValue, sizeof(optionValue), "%s",
-          (dev->scanType == SCAN_WIFI_AP)  ? "WiFi AP"
-                                            : "Unknown");
-        break;
-      case WendigoOptionAPStaCount:
-        snprintf(optionValue, sizeof(optionValue), "%d Stations",
-          dev->radio.ap.stations_count);
-        break;
-      default:
-        // Nothing
-        break;
-    }
-  } else if (dev->scanType == SCAN_WIFI_STA) {
-    /* Use MAC to label the device */
-    name = malloc(sizeof(char) * (MAC_STRLEN + 1));
-    free_name = true;
-    if (name != NULL) {
-      bytes_to_string(dev->mac, MAC_BYTES, name);
-    }
-    optionsCount = WendigoOptionsSTACount;
-    if (dev->view == NULL) {
-      optionIndex = WendigoOptionSTAScanType;
-    } else {
-      optionIndex = variable_item_get_current_value_index(dev->view);
-    }
-    switch (optionIndex) {
-      case WendigoOptionSTARSSI:
-        snprintf(optionValue, sizeof(optionValue), "%d dB", dev->rssi);
-        break;
-      case WendigoOptionSTALastSeen:
-        elapsedTime(dev, optionValue, sizeof(optionValue));
-        break;
-      case WendigoOptionSTAChannel:
-        snprintf(optionValue, sizeof(optionValue), "Ch. %d",
-                dev->radio.sta.channel);
-        break;
-      case WendigoOptionSTAAP:
-        if (memcmp(dev->radio.sta.apMac, nullMac, MAC_BYTES)) {
-          /* AP has a MAC - Do we have the AP in our cache? */
-          uint16_t apIdx = device_index_from_mac(dev->radio.sta.apMac);
-          if (apIdx == devices_count || devices == NULL ||
-              devices[apIdx] == NULL || devices[apIdx]->scanType !=
-              SCAN_WIFI_AP || devices[apIdx]->radio.ap.ssid[0] == '\0') {
-            /* Either we don't have the AP in our cache or
-             * the AP's SSID is unknown - Use MAC instead */
-            bytes_to_string(dev->radio.sta.apMac, MAC_BYTES, optionValue);
-          } else {
-            /* We have an SSID for the AP */
-            snprintf(optionValue, sizeof(optionValue), "%s",
-                    devices[apIdx]->radio.ap.ssid);
-          }
-        } else {
-          /* We don't know the AP */
-          snprintf(optionValue, sizeof(optionValue), "AP Unknown");
-        }
-        break;
-      case WendigoOptionSTAScanType:
-        snprintf(optionValue, sizeof(optionValue), "%s",
-          (dev->scanType == SCAN_WIFI_STA) ? "WiFi STA"
-                                            : "Unknown");
-        break;
-      case WendigoOptionSTASavedNetworks:
-        snprintf(optionValue, sizeof(optionValue), "%d Networks",
-          dev->radio.sta.saved_networks_count);
-        break;
-      default:
-        /* Nothing to do, I think */
-        break;
-    }
-  } else {
-    /* Invalid device type */
-    return;
-  }
-  uint16_t dev_idx = custom_device_index(dev, current_devices.devices, current_devices.devices_count);
+  /* Is this a new or existing device? */
+  uint16_t dev_idx = custom_device_index(dev, current_devices.devices,
+    current_devices.devices_count);
   if (dev_idx == current_devices.devices_count) {
     /* Add a new item */
-    dev->view = variable_item_list_add(
-        app->devices_var_item_list, (name == NULL) ? "(Unknown)" : name,
-        optionsCount, wendigo_scene_device_list_var_list_change_callback, dev);
-    /* And set selected option */
-    variable_item_set_current_value_index(dev->view, optionIndex);
-    variable_item_set_current_value_text(dev->view, optionValue);
-    /* Update current_devices.devices[] to include the new device */
-    if (!current_devices.free_devices) {
-      char *msg = malloc(sizeof(char) * (123 + MAX_SSID_LEN)); /* Length assumes that a bdname won't be longer than MAX_SSID_LEN */
-      if (msg == NULL || name == NULL) {
-        wendigo_log(MSG_ERROR, "Adding new device to current_devices.devices[] but it is configured to be immutable. Ignoring this and adding anyway...");
+    uint8_t options_count = wendigo_scene_device_list_options_count(dev);
+    dev->view = variable_item_list_add(app->devices_var_item_list, "Loading",
+      options_count, wendigo_scene_device_list_var_list_change_callback, dev);
+    uint8_t option_idx = wendigo_scene_device_list_default_option(dev);
+    /* Expand current_devices.devices[] & selected_option_index[] */
+    wendigo_device **new_devices = realloc(current_devices.devices,
+      sizeof(wendigo_device *) * (current_devices.devices_count + 1));
+    uint8_t *new_selected_option_index = realloc(
+      current_devices.selected_option_index, current_devices.devices_count + 1);
+    if (new_devices == NULL || new_selected_option_index == NULL) {
+      char *msg = malloc(sizeof(char) * 108);
+      if (msg == NULL) {
+        wendigo_log(MSG_ERROR, "wendigo_scene_device_list_update(): Failed to extend devices[] and selected_option_index[].");
       } else {
-        snprintf(msg, 123 + MAX_SSID_LEN,
-          "Adding a new device %s to current_devices.devices[] but it is configured to be immutable. Ignoring this and adding anyway...",
-          name);
+        snprintf(msg, 108,
+          "wendigo_scene_device_list_update(): Failed to extend devices[] and selected_option_index[] to length %d.",
+          current_devices.devices_count + 1);
         wendigo_log(MSG_ERROR, msg);
-      }
-      if (msg != NULL) {
         free(msg);
       }
-    }
-    wendigo_device **new_devices = realloc(current_devices.devices, sizeof(wendigo_device *) * (current_devices.devices_count + 1));
-    if (new_devices != NULL) {
+      /* If either realloc worked, shrink it back to its original size */
+      if (new_devices != NULL) {
+        current_devices.devices = realloc(new_devices,
+          sizeof(wendigo_device *) * current_devices.devices_count);
+      }
+
+      if (new_selected_option_index != NULL) {
+        current_devices.selected_option_index = realloc(
+          new_selected_option_index, current_devices.devices_count);
+      }
+    } else {
+      /* Append device and option in current_devices */
       current_devices.devices = new_devices;
-      current_devices.devices[current_devices.devices_count++] = dev;
-    }
-  } else {
-    /* Update dev->view */
-    // YAGNI: Seems to be an occasional bug with the API - This results in occasional NULL pointer dereference
-    //variable_item_set_item_label(dev->view, (name == NULL) ? "(Unknown)" : name);
-  }
-  if (dev->view != NULL) {
-    variable_item_set_current_value_index(dev->view, optionIndex);
-    if (optionValue[0] != '\0') {
-      /* New value for the option */
-      // YAGNI: Seems to be an occasional bug with the PI - This results in an occasional NULL pointer dereference
-      //variable_item_set_current_value_text(dev->view, optionValue);
+      current_devices.devices[current_devices.devices_count] = dev;
+      current_devices.selected_option_index = new_selected_option_index;
+      current_devices.selected_option_index[current_devices.devices_count++] = option_idx;
     }
   }
-  /* Free `name` if we malloc'd it */
-  if (free_name && name != NULL) {
-    free(name);
-  }
+  /* Set VariableItem label and option */
+  wendigo_scene_device_list_update_device(dev->view);
   FURI_LOG_D(WENDIGO_TAG, "End wendigo_scene_device_list_update()");
 }
 
@@ -1118,36 +1006,11 @@ bool wendigo_selected_options_init(DeviceListInstance *deviceList) {
   /* Loop through deviceList->devices[] to set appropriate option defaults */
   if (deviceList->selected_option_index != NULL) {
     for (uint16_t i = 0; i < deviceList->devices_count; ++i) {
-      if (deviceList->devices[i] != NULL) {
-        if (deviceList->devices[i]->scanType == SCAN_HCI ||
-            deviceList->devices[i]->scanType == SCAN_BLE) {
-          deviceList->selected_option_index[i] = WendigoOptionBTScanType;
-        } else if (deviceList->devices[i]->scanType == SCAN_WIFI_AP) {
-          deviceList->selected_option_index[i] = WendigoOptionAPScanType;
-        } else if (deviceList->devices[i]->scanType == SCAN_WIFI_STA) {
-          deviceList->selected_option_index[i] = WendigoOptionSTAScanType;
-        } else {
-          deviceList->selected_option_index[i] = 0;
-        }
-      }
+      deviceList->selected_option_index[i] =
+        wendigo_scene_device_list_default_option(deviceList->devices[i]);
     }
   }
   return true;
-}
-
-/** Determines the number of options that should be displayed for a device */
-uint8_t wendigo_scene_device_list_options_count(wendigo_device *dev) {
-  uint8_t options_count;
-  if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
-    options_count = WendigoOptionsBTCount;
-  } else if (dev->scanType == SCAN_WIFI_AP) {
-    options_count = WendigoOptionsAPCount;
-  } else if (dev->scanType == SCAN_WIFI_STA) {
-    options_count = WendigoOptionsSTACount;
-  } else {
-    options_count = 1;
-  }
-  return options_count;
 }
 
 /** Re-render the variable item list. This function exists because there is no
@@ -1184,6 +1047,7 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
       wendigo_scene_device_list_update_device(current_devices.devices[i]->view);
     }
   }
+  // TODO: Restore existing selected item if there is one
   variable_item_list_set_selected_item(app->devices_var_item_list, 0);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_redraw()");
 }
