@@ -1135,6 +1135,21 @@ bool wendigo_selected_options_init(DeviceListInstance *deviceList) {
   return true;
 }
 
+/** Determines the number of options that should be displayed for a device */
+uint8_t wendigo_scene_device_list_options_count(wendigo_device *dev) {
+  uint8_t options_count;
+  if (dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) {
+    options_count = WendigoOptionsBTCount;
+  } else if (dev->scanType == SCAN_WIFI_AP) {
+    options_count = WendigoOptionsAPCount;
+  } else if (dev->scanType == SCAN_WIFI_STA) {
+    options_count = WendigoOptionsSTACount;
+  } else {
+    options_count = 1;
+  }
+  return options_count;
+}
+
 /** Re-render the variable item list. This function exists because there is no
  * method to remove items from a variable_item_list, but that is sometimes
  * necessary (e.g. when viewing selected devices and de-selecting a device).
@@ -1159,16 +1174,7 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
   for (uint16_t i = 0; i < current_devices.devices_count; ++i) {
     /* Determine the number of options based on the device type */
     if (current_devices.devices != NULL &&current_devices.devices[i] != NULL) {
-      if (current_devices.devices[i]->scanType == SCAN_HCI ||
-          current_devices.devices[i]->scanType == SCAN_BLE) {
-        options_count = WendigoOptionsBTCount;
-      } else if (current_devices.devices[i]->scanType == SCAN_WIFI_AP) {
-        options_count = WendigoOptionsAPCount;
-      } else if (current_devices.devices[i]->scanType == SCAN_WIFI_STA) {
-        options_count = WendigoOptionsSTACount;
-      } else {
-        options_count = 1;
-      }
+      options_count = wendigo_scene_device_list_options_count(current_devices.devices[i]);
       /* Add a new list item */
       current_devices.devices[i]->view = variable_item_list_add(
         app->devices_var_item_list, "Loading", options_count, 
