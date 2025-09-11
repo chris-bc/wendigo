@@ -4,17 +4,19 @@ This section is a running list of current priorities.
 
 * [X] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [X] Add "m" command as a shortcut to mac
-* [ ] Update redraw() function so that:
-  * [ ] It creates a VariableItem with the correct options count
-  * [ ] It then calls wendigo_scene_device_list_update_device() to populate the VariableItem
-* [ ] Update update() function so that:
-  * [ ] It creates the device if necessary
-  * [ ] Then calls wendigo_scene_device_list_update_device()
+* [X] Update redraw() function so that:
+  * [X] It creates a VariableItem with the correct options count
+  * [X] It then calls wendigo_scene_device_list_update_device() to populate the VariableItem
+* [X] Update update() function so that:
+  * [X] It creates the device if necessary
+  * [X] Then calls wendigo_scene_device_list_update_device()
 * [ ] Review all other functions, particularly
   * [ ] on_enter()
   * [ ] on_event()
   * [ ] list_changed()
   * [ ] list_enter()
+* [X] Check use of the function wendigo_option_text_for_id()
+* [X] Check use of the function wendigo_scene_device_list_update_variableItem()
 * [ ] BUG: Wendigo "hangs" after several minutes of scanning
   * [ ] **Confirm this is fixed**
   * [ ] Scanning for a short period, stopping it, and spending a long time exploring discovered devices doesn't cause any issues so this is definitely related to scanning
