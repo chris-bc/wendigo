@@ -89,6 +89,7 @@ void wendigo_scene_device_list_init(void *config) {
   if (config == NULL) {
     current_devices.devices = NULL;
     current_devices.selected_option_index = NULL;
+    current_devices.selected_index = 0;
     current_devices.devices_count = 0;
     current_devices.devices_mask = DEVICE_ALL;
     current_devices.view = WendigoAppViewDeviceList;
@@ -138,6 +139,7 @@ void wendigo_scene_device_list_init(void *config) {
     } else {
       current_devices.devices = NULL;
       current_devices.selected_option_index = NULL;
+      current_devices.selected_index = cfg->selected_index;
       current_devices.devices_count = 0;
     }
     current_devices.devices_mask = cfg->devices_mask;
@@ -526,9 +528,9 @@ wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_selected_device()");
   WendigoApp *app = variable_item_get_context(item);
 
-  if (app->device_list_selected_menu_index < current_devices.devices_count) {
+  if (current_devices.selected_index < current_devices.devices_count) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_selected_device()");
-    return current_devices.devices[app->device_list_selected_menu_index];
+    return current_devices.devices[current_devices.selected_index];
   }
   // TODO: Compare these methods - I'm tempted to remove the first approach
   // (which is why it now gets its own function)
@@ -623,7 +625,7 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
   /* Fetch the device model from new_item's context */
   wendigo_device *dev = variable_item_get_context(new_item);
   if (dev == NULL) {
-    wendigo_log(MSG_ERROR, "VariableItem has NULL context - Terminating!");
+    wendigo_log(MSG_ERROR, "wendigo_scene_device_list_update_device(): VariableItem has NULL context - Terminating!");
     return;
   }
   /* Use dev->scanType to determine the menu item's name/label */
@@ -717,8 +719,7 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
   } else if ((dev->scanType == SCAN_HCI || dev->scanType == SCAN_BLE) &&
       optionIndex == WendigoOptionBTCod) {
     /* Update BT class of device */
-    snprintf(optionValue, sizeof(optionValue), "%s",
-      dev->radio.bluetooth.cod_str);
+    strncpy(optionValue, dev->radio.bluetooth.cod_str, sizeof(optionValue));
   } else if ((dev->scanType == SCAN_WIFI_AP &&
       optionIndex == WendigoOptionAPChannel) ||
       (dev->scanType == SCAN_WIFI_STA &&
@@ -746,8 +747,7 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
     if (mode > WIFI_AUTH_MAX) {
       mode = WIFI_AUTH_MAX;
     }
-    snprintf(optionValue, sizeof(optionValue), "%s",
-      wifi_auth_mode_strings[mode]);
+    strncpy(optionValue, wifi_auth_mode_strings[mode]);
   } else if (dev->scanType == SCAN_WIFI_STA &&
       optionIndex == WendigoOptionSTAAP) {
     /* Update STA's AP */
@@ -763,8 +763,7 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
         bytes_to_string(dev->radio.sta.apMac, MAC_BYTES, optionValue);
       } else {
         /* We have an SSID for the AP */
-        snprintf(optionValue, sizeof(optionValue), "%s",
-          devices[apIdx]->radio.ap.ssid);
+        strncpy(optionValue, devices[apIdx]->radio.ap.ssid, sizeof(optionValue));
       }
     } else {
       /* We don't know the AP */
@@ -870,9 +869,9 @@ bool wendigo_selected_options_init(DeviceListInstance *deviceList) {
       wendigo_log(MSG_ERROR, "End wendigo_selected_options_init() - Failed to allocate memory to hold device list selected options.");
       return false;
     }
-  }
-  /* Loop through deviceList->devices[] to set appropriate option defaults */
-  if (deviceList->selected_option_index != NULL) {
+    /* Loop through deviceList->devices[] to set appropriate option defaults.
+     * Only do this if selected_option_index is NULL otherwise it'll be
+     * impossible to scroll through options. */
     for (uint16_t i = 0; i < deviceList->devices_count; ++i) {
       deviceList->selected_option_index[i] =
         wendigo_scene_device_list_default_option(deviceList->devices[i]);
@@ -891,7 +890,6 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
   uint8_t options_count = 0;
   wendigo_scene_device_list_set_current_devices_mask(current_devices.devices_mask);
   /* Initialise current_devices.selected_option_index[] if necessary */
-  // TODO: Ensure this won't overwrite historical selections when restoring the view
   if (!wendigo_selected_options_init(&current_devices)) {
     wendigo_log(MSG_ERROR, "wendigo_selected_options_init() failed!");
   }
@@ -915,8 +913,8 @@ void wendigo_scene_device_list_redraw(WendigoApp *app) {
       wendigo_scene_device_list_update_device(current_devices.devices[i]->view);
     }
   }
-  // TODO: Restore existing selected item if there is one
-  variable_item_list_set_selected_item(app->devices_var_item_list, 0);
+  /* Restore the selected item index from current_devices */
+  variable_item_list_set_selected_item(app->devices_var_item_list, current_devices.selected_index);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_redraw()");
 }
 
@@ -933,7 +931,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     return;
   }
 
-  app->device_list_selected_menu_index = index;
+  current_devices.selected_index = index;
 
   /* If the tag/untag menu item is selected perform that action, otherwise
    * display details for `item` */
@@ -1155,11 +1153,9 @@ void wendigo_scene_device_list_on_enter(void *context) {
   variable_item_list_set_enter_callback(app->devices_var_item_list,
     wendigo_scene_device_list_var_list_enter_callback, app);
 
-  /* Restore the selected device index if it's there to restore (e.g. if we're
-   * returning from the device detail scene). But first test that it's in
-   * bounds, unless we've moved from all devices to a subset. */
-  uint8_t selected_item = scene_manager_get_scene_state(app->scene_manager,
-                                                        WendigoSceneDeviceList);
+  /* Ignore the scene state and restore the selected device from
+   * current_devices. */
+  uint8_t selected_item = current_devices.selected_index;
   if (selected_item >= current_devices.devices_count) {
     selected_item = 0;
   }
@@ -1177,20 +1173,14 @@ bool wendigo_scene_device_list_on_event(void *context,
   if (event.type == SceneManagerEventTypeCustom) {
     switch (event.event) {
     case Wendigo_EventListDeviceDetails:
-      scene_manager_set_scene_state(app->scene_manager, WendigoSceneDeviceList,
-                                    app->device_list_selected_menu_index);
       scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceDetail);
       break;
     case Wendigo_EventListDevices:
       /* current_devices has been populated with relevant devices - all we
        * need to do here is display them. */
-      scene_manager_set_scene_state(app->scene_manager, WendigoSceneDeviceList,
-                                    app->device_list_selected_menu_index);
       scene_manager_next_scene(app->scene_manager, WendigoSceneDeviceList);
       break;
     case Wendigo_EventListNetworks:
-        scene_manager_set_scene_state(app->scene_manager, WendigoSceneDeviceList,
-                                      app->device_list_selected_menu_index);
         scene_manager_next_scene(app->scene_manager, WendigoScenePNLList);
         break;
     default:
@@ -1206,7 +1196,8 @@ bool wendigo_scene_device_list_on_event(void *context,
     }
     consumed = true;
   } else if (event.type == SceneManagerEventTypeTick) {
-    app->device_list_selected_menu_index =
+    // TODO: Up to here
+    current_devices.selected_index =
         variable_item_list_get_selected_item_index(app->devices_var_item_list);
     consumed = true;
   }

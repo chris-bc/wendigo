@@ -135,6 +135,7 @@ typedef struct DeviceListInstance {
   char devices_msg[MAX_SSID_LEN + 18]; // Space for "Clients of MAX_SSID_LEN"
   bool free_devices; // Do we need to free devices[] when we're done with it?
   uint8_t *selected_option_index;
+  uint8_t selected_index;
 } DeviceListInstance;
 
 struct WendigoApp {
@@ -159,7 +160,6 @@ struct WendigoApp {
     uint32_t last_packet;
 
     uint8_t setup_selected_menu_index;
-    uint16_t device_list_selected_menu_index;
     uint8_t setup_selected_option_index[SETUP_MENU_ITEMS];
     uint8_t selected_menu_index;
     uint8_t selected_option_index[START_MENU_ITEMS];

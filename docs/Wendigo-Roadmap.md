@@ -2,6 +2,9 @@
 
 This section is a running list of current priorities.
 
+* [ ] BUG: Probed SSIDs hangs the application
+  * [ ] Works when scanning is stopped
+* [ ] BUG: Cannot scroll options in device list
 * [X] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
 * [X] Add "m" command as a shortcut to mac
 * [X] Update redraw() function so that:
