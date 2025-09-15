@@ -524,25 +524,13 @@ double elapsedTime(wendigo_device *dev, char *elapsedStr, uint8_t strlen) {
 /** Identify the device represented by the currently-selected menu item. NULL if
  * it cannot be identified.
  */
-wendigo_device *wendigo_scene_device_list_selected_device(VariableItem *item) {
+wendigo_device *wendigo_scene_device_list_selected_device() {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_selected_device()");
-  WendigoApp *app = variable_item_get_context(item);
 
-  if (current_devices.selected_index < current_devices.devices_count) {
+  if (current_devices.selected_index < current_devices.devices_count &&
+      current_devices.devices != NULL) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_selected_device()");
     return current_devices.devices[current_devices.selected_index];
-  }
-  // TODO: Compare these methods - I'm tempted to remove the first approach
-  // (which is why it now gets its own function)
-  /* Instead of indexing into the array, see if we can find the device with a
-   * reverse lookup from `item` */
-  uint16_t idx = 0;
-  for (; idx < current_devices.devices_count && current_devices.devices[idx]->view != item;
-    ++idx) {
-  }
-  if (idx < current_devices.devices_count) {
-    FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_selected_device()");
-    return current_devices.devices[idx];
   }
   /* Device not found */
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_selected_device()");
@@ -747,7 +735,7 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
     if (mode > WIFI_AUTH_MAX) {
       mode = WIFI_AUTH_MAX;
     }
-    strncpy(optionValue, wifi_auth_mode_strings[mode]);
+    strncpy(optionValue, wifi_auth_mode_strings[mode], sizeof(optionValue));
   } else if (dev->scanType == SCAN_WIFI_STA &&
       optionIndex == WendigoOptionSTAAP) {
     /* Update STA's AP */
