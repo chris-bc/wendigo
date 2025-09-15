@@ -925,41 +925,55 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
 
   furi_assert(index < current_devices.devices_count);
 
-  wendigo_device *item = current_devices.devices[index];
-  if (item == NULL) {
-    return;
+  /* Get the wendigo_device from the VariableItem at index `index` */
+  wendigo_device *item = NULL;
+  VariableItem *var_item = variable_item_list_get(
+    app->devices_var_item_list, index);
+  if (var_item != NULL) {
+    item = (wendigo_device *)variable_item_get_context(var_item);
   }
+  /* If that failed, currently we know that the var_item_list and
+   * current_devices.devices[] are in the same order so we can look the device
+   * up in current_devices.devices[].
+   * NOTE: This will need to be removed when sorting is implemented. */
+  if (var_item == NULL || item == NULL) {
+    wendigo_device *item = current_devices.devices[index];
+    if (item == NULL) {
+      wendigo_log(MSG_ERROR, "End wendigo_scene_device_list_var_list_enter_callback(): Unable to find selected wendigo_device.");
+      return;
+    }
+  }
+  /* This is a good opportunity to patch item->view if it's invalid */
+  item->view = var_item;
 
   current_devices.selected_index = index;
 
-  /* If the tag/untag menu item is selected perform that action, otherwise
-   * display details for `item` */
+  /* Update the selected option */
+  uint8_t option_index = variable_item_get_current_value_index(item->view);
+  /* If the tag/untag menu item is selected toggle tagged state */
   if (item->view != NULL &&
       (((item->scanType == SCAN_HCI || item->scanType == SCAN_BLE) &&
-        variable_item_get_current_value_index(item->view) ==
-            WendigoOptionBTTagUntag) ||
+        option_index == WendigoOptionBTTagUntag) ||
         (item->scanType == SCAN_WIFI_AP &&
-        variable_item_get_current_value_index(item->view) ==
-            WendigoOptionAPTagUntag) ||
+        option_index == WendigoOptionAPTagUntag) ||
         (item->scanType == SCAN_WIFI_STA &&
-        variable_item_get_current_value_index(item->view) ==
-            WendigoOptionSTATagUntag))) {
+        option_index == WendigoOptionSTATagUntag))) {
     item->tagged = !(item->tagged);
     variable_item_set_current_value_text(item->view,
                                         (item->tagged) ? "Untag" : "Tag");
     /* If the device is now untagged and we're viewing tagged devices only,
      * remove the device from view unless custom device view is enabled. */
     if (((current_devices.devices_mask & DEVICE_SELECTED_ONLY) == DEVICE_SELECTED_ONLY) &&
-        !item->tagged && ((current_devices.devices_mask & DEVICE_CUSTOM) != DEVICE_CUSTOM)) {
-      /* Bugger - There's no method to remove an item from a variable_item_list */
-      item->view = NULL; // TODO: Is this leaking memory? Can I free a VariableItem?
+        !item->tagged && ((current_devices.devices_mask & DEVICE_CUSTOM) == 0)) {
+      /* Bugger - There's no method to remove an item from a variable_item_list
+       * We'll just have to redraw the entire var_item_list. */
+      item->view = NULL;
       wendigo_scene_device_list_redraw(app);
     }
   } else if (item->view != NULL && ((item->scanType == SCAN_WIFI_AP &&
-      variable_item_get_current_value_index(item->view) ==
-      WendigoOptionAPStaCount) || (item->scanType == SCAN_WIFI_STA &&
-      variable_item_get_current_value_index(item->view) ==
-      WendigoOptionSTAAP))) {
+      option_index == WendigoOptionAPStaCount) ||
+      (item->scanType == SCAN_WIFI_STA &&
+      option_index == WendigoOptionSTAAP))) {
     /* Push current_devices onto the device list stack */
     DeviceListInstance *new_stack = realloc(stack, sizeof(DeviceListInstance) * (stack_counter + 1));
     if (new_stack == NULL) {
@@ -978,6 +992,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     current_devices.devices_count = 0;
     current_devices.devices = NULL;
     current_devices.selected_option_index = NULL;
+    current_devices.selected_index = 0;
     bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
     char *deviceName = malloc(sizeof(char) * (MAX_SSID_LEN + 1));
     if (deviceName == NULL) {
@@ -1070,7 +1085,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       }
     } else if (item->scanType == SCAN_WIFI_STA) {
       current_devices.view = WendigoAppViewSTAAP;
-      /* Use MAC to refer to the device */
+      /* Use MAC to refer to the station */
       if (deviceName == NULL) {
         snprintf(current_devices.devices_msg,
           sizeof(current_devices.devices_msg),
@@ -1086,9 +1101,10 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
         /* We have a MAC. Find the wendigo_device* */
         uint16_t apIdx = device_index_from_mac(item->radio.sta.apMac);
         if (apIdx < devices_count) {
-          /* Found the AP in the device cache - Display just it */
+          /* Found the AP in the device cache - Display it */
           current_devices.devices_count = 1;
           current_devices.devices = &(devices[apIdx]);
+          current_devices.free_devices = false;
           current_devices.selected_option_index = malloc(1);
           if (current_devices.selected_option_index == NULL) {
             wendigo_log(MSG_ERROR, "Unable to allocate 1 byte for AP's options.");
@@ -1100,7 +1116,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       }
     } else {
       wendigo_log(MSG_WARN,
-        "Logic error: Fell through conditional nest in wendigo_scene_device_list.c");
+        "Logic error: Fell through conditional nest in wendigo_scene_device_list_var_list_enter_callback().");
     }
     if (deviceName != NULL) {
       free(deviceName);
@@ -1108,8 +1124,7 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     view_dispatcher_send_custom_event(app->view_dispatcher,
       Wendigo_EventListDevices);
   } else if (item->view != NULL && item->scanType == SCAN_WIFI_STA &&
-      variable_item_get_current_value_index(item->view) ==
-        WendigoOptionSTASavedNetworks) {
+      option_index == WendigoOptionSTASavedNetworks) {
     /* Tell the scene which device we're interested in */
     wendigo_scene_pnl_list_set_device(item, app);
     view_dispatcher_send_custom_event(app->view_dispatcher,
