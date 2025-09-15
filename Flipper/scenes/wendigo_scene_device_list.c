@@ -200,6 +200,19 @@ void wendigo_scene_device_list_timer_callback(void *context) {
     if (current_devices.devices[i] != NULL &&
         current_devices.devices[i]->view != NULL) {
       wendigo_scene_device_list_update_device(current_devices.devices[i]->view);
+    } else {
+      // "ERROR: current_devices.devices[i] is NULL." 85 + 4
+      char *msg = malloc(sizeof(char) * 90);
+      if (msg == NULL) {
+        wendigo_log(MSG_ERROR,
+          "wendigo_scene_device_list_timer_callback() ERROR: current_devices.devices[i] is NULL.");
+      } else {
+        snprintf(msg, 90,
+          "wendigo_scene_device_list_timer_callback() ERROR: current_devices.devices[%d] is NULL.",
+          i);
+        wendigo_log(MSG_ERROR, msg);
+        free(msg);
+      }
     }
   }
 }
@@ -215,7 +228,7 @@ bool wendigo_start_device_timer(WendigoApp *app, FuriTimer *timer, uint16_t mill
       FuriTimerTypePeriodic, app);
   }
   if (timer == NULL) {
-    wendigo_log(MSG_ERROR, "End wendigo_start_device_timer() - Unable to initialise timer.");
+    wendigo_log(MSG_ERROR, "End wendigo_start_device_timer() - Unable to allocate timer.");
     return false;
   }
   /* Stop the timer if it's running because we might have a new duration */
