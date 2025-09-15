@@ -73,6 +73,7 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
         /* If networks[] has been initialised we can assume it's up to date */
         return networks_count;
     }
+    networks_count = 0;
     /* Input validation */
     if (app == NULL || devices == NULL || devices_count == 0) {
         FURI_LOG_T(WENDIGO_TAG, "End map_ssids_to_devices() - Invalid arguments.");
@@ -104,8 +105,8 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
             /* Zero out newly-allocated space to initialise new PreferredNetwork elements
              * (NULL ssid[] and devices[], 0 device_count). */
             bzero(new_networks + (networks_count * sizeof(PreferredNetwork)), this_count * sizeof(PreferredNetwork));
-            networks_capacity = networks_count + this_count;
             networks = new_networks;
+            networks_capacity = networks_count + this_count;
         }
         /* Check each saved network for devices[i] */
         for (uint8_t j = 0; j < this_count; ++j) {
@@ -161,8 +162,8 @@ uint16_t map_ssids_to_devices(WendigoApp *app) {
             wendigo_log(MSG_ERROR, "Unable to shrink networks[] to remove spare capacity.");
             /* Don't fret too much */
         } else {
-            networks_capacity = networks_count;
             networks = new_networks;
+            networks_capacity = networks_count;
         }
     }
     furi_mutex_release(app->pnlMutex);

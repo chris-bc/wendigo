@@ -1263,6 +1263,13 @@ void wendigo_scene_device_list_on_exit(void *context) {
      * another device list, such as displaying an AP's STAs, this function is
      * called but we do not want to replace the current_devices we've just
      * constructed with the stack element we've just pushed. */
+
+    /* Stop & free the refresh timer if it's running */
+    if (deviceTimer != NULL) {
+      furi_timer_stop(deviceTimer);
+      furi_timer_free(deviceTimer);
+      deviceTimer = NULL;
+    }
     /* Free current_devices.devices[] if necessary */
     if (current_devices.devices != NULL && current_devices.devices_count > 0) {
       if (current_devices.free_devices) {
@@ -1289,12 +1296,6 @@ void wendigo_scene_device_list_on_exit(void *context) {
         stack = stackAfterPop;
       }
       --stack_counter;
-    }
-    /* Stop & free the refresh timer if it's running */
-    if (deviceTimer != NULL) {
-      furi_timer_stop(deviceTimer);
-      furi_timer_free(deviceTimer);
-      deviceTimer = NULL;
     }
     app->leaving_scene = false;
   }

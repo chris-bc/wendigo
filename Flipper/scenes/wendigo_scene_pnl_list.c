@@ -57,6 +57,7 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scen_pnl_list_var_list_enter_callback()");
 }
 
+/** Display a list of SSIDs that current_device has sent probes for */
 void wendigo_scene_pnl_list_redraw_sta(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_redraw_sta()");
     VariableItemList *var_item_list = app->var_item_list;
@@ -90,6 +91,7 @@ void wendigo_scene_pnl_list_redraw_sta(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw_sta()");
 }
 
+/** Display all SSIDs that any device has sent a probe for */
 void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_redraw_all_devices()");
     /* Initialise or update networks[] prior to display */
@@ -120,12 +122,15 @@ void wendigo_scene_pnl_list_redraw_all_devices(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw_all_devices()");
 }
 
+/** Redraw the device list based on current_device */
 void wendigo_scene_pnl_list_redraw(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_pnl_list_redraw()");
     if (current_device != NULL && current_device->scanType == SCAN_WIFI_STA) {
+        /* Display the PNL for current_device */
         FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw() - Displaying STA.");
         return wendigo_scene_pnl_list_redraw_sta(app);
     }
+    /* Display all probed SSIDs */
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_pnl_list_redraw() - Displaying all devices.");
     return wendigo_scene_pnl_list_redraw_all_devices(app);
 }

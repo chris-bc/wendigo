@@ -636,7 +636,7 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
                                 dev->radio.sta.saved_networks[i] != NULL) {
                             /* Copy dev[i] to target[pnl_idx] */
                             pnl_len = strlen(dev->radio.sta.saved_networks[i]);
-                            new_pnl[pnl_idx] = malloc(pnl_len + 1);
+                            new_pnl[pnl_idx] = malloc(sizeof(char) * (pnl_len + 1));
                             if (new_pnl[pnl_idx] != NULL) {
                                 strncpy(new_pnl[pnl_idx],
                                     dev->radio.sta.saved_networks[i], pnl_len);
