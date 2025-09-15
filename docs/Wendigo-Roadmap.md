@@ -4,38 +4,22 @@ This section is a running list of current priorities.
 
 * [ ] BUG: Probed SSIDs hangs the application
   * [ ] Works when scanning is stopped
-* [ ] BUG: Cannot scroll options in device list
 * [ ] Extend wendigo_log() to support variable arguments
-* [X] ESP32 tag command has a radio arg, doesn't need it - parse_command_tag()
-* [X] Add "m" command as a shortcut to mac
-* [X] Update redraw() function so that:
-  * [X] It creates a VariableItem with the correct options count
-  * [X] It then calls wendigo_scene_device_list_update_device() to populate the VariableItem
-* [X] Update update() function so that:
-  * [X] It creates the device if necessary
-  * [X] Then calls wendigo_scene_device_list_update_device()
-* [ ] Review all other functions, particularly
-  * [X] on_enter()
-  * [X] on_event()
-  * [X] list_changed()
-  * [X] list_enter()
-  * [X] Timer callback
-* [X] Check use of the function wendigo_option_text_for_id()
-* [X] Check use of the function wendigo_scene_device_list_update_variableItem()
+* [ ] Identify functions that should probe for available features
 * [ ] BUG: Wendigo "hangs" after several minutes of scanning
   * [ ] **Confirm this is fixed**
   * [ ] Scanning for a short period, stopping it, and spending a long time exploring discovered devices doesn't cause any issues so this is definitely related to scanning
   * [ ] Could the UART thread be deadlocked?
   * [ ] Run with debugger and trace log to find clues
 * [ ] Refactor all use of ```wendigo_display_popup()``` now it can correctly restore the previous view
-* [ ] Device List scene doesn't remember selected options
-  * [ ] e.g. Selecting a STA, viewing its probed networks, and returning to the device list will display the option "WiFi STA" rather than "x Networks".
-  * [ ] Also view device list, view AP, return to device list
-  * [ ] Because Device Lists are often nested, the stack-based approach used elsewhere isn't suitable
-  * [ ] Add ```selected_device_index``` and ```selected_option_index[deviceCount]``` to DeviceListInstance, to allow selected devices and options to be maintained through nested device lists
-  * [ ] wendigo_selected_options_init() is called too often - it overwrites saved values when returning to the view
-    * [ ] Have the function set default values only when the array is malloc'd
-  * [ ] BUG: device list's list_changed() callback isn't changing options
+* [X] Device List scene doesn't remember selected options
+  * [X] e.g. Selecting a STA, viewing its probed networks, and returning to the device list will display the option "WiFi STA" rather than "x Networks".
+  * [X] Also view device list, view AP, return to device list
+  * [X] Because Device Lists are often nested, the stack-based approach used elsewhere isn't suitable
+  * [X] Add ```selected_device_index``` and ```selected_option_index[deviceCount]``` to DeviceListInstance, to allow selected devices and options to be maintained through nested device lists
+  * [X] wendigo_selected_options_init() is called too often - it overwrites saved values when returning to the view
+    * [X] Have the function set default values only when the array is malloc'd
+  * [X] BUG: device list's list_changed() callback isn't changing options
 
 
 * [ ] Create a new thread to parse Wendigo packets, using a Message Queue for concurrency management
@@ -45,12 +29,10 @@ This section is a running list of current priorities.
   * [ ] A new worker, running on a new thread, will wake up when an item is in the queue and this thread will parse the packet and make necessary changes to the data model.
   * [ ] This reduces the time the UART receiver is doing things other than receiving UART.
 * [ ] Finish implementation of association/reassociation packet parsers
-* [ ] Update feature-dependent functions to probe for device capabilities
 * [ ] Channel command overwrites enabled channels when setting channels
   * [ ] This approach is preferable when the client is always an application, but inconvenient in interactive mode
   * [ ] Make it possible to select/deselect a subset of channels at a time
   * [ ] Don't change the current implementation (too much) because it's a simple integration for Flipper-Wendigo
-* [X] Scan menu option doesn't need "Start" when it's started or "Stop" when it's stopped - Use a single menu option that changes its text, similar to Tag/Untag.
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
 * [X] BT Classic and LE device transmission from ESP32 to Flipper
