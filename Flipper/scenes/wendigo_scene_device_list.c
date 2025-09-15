@@ -254,10 +254,8 @@ bool wendigo_device_is_displayed_custom(wendigo_device *dev) {
   }
   /* Loop through current_devices.devices[] searching for dev */
   uint16_t idx;
-  for (idx = 0; idx < current_devices.devices_count &&
-    (current_devices.devices[idx] == NULL ||
-      memcmp(dev->mac, current_devices.devices[idx]->mac, MAC_BYTES));
-    ++idx) { }
+  idx = custom_device_index(dev, current_devices.devices,
+    current_devices.devices_count);
   return (idx < current_devices.devices_count);
 }
 
@@ -624,7 +622,7 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
   char optionValue[MAX_SSID_LEN + 1];
   bzero(optionValue, MAX_SSID_LEN + 1); /* Null out optionValue[] */
   /* Fetch the device model from new_item's context */
-  wendigo_device *dev = variable_item_get_context(new_item);
+  wendigo_device *dev = (wendigo_device *)variable_item_get_context(new_item);
   if (dev == NULL) {
     wendigo_log(MSG_ERROR, "wendigo_scene_device_list_update_device(): VariableItem has NULL context - Terminating!");
     return;
@@ -809,6 +807,7 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
   if (dev_idx == current_devices.devices_count) {
     /* Add a new item */
     uint8_t options_count = wendigo_scene_device_list_options_count(dev);
+    // TODO: Review parsers to see if there's any way dev could have an initialised view - Decide whether we need a free(dev->view). Only include if definitely necessary - it's risky, only required one initialisation mistake to cause crashes
     dev->view = variable_item_list_add(app->devices_var_item_list, "Loading",
       options_count, wendigo_scene_device_list_var_list_change_callback, dev);
     uint8_t option_idx = wendigo_scene_device_list_default_option(dev);
@@ -833,7 +832,6 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
         current_devices.devices = realloc(new_devices,
           sizeof(wendigo_device *) * current_devices.devices_count);
       }
-
       if (new_selected_option_index != NULL) {
         current_devices.selected_option_index = realloc(
           new_selected_option_index, current_devices.devices_count);
@@ -1126,11 +1124,42 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_var_list_enter_callback()");
 }
 
+/** Called when the selected option is changed for a device by scrolling
+ * through the available options.
+ */
 static void wendigo_scene_device_list_var_list_change_callback(VariableItem *item) {
   FURI_LOG_T(WENDIGO_TAG, "Start wendigo_scene_device_list_var_list_change_callback()");
   furi_assert(item);
+  wendigo_device *dev = (wendigo_device *)variable_item_get_context(item);
+  if (dev == NULL) {
+    wendigo_log(MSG_WARN, "wendigo_scene_device_list_var_list_change_callback(): Context is NULL, unexpected behaviour may occur.");
+  }
+  /* Initialise selected_option_index[] if necessary */
+  if (current_devices.selected_option_index == NULL) {
+    bool result = wendigo_selected_options_init(&current_devices);
+    if (!result) {
+      wendigo_log(MSG_ERROR, "wendigo_scene_device_list_var_list_change_callback(): Failed to initialise selected_option_index().");
+    }
+  }
+  /* Find the index of dev in current_devices.devices[] */
+  uint16_t dev_idx = custom_device_index(dev, current_devices.devices,
+    current_devices.devices_count);
   /* Update selected_option_index[] */
-  // TODO
+  if (current_devices.selected_option_index != NULL &&
+      dev_idx < current_devices.devices_count) {
+    uint8_t idx = variable_item_get_current_value_index(item);
+    /* If idx is out of bounds use the default index for the device type */
+    uint8_t options_count = wendigo_scene_device_list_options_count(dev);
+    if (idx >= options_count) {
+      idx = wendigo_scene_device_list_default_option(dev);
+      /* Just to be extra-safe */
+      if (idx >= options_count) {
+        idx = 0;
+      }
+    }
+    current_devices.selected_option_index[dev_idx] = idx;
+  }
+  /* Update UI attributes */
   wendigo_scene_device_list_update_device(item);
   FURI_LOG_T(WENDIGO_TAG, "End wendigo_scene_device_list_var_list_change_callback()");
 }
