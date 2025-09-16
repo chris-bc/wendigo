@@ -172,6 +172,27 @@ void wendigo_scene_setup_on_enter(void *context) {
         variable_item_set_current_value_index(item, app->setup_selected_option_index[i]);
         variable_item_set_current_value_text(
             item, items[i].options_menu[app->setup_selected_option_index[i]]);
+        /* Lock the VariableItem if ESP32 doesn't support the interface */
+        if (!(strncmp(items[i].item_string, "BLE", 3) || app->interfaces[IF_BLE].supported)) {
+            variable_item_set_locked(item, true, BLE_UNSUPPORTED_MSG);
+        } else if (!(strncmp(items[i].item_string, "BT", 2) || app->interfaces[IF_BT_CLASSIC].supported)) {
+            variable_item_set_locked(item, true, BT_CLASSIC_UNSUPPORTED_MSG);
+        } else if (!((strncmp(items[i].item_string, "WiFi", 4) &&
+                strncmp(items[i].item_string, "Channel", 7)) ||
+                app->interfaces[IF_WIFI].supported)) {
+            variable_item_set_locked(item, true, WIFI_UNSUPPORTED_MSG);
+        } else {
+            char *msg = malloc(sizeof(char) * 58);
+            if (msg == NULL) {
+                wendigo_log(MSG_ERROR, "wendigo_scene_setup_on_enter(): Unknown interface");
+            } else {
+                snprintf(msg, 58,
+                    "wendigo_scene_setup_on_enter(): Unknown interface %s",
+                    items[i].item_string);
+                wendigo_log(MSG_ERROR, msg);
+                free(msg);
+            }
+        }
     }
 
     variable_item_list_set_selected_item(app->var_item_list,

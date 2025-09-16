@@ -20,24 +20,24 @@ static const WendigoItem items[START_MENU_ITEMS] = {
     {"Help", {"About", "Version"}, 2, OPEN_HELP, TEXT_MODE},
 };
 
-#define SETUP_IDX       (0)
-#define SCAN_IDX        (1)
-#define PNL_IDX         (4)
-#define SCAN_WIFI_IDX   (0)
-#define SCAN_BT_IDX     (1)
-#define SCAN_STATUS_IDX (2)
-#define SCAN_START_STR  "Start"
-#define SCAN_STOP_STR   "Stop"
-#define ABOUT_IDX       (0)
-#define ESP_VER_IDX     (1)
-#define LOCKED_MSG      "Stop\nScanning\nFirst!"
-#define DEVICE_ALL_IDX  (0)
-#define DEVICE_BT_IDX   (1)
-#define DEVICE_WIFI_IDX (2)
-#define DEVICE_HCI_IDX  (3)
-#define DEVICE_BLE_IDX  (4)
-#define DEVICE_AP_IDX   (5)
-#define DEVICE_STA_IDX  (6)
+#define SETUP_IDX               (0)
+#define SCAN_IDX                (1)
+#define PNL_IDX                 (4)
+#define SCAN_WIFI_IDX           (0)
+#define SCAN_BT_IDX             (1)
+#define SCAN_STATUS_IDX         (2)
+#define SCAN_START_STR          "Start"
+#define SCAN_STOP_STR           "Stop"
+#define ABOUT_IDX               (0)
+#define ESP_VER_IDX             (1)
+#define LOCKED_MSG              "Stop\nScanning\nFirst!"
+#define DEVICE_ALL_IDX          (0)
+#define DEVICE_BT_IDX           (1)
+#define DEVICE_WIFI_IDX         (2)
+#define DEVICE_HCI_IDX          (3)
+#define DEVICE_BLE_IDX          (4)
+#define DEVICE_AP_IDX           (5)
+#define DEVICE_STA_IDX          (6)
 
 static uint8_t menu_items_num = 0;
 static uint8_t item_indexes[START_MENU_ITEMS] = {0};
@@ -117,9 +117,17 @@ static void wendigo_scene_start_var_list_enter_callback(void *context, uint32_t 
             if (selected_option_index == SCAN_WIFI_IDX || selected_option_index == SCAN_BT_IDX) {
                 if (selected_option_index == SCAN_WIFI_IDX) {
                     radio = &app->interfaces[IF_WIFI];
+                    /* Only perform the action if the radio is supported by the ESP32 */
+                    if (!radio->supported) {
+                        return;
+                    }
                     wendigo_set_scanning_interface(app, IF_WIFI, !radio->scanning);
                 } else {
                     radio = &app->interfaces[IF_BLE];
+                    /* If neither BT Classic nor BLE are enabled stop here */
+                    if (!(app->interfaces[IF_BLE].supported || app->interfaces[IF_BT_CLASSIC].supported)) {
+                        return;
+                    }
                     /* Because BLE and BT Classic are managed by a single option,
                     * we disable both only if both are running, otherwise assume
                     * we want both to be started. */
@@ -299,15 +307,21 @@ void wendigo_scene_start_on_enter(void *context) {
             } else if (i == SCAN_IDX && app->selected_option_index[i] < SCAN_STATUS_IDX) {
                 /* Update the selected interface based on scanning status */
                 bool scanning;
+                bool supported;
                 if (app->selected_option_index[i] == SCAN_WIFI_IDX) {
                     scanning = app->interfaces[IF_WIFI].scanning;
+                    supported = app->interfaces[IF_WIFI].supported;
                 } else {
                     scanning = (app->interfaces[IF_BLE].scanning ||
                         app->interfaces[IF_BT_CLASSIC].scanning);
+                    supported = (app->interfaces[IF_BLE].supported ||
+                        app->interfaces[IF_BT_CLASSIC].supported);
                 }
-                /* Append "start" or "stop" to the current option text */
+                /* Prepend "no", "start" or "stop" to the current option text */
                 uint8_t optionLen = strlen(items[i].options_menu[app->selected_option_index[i]]) + 2;
-                if (scanning) {
+                if (!supported) {
+                    optionLen += strlen("No");
+                } else if (scanning) {
                     optionLen += strlen(SCAN_STOP_STR);
                 } else {
                     optionLen += strlen(SCAN_START_STR);
@@ -315,14 +329,18 @@ void wendigo_scene_start_on_enter(void *context) {
                 char *scanningStr = malloc(sizeof(char) * optionLen);
                 if (scanningStr != NULL) {
                     snprintf(scanningStr, optionLen, "%s %s",
-                        (scanning) ? SCAN_STOP_STR : SCAN_START_STR,
+                        (!supported) ? "No" : (scanning) ? SCAN_STOP_STR
+                        : SCAN_START_STR,
                         items[i].options_menu[app->selected_option_index[i]]);
                     variable_item_set_current_value_text(item, scanningStr);
                     free(scanningStr);
                 }
             } else if (i == PNL_IDX) {
                 pnl_view = item;
-                if (pnl_view != NULL && networks_count > 0 &&
+                /* Disable the menu item if WiFi is unsupported */
+                if (!app->interfaces[IF_WIFI].supported) {
+                    variable_item_set_locked(item, true, WIFI_UNSUPPORTED_MSG);
+                } else if (pnl_view != NULL && networks_count > 0 &&
                         networks != NULL) {
                     /* Update the count of probed networks */
                     wendigo_display_pnl_count(app);

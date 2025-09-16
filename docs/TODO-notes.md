@@ -39,15 +39,16 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 * [X] selected_options_index updated where needed
 * Should now be completed and working, subject to testing
 * [ ] Identify functions that should probe for available features
-  * [ ] Add supported flag to WendigoRadio
+  * [X] Add supported flag to WendigoRadio
+  * [X] Update wendigo_scene_start_on_enter() to set option label to "No WiFi" or "No BT" if unsupported
+  * [X] Update wendigo_scene_start_var_list_enter_callback() to ignore the keypress if radio unsupported
   * [ ] Update parseBufferStatus() to populate these flags when a packet is received but to display results only when the status view is displayed
-  * [ ] Channel settings requires WiFi
-  * [ ] WiFi radio setting requires WiFi
-  * [ ] BT Classic radio setting requires BT Classic
-  * [ ] BLE radio setting requires BLE
-  * [ ] BT Start/Stop/Status requires BT Classic or BLE
-  * [ ] WiFi Start/Stop/Status requires WiFi support
-  * [ ] Probed networks requires WiFi support
+  * [X] Send a status request on application launch to obtain supported interface status
+  * [X] Setup channel settings requires WiFi
+  * [X] Setup WiFi radio setting requires WiFi
+  * [X] Setup BT Classic radio setting requires BT Classic
+  * [X] Setup BLE radio setting requires BLE
+  * [X] Probed networks requires WiFi support
 
 #### Use a message queue and a new worker to separate the UART receiver from the packet parser
 

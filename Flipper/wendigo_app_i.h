@@ -47,6 +47,10 @@
 #define WENDIGO_TEXT_BOX_STORE_SIZE   (4096)
 #define WENDIGO_TEXT_INPUT_STORE_SIZE (512)
 
+#define WIFI_UNSUPPORTED_MSG        "This ESP32\ndoes not\nsupport WiFi"
+#define BLE_UNSUPPORTED_MSG         "This ESP32\ndoes not\nsupport BLE"
+#define BT_CLASSIC_UNSUPPORTED_MSG  "This ESP32 does\nnot support\nBT Classic"
+
 // Command action type
 typedef enum {
     NO_ACTION = 0,
@@ -83,6 +87,7 @@ typedef struct {
     bool mutable;
     bool scanning;
     bool initialised;
+    bool supported;
 } WendigoRadio;
 
 typedef struct {

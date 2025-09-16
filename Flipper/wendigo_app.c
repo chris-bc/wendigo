@@ -192,6 +192,10 @@ void wendigo_interface_init(WendigoApp *app) {
         app->interfaces[i].mutable = true;
         app->interfaces[i].scanning = false;
         app->interfaces[i].initialised = false;
+        /* By defult assume that all radios are supported - After application
+         * initialisation we'll send a status command to ESP32 and update
+         * this based on the status packet. */
+        app->interfaces[i].supported = true;
     }
     memcpy(app->interfaces[IF_WIFI].mac_bytes, nullMac, MAC_BYTES);
     memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, nullMac, MAC_BYTES);
@@ -368,6 +372,9 @@ int32_t wendigo_app(void *p) {
     wendigo_app->uart = wendigo_uart_init(wendigo_app);
     /* Set UART callback using wendigo_scan */
     wendigo_uart_set_binary_cb(wendigo_app->uart);
+
+    /* Send the status command so we can determine which radios are supported */
+    wendigo_esp_status(wendigo_app);
 
     view_dispatcher_run(wendigo_app->view_dispatcher);
 
