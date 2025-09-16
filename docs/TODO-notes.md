@@ -39,9 +39,10 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 * [X] selected_options_index updated where needed
 * Should now be completed and working, subject to testing
 * [ ] Identify functions that should probe for available features
-  * [ ] Already implemented for MAC - Check for gaps
-    * [ ] I don't think the MAC menu options are disabled if unsupported?
+  * [ ] Add supported flag to WendigoRadio
+  * [ ] Update parseBufferStatus() to populate these flags when a packet is received but to display results only when the status view is displayed
   * [ ] Channel settings requires WiFi
+  * [ ] WiFi radio setting requires WiFi
   * [ ] BT Classic radio setting requires BT Classic
   * [ ] BLE radio setting requires BLE
   * [ ] BT Start/Stop/Status requires BT Classic or BLE
