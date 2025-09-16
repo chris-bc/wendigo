@@ -3,7 +3,8 @@
 This section is a running list of current priorities.
 
 * [ ] BUG: Probed SSIDs hangs the application
-  * [ ] Works when scanning is stopped
+  * Works when scanning is stopped
+  * Ready for testing - should be working now
 * [ ] Extend wendigo_log() to support variable arguments
 * [ ] Identify functions that should probe for available features
 * [ ] BUG: Wendigo "hangs" after several minutes of scanning
@@ -11,7 +12,7 @@ This section is a running list of current priorities.
   * [ ] Scanning for a short period, stopping it, and spending a long time exploring discovered devices doesn't cause any issues so this is definitely related to scanning
   * [ ] Could the UART thread be deadlocked?
   * [ ] Run with debugger and trace log to find clues
-* [ ] Refactor all use of ```wendigo_display_popup()``` now it can correctly restore the previous view
+* [X] Refactor all use of ```wendigo_display_popup()``` now it can correctly restore the previous view
 * [X] Device List scene doesn't remember selected options
   * [X] e.g. Selecting a STA, viewing its probed networks, and returning to the device list will display the option "WiFi STA" rather than "x Networks".
   * [X] Also view device list, view AP, return to device list

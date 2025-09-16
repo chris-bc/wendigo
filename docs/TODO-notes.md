@@ -36,9 +36,8 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
     * What if item doesn't have a valid context?
       * iterate over device_var_item_list's views to see if any match dev->view (since it seems hard to trust the cached value)
     * This could be called by a timer callback, looping through all displayed devices periodically to refresh the UI
-* **CURRENTLY UP TO** refactoring to include selected_option_index (but I don't think I added selected_device_index - is there an equivalent?)
-* [X] selected_options_index updated where needed except for
-  * [ ] ```wendigo_scene_device_list_init()``` - Currently a mish-mash of results for selected_options_index - refactor so that all paths either call ```wendigo_selected_options_init()``` or populate it from a template ```DeviceListInstance```.
+* [X] selected_options_index updated where needed
+* Should now be completed and working, subject to testing
 
 #### Use a message queue and a new worker to separate the UART receiver from the packet parser
 
@@ -49,17 +48,13 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 
 #### Migrate to device list scene's VariableItem updater
 
-* [ ] Update redraw() function so that:
-  * [ ] It creates a VariableItem with the correct options count
-  * [ ] It then calls wendigo_scene_device_list_update_device() to populate the VariableItem
-* [ ] Update update() function so that:
-  * [ ] It creates the device if necessary
-  * [ ] Then calls wendigo_scene_device_list_update_device()
-* [ ] Review all other functions, particularly
-  * [ ] on_enter()
-  * [ ] on_event()
-  * [ ] list_changed()
-  * [ ] list_enter()
+* [X] Update redraw() function so that:
+  * [X] It creates a VariableItem with the correct options count
+  * [X] It then calls wendigo_scene_device_list_update_device() to populate the VariableItem
+* [X] Update update() function so that:
+  * [X] It creates the device if necessary
+  * [X] Then calls wendigo_scene_device_list_update_device()
+* [X] Review all other functions
 
 #### WIFI & BT MACS
 * esp_wifi_get_mac(WIFI_IF_AP, macBytes)
@@ -79,7 +74,7 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 * esp_ble_gap_read_rssi(bda)?!?
 
 #### wendigo_scene_device_list.c
-* [ ] Ensure current_devices is sound
+* [X] Ensure current_devices is sound
 
 #### Manage current_devices.devices[] - free or realloc
 * Often doesn't respect free_devices, but I think it's only used when setting devices to a PNL element, and I'm pretty sure devices[] is copied to a newly-allocated location for that.

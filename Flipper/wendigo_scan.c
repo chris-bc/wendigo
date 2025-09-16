@@ -1239,7 +1239,7 @@ uint16_t parseBufferVersion(WendigoApp *app, uint8_t *packet, uint16_t packetLen
             wendigo_log_with_packet(MSG_ERROR, msg, packet, packetLen);
             free(msg);
         }
-        // Consume this message
+        /* Consume this message */
         return endSeq + PREAMBLE_LEN;
     }
     wendigo_popup_text = versionStr;
