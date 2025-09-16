@@ -40,6 +40,7 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 * Should now be completed and working, subject to testing
 * [ ] Identify functions that should probe for available features
   * [ ] Already implemented for MAC - Check for gaps
+    * [ ] I don't think the MAC menu options are disabled if unsupported?
   * [ ] Channel settings requires WiFi
   * [ ] BT Classic radio setting requires BT Classic
   * [ ] BLE radio setting requires BLE
