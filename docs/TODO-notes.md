@@ -38,6 +38,14 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
     * This could be called by a timer callback, looping through all displayed devices periodically to refresh the UI
 * [X] selected_options_index updated where needed
 * Should now be completed and working, subject to testing
+* [ ] Identify functions that should probe for available features
+  * [ ] Already implemented for MAC - Check for gaps
+  * [ ] Channel settings requires WiFi
+  * [ ] BT Classic radio setting requires BT Classic
+  * [ ] BLE radio setting requires BLE
+  * [ ] BT Start/Stop/Status requires BT Classic or BLE
+  * [ ] WiFi Start/Stop/Status requires WiFi support
+  * [ ] Probed networks requires WiFi support
 
 #### Use a message queue and a new worker to separate the UART receiver from the packet parser
 
