@@ -150,7 +150,7 @@ The following are both valid channel commands:
 #### MAC Addresses
 
 ```sh
-mac [ <interface> <MAC> ]
+m[ac] [ <interface> <MAC> ]
 interface ::= IF_BASE | IF_WIFI | IF_BLUETOOTH
 IF_BASE ::= 0
 IF_WIFI ::= 1
