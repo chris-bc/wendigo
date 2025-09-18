@@ -1,6 +1,7 @@
 ## Wendigo Interactive Mode
 
 <a id="about"></a>
+
 ### About
 
 While Wendigo is first and foremost a Flipper Zero application, and a Flipper Zero is required to make effective use of many of its features, the Wendigo ESP32 firmware provides an *Interactive Mode* that can be used to execute all of the same commands that are used by the Wendigo Flipper Zero application.
@@ -8,21 +9,26 @@ While Wendigo is first and foremost a Flipper Zero application, and a Flipper Ze
 When using ESP32-Wendigo in this way, please bear in mind that Flipper-Wendigo performs a large amount of processing on the data provided by ESP32-Wendigo. Using Interactive Mode allows you to get all the same data that Flipper-Wendigo has access to, but some information requires further processing that is not performed by ESP32-Wendigo.
 
 <a id="getting-started"></a>
+
 ### Getting Started
 
 This document assumes you have an ESP32 that has been flashed with Wendigo firmware.
 
 <a id="reading-commands"></a>
+
 #### Reading Commands
 
 This document presents commands and their syntax using the standard notation for syntax; optional items are enclosed in square brackets (```[]```) and named elements are enclosed in angle brackets (```<>```). For example, the syntax for the ```wifi``` command is:
+
 * ```w[ifi] [ 0 | 1 | 2 ]```
 
 Or, more descriptively:
+
 * ```w[ifi] [<RadioStatus>]```
 * ```RadioStatus ::= 0 | 1 | 2```
 
 This means:
+
 * The command can be run by entering the command ```wifi``` or simply ```w```;
 * The command takes one optional parameter
 * If provided, the parameter can be the digit 0, 1, or 2.
@@ -30,6 +36,7 @@ This means:
 The [Commands](ESP32-Wendigo-Commands.md#commands) section of this document describes all available commands.
 
 <a id="connecting"></a>
+
 #### Connecting to ESP32-Wendigo
 
 * Connect the ESP32 to your computer, phone, or other device of choice with a USB cable.
@@ -39,16 +46,19 @@ The [Commands](ESP32-Wendigo-Commands.md#commands) section of this document desc
   ```I (3783) WENDIGO: Enabling Interactive Mode...Done.```
 
 At this point you can run any Wendigo command. Refer to the [Commands](ESP32-Wendigo-Commands.md#commands) section to explore your nearby radio spectra, but as a starting point try these:
+
 * ```b[le] 1``` (Start BLE scanning)
 * Wait for around a minute and then run ```b[le] 0``` (disable BLE scanning)
 * ```s[tatus]``` (Display status information about the device and discovered devices)
 
 <a id="finding-serial"></a>
+
 #### Finding ESP32's serial port
 
 In order to connect your serial console to ESP32-Wendigo you need to know which serial port your operating system has assigned to the device. How this is done varies across operating systems, this section describes techniques to identify the correct serial port on Linux, MacOS and Windows.
 
 <a id="finding-serial-linux"></a>
+
 ##### Linux
 
 * Start a terminal emulator
@@ -58,6 +68,7 @@ In order to connect your serial console to ESP32-Wendigo you need to know which 
   * This is the serial port to use when connecting the serial console.
 
 <a id="finding-serial-macos"></a>
+
 ##### MacOS
 
 * Run ```/Applications/Utilities/Terminal.app```
@@ -67,6 +78,7 @@ In order to connect your serial console to ESP32-Wendigo you need to know which 
   * This is the serial port to use when connecting the serial console.
 
 <a id="finding-serial-windows"></a>
+
 ##### Windows
 
 * Connect the ESP32
@@ -76,14 +88,17 @@ In order to connect your serial console to ESP32-Wendigo you need to know which 
 * In this example, the serial port being used is ```COM5```.
 
 <a id="using-serial"></a>
+
 #### Using serial console software
 
 ### TODO
 
 <a id="commands"></a>
+
 ### Commands
 
 <a id="hci"></a>
+
 #### Bluetooth Classic
 
 Control the Bluetooth Classic scanner.
@@ -95,9 +110,11 @@ disable ::= 0
 enable ::= 1
 status ::= 2
 ```
+
 e.g. ```h 1``` to enable Bluetooth Classic scanning
 
 <a id="ble"></a>
+
 #### Bluetooth Low Energy
 
 Control the Bluetooth Low Energy scanner.
@@ -109,9 +126,11 @@ disable ::= 0
 enable ::= 1
 status ::= 2
 ```
+
 e.g. ```ble 2``` to display BLE status information
 
 <a id="wifi"></a>
+
 #### WiFi
 
 Control the WiFi scanner.
@@ -123,9 +142,11 @@ disable ::= 0
 enable ::= 1
 status ::= 2
 ```
+
 e.g. ```wifi 0``` to disable WiFi scanning
 
 <a id="channel"></a>
+
 #### WiFi Channels
 
 Display or set the enabled WiFi channels. On startup Wendigo defaults to enabling all 2.4GHz channels, and WiFi scanning will stay on a channel for a short time (500 milliseconds by default) before moving to the next channel so it can obtain information from all channels you're interested in.
@@ -135,18 +156,22 @@ However, Wendigo cannot receive packets on one channel while it is tuned to anot
 ```sh
 c[hannel] <channelNum>*
 ```
+
 The asterisk in this syntax indicates that ```<channelNum>``` is included zero or more times.
 
-```<channelNum>``` must be a channel that is supported by your ESP32. Currently Wendigo only supports 2.4GHz WiFi, so
+```<channelNum>``` must be a channel that is supported by your ESP32. Currently Wendigo only supports 2.4GHz WiFi, so:
 
 ```sh
 channelNum ::= 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
 ```
+
 The following are both valid channel commands:
+
 * ```channel``` (displays a list of enabled channels)
 * ```c 3 11 1 6 9``` (set the enabled channels to 1, 3, 6, 9 and 11).
 
 <a id="mac"></a>
+
 #### MAC Addresses
 
 ```sh
@@ -168,6 +193,7 @@ The command syntax above includes a special interface specifier ```IF_BASE``` (`
 Currently Wendigo does not display the base MAC, nor give any indication what sort of MAC address is being used. This means that it's currently possible to *set* a new base MAC for the device, but not possible to *view* the base MAC, or even view the new WiFi and Bluetooth MACs that were assigned as a result of changing the base MAC.
 
 <a id="status"></a>
+
 #### Status
 
 ```sh
@@ -200,6 +226,7 @@ The ```status``` command provides a summary of the ESP32's supported features an
 ```
 
 <a id="version"></a>
+
 #### Version
 
 ```sh
@@ -209,6 +236,7 @@ v[er]
 **Note** that the full command here is ```ver```, not ```version```, because the ESP32 Console library, which is used by Wendigo, includes a built-in ```version``` command to display chip information.
 
 <a id="tag"></a>
+
 #### Tag
 
 Devices can be *tagged*, or selected, to allow you to view only those devices and ignore everything else.
@@ -228,6 +256,7 @@ x ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | a | b | c | d | e | f
 When the ```bt``` device type is selected Wendigo will search for either a Bluetooth Classic or BLE device with the specified MAC.
 
 <a id="focus"></a>
+
 #### Focus
 
 Focus mode restricts the displayed devices to only devices that have been tagged.
@@ -241,6 +270,7 @@ Enable ::= 1
 Status ::= 2
 
 <a id="interactive"></a>
+
 #### Interactive Mode
 
 ```sh
@@ -251,3 +281,9 @@ Disable ::= 0
 Enable ::= 1
 Status ::= 2
 ```
+
+### Command Results
+
+When in *Interactive Mode* results and notifications are displayed to the console output (```stdout```). During normal use Wendigo still outputs data to ```stdout```, which is mirrored to the ESP32's primary UART pins to communicate with the Flipper Zero. However, in normal mode the ESP32 uses a binary protocol to communicate with the Flipper Zero so, while it's possible to run ESP32-Wendigo over a serial terminal without entering *Interactive Mode*, ```stdout``` will attempt to display more non-text bytes than text bytes and the results will be unintelligible.
+
+If you want to create your own client to ESP32-Wendigo you can parse the packets in a similar way to Flipper-Wendigo. All Wendigo packets are described in [the protocol documentation](https://github.com/chris-bc/wendigo/blob/main/docs/Wendigo-Packets.md). You can refer to Flipper-Wendigo's packet assembly and parsing code for an example of how to work with a packet-based binary protocol. A good starting point is the function ```parsePacket(WendigoApp *app, uint8_t *packet, uint16_t packetLen)```, which can be found in [/Flipper/wendigo_scan.c](https://github.com/chris-bc/wendigo/blob/main/Flipper/wendigo_scan.c).

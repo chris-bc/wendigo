@@ -308,7 +308,9 @@ Launch the Wendigo application from Apps => GPIO => ESP => [ESP32] Wendigo BT+BL
 
 Alternatively you can connect ESP32-Wendigo to any device with a serial console and control it from there. Connect your serial console in the usual way, for example ```screen /dev/ttyUSB0 115200```, then enter the command ```i 1``` (or ```interactive 1```) to switch from Binary Mode to Interactive Mode. You now have tab completion, command history, and can use the commands ```commands``` to get a list of available commands and ```help``` to get a brief overview and syntax of each command.
 
-*For more information about Interactive Mode please refer to the [Command Documentation](https://github.com/chris-bc/wendigo/blob/main/docs/ESP32-Wendigo-Commands.md)*
+*For more information about Interactive Mode refer to the [Command Documentation](https://github.com/chris-bc/wendigo/blob/main/docs/ESP32-Wendigo-Commands.md)*
+
+*ESP32-Wendigo communicates with Flipper-Wendigo using a binary, packet-based protocol (although Flipper-Wendigo communicates with ESP32-Wendigo using the same text commands you would send in Interactive Mode, such as ```interactive 1``` or ```ble 2```). The content and structure of these packets are described in [the protocol documentation](https://github.com/chris-bc/wendigo/blob/main/docs/Wendigo-Packets.md).*
 
 ### TODO: Screenshots
 

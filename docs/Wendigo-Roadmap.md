@@ -2,6 +2,8 @@
 
 This section is a running list of current priorities.
 
+* [ ] BUG: Quitting the application without doing anything causes it to hang
+  * [ ] Identified in released v0.5.1 - may be fixed already?
 * [ ] BUG: Probed SSIDs hangs the application
   * Works when scanning is stopped
   * Ready for testing - should be working now
