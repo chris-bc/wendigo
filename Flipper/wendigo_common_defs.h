@@ -12,53 +12,68 @@
  * offset 0 representing the first byte of the packet preamble.
  * 
  */
- #define WENDIGO_OFFSET_BT_BDNAME_LEN           (4)
- #define WENDIGO_OFFSET_BT_EIR_LEN              (5)
- #define WENDIGO_OFFSET_BT_RSSI                 (6)
- #define WENDIGO_OFFSET_BT_COD                  (8)
- #define WENDIGO_OFFSET_BT_BDA                  (12)
- #define WENDIGO_OFFSET_BT_SCANTYPE             (18)
- #define WENDIGO_OFFSET_BT_TAGGED               (19)
- #define WENDIGO_OFFSET_BT_LASTSEEN             (20)
- #define WENDIGO_OFFSET_BT_NUM_SERVICES         (39)
- #define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (40)
- #define WENDIGO_OFFSET_BT_COD_LEN              (41)
- #define WENDIGO_OFFSET_BT_BDNAME               (42)
- /* bdname is bdname_len bytes, followed by eir_len bytes of EIR and cod_len bytes of CoD */
+#define WENDIGO_OFFSET_BT_BDNAME_LEN           (4)
+#define WENDIGO_OFFSET_BT_EIR_LEN              (5)
+#define WENDIGO_OFFSET_BT_RSSI                 (6)
+#define WENDIGO_OFFSET_BT_COD                  (8)
+#define WENDIGO_OFFSET_BT_BDA                  (12)
+#define WENDIGO_OFFSET_BT_SCANTYPE             (18)
+#define WENDIGO_OFFSET_BT_TAGGED               (19)
+#define WENDIGO_OFFSET_BT_LASTSEEN             (20)
+#define WENDIGO_OFFSET_BT_NUM_SERVICES         (39)
+#define WENDIGO_OFFSET_BT_KNOWN_SERVICES_LEN   (40)
+#define WENDIGO_OFFSET_BT_COD_LEN              (41)
+#define WENDIGO_OFFSET_BT_BDNAME               (42)
+/* bdname is bdname_len bytes, followed by eir_len bytes of EIR and cod_len bytes of CoD */
 
- /* Initial elements of AP and STA packets are common so are just defined once */
- #define WENDIGO_OFFSET_WIFI_SCANTYPE           (4)
- #define WENDIGO_OFFSET_WIFI_MAC                (5)
- #define WENDIGO_OFFSET_WIFI_CHANNEL            (11)
- #define WENDIGO_OFFSET_WIFI_RSSI               (12)
- #define WENDIGO_OFFSET_WIFI_LASTSEEN           (14)
- #define WENDIGO_OFFSET_WIFI_TAGGED             (33)
- /* Unique elements */
- #define WENDIGO_OFFSET_STA_PNL_COUNT           (34)
- #define WENDIGO_OFFSET_STA_AP_MAC              (35)
- #define WENDIGO_OFFSET_STA_AP_SSID_LEN         (41)
- #define WENDIGO_OFFSET_STA_AP_SSID             (42)
- /* SSID is SSID_Len bytes, followed by WENDIGO_OFFSET_STA_PNL_COUNT sets of SSIDs,
-    where each SSID is 1 byte for SSID length followed by that number of bytes for
-    the SSID. Finally, this is followed by the packet terminator which is
-    PREAMBLE_LEN == 4 bytes */
- #define WENDIGO_OFFSET_AP_AUTH_MODE            (34)
- #define WENDIGO_OFFSET_AP_SSID_LEN             (35)
- #define WENDIGO_OFFSET_AP_STA_COUNT            (36)
- #define WENDIGO_OFFSET_AP_SSID                 (37)
- /* SSID is SSID_Len bytes. Each station is a 6-byte MAC. There are STA_COUNT stations. */
+/* Initial elements of AP and STA packets are common so are just defined once */
+#define WENDIGO_OFFSET_WIFI_SCANTYPE           (4)
+#define WENDIGO_OFFSET_WIFI_MAC                (5)
+#define WENDIGO_OFFSET_WIFI_CHANNEL            (11)
+#define WENDIGO_OFFSET_WIFI_RSSI               (12)
+#define WENDIGO_OFFSET_WIFI_LASTSEEN           (14)
+#define WENDIGO_OFFSET_WIFI_TAGGED             (33)
+/* Unique elements */
+#define WENDIGO_OFFSET_STA_PNL_COUNT           (34)
+#define WENDIGO_OFFSET_STA_AP_MAC              (35)
+#define WENDIGO_OFFSET_STA_AP_SSID_LEN         (41)
+#define WENDIGO_OFFSET_STA_AP_SSID             (42)
+/* SSID is SSID_Len bytes, followed by WENDIGO_OFFSET_STA_PNL_COUNT sets of SSIDs,
+ * where each SSID is 1 byte for SSID length followed by that number of bytes for
+ * the SSID. Finally, this is followed by the packet terminator which is
+ * PREAMBLE_LEN == 4 bytes */
+#define WENDIGO_OFFSET_AP_AUTH_MODE            (34)
+#define WENDIGO_OFFSET_AP_SSID_LEN             (35)
+#define WENDIGO_OFFSET_AP_STA_COUNT            (36)
+#define WENDIGO_OFFSET_AP_SSID                 (37)
+/* SSID is SSID_Len bytes. Each station is a 6-byte MAC. There are STA_COUNT stations. */
 
- #define WENDIGO_OFFSET_CHANNEL_COUNT           (4)
- #define WENDIGO_OFFSET_CHANNELS                (5)
+#define WENDIGO_OFFSET_CHANNEL_COUNT           (4)
+#define WENDIGO_OFFSET_CHANNELS                (5)
 
- #define WENDIGO_OFFSET_MAC_IF_COUNT            (4)
- #define WENDIGO_OFFSET_MAC_BT_TYPE             (5)
- #define WENDIGO_OFFSET_MAC_BT_MAC              (6)
- #define WENDIGO_OFFSET_MAC_WIFI_TYPE           (12)
- #define WENDIGO_OFFSET_MAC_WIFI_MAC            (13)
- #define WENDIGO_OFFSET_MAC_TERMINATOR          (19)
+#define WENDIGO_OFFSET_MAC_IF_COUNT            (4)
+#define WENDIGO_OFFSET_MAC_BT_TYPE             (5)
+#define WENDIGO_OFFSET_MAC_BT_MAC              (6)
+#define WENDIGO_OFFSET_MAC_WIFI_TYPE           (12)
+#define WENDIGO_OFFSET_MAC_WIFI_MAC            (13)
+#define WENDIGO_OFFSET_MAC_TERMINATOR          (19)
 
- #ifdef IS_FLIPPER_APP
+/* Status attributes representing interface support (e.g. Bluetooth Classic
+ * support, WiFi support) are also used to determine which features to
+ * enable/disable, so let's #define them. */
+#define STRING_BT_CLASSIC_SUPPORTED             "BT Classic Support?"
+#define STRING_BLE_SUPPORTED                    "BT Low Energy Support?"
+#define STRING_WIFI_SUPPORTED                   "WiFi Support?"
+// TODO: Separate WiFi into 2.4 and 5GHz (where's the best place to put them?)
+#define STRING_BT_CLASSIC_COUNT                 "BT Classic Devices:"
+#define STRING_BLE_COUNT                        "BT Low Energy Devices:"
+#define STRING_WIFI_STA_COUNT                   "WiFi STA Devices:"
+#define STRING_WIFI_AP_COUNT                    "WiFi APs:"
+static const char STRING_YES[] =                "YES";
+static const char STRING_NO[] =                 "NO";
+
+
+#ifdef IS_FLIPPER_APP
     typedef enum {
         WIFI_AUTH_OPEN = 0,
         WIFI_AUTH_WEP = 1,

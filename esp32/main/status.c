@@ -6,10 +6,11 @@
 #define VAL_MAX_LEN    (uint8_t)20
 #define ATTR_COUNT_MAX (uint8_t)13
 
-char *attribute_names[] = {"Version:", "Chris Bennetts-Cash", "BT UUID Dictionary?", "BT Classic Support?",
-                           "BT Low Energy Support?", "WiFi Support?", "BT Classic Scanning:",
-                           "BT Low Energy Scanning:", "WiFi Scanning:", "BT Classic Devices:",
-                           "BT Low Energy Devices:", "WiFi STA Devices:", "WiFi APs:"};
+char *attribute_names[] = {"Version:", "Chris Bennetts-Cash",
+    "BT UUID Dictionary?", STRING_BT_CLASSIC_SUPPORTED, STRING_BLE_SUPPORTED,
+    STRING_WIFI_SUPPORTED, "BT Classic Scanning:", "BT Low Energy Scanning:",
+    "WiFi Scanning:", STRING_BT_CLASSIC_COUNT, STRING_BLE_COUNT,
+    STRING_WIFI_STA_COUNT, STRING_WIFI_AP_COUNT};
 char attribute_values[ATTR_COUNT_MAX][VAL_MAX_LEN];
 
 uint16_t classicDeviceCount = 0;

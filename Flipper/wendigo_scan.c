@@ -775,8 +775,8 @@ void wendigo_free_devices() {
 void process_and_display_status_attribute(WendigoApp *app, char *attribute_name,
                                           char *attribute_value) {
     FURI_LOG_T(WENDIGO_TAG, "Start process_and_display_status_attribute()");
-    char *interesting_attributes[] = {"BT Classic Devices:", "BT Low Energy Devices:",
-        "WiFi STA Devices:", "WiFi APs:"};
+    char *interesting_attributes[] = {STRING_BT_CLASSIC_COUNT,
+        STRING_BLE_COUNT, STRING_WIFI_STA_COUNT, STRING_WIFI_AP_COUNT};
     uint8_t interesting_attributes_count = 4;
     uint8_t interested;
     uint16_t count = 0;
@@ -1345,17 +1345,19 @@ uint16_t parseBufferChannels(WendigoApp *app, uint8_t *packet, uint16_t packetLe
     return packetLen;
 }
 
-/** Parse a status packet and display in the status view.
- * This function requires that Wendigo_AppViewStatus be the
- * currently-displayed view (otherwise the packet is discarded).
+/** Parse a status packet, set the supported interface types and, if
+ * Wendigo_AppViewStatus is displayed, also display the received attributes.
  */
 uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferStatus()");
-    /* Ignore the packet if the status scene isn't displayed */
+    /* Don't display the packet if the status scene isn't displayed */
+    bool display = true;
     if (app->current_view != WendigoAppViewStatus) {
-        return packetLen;
+        display = false;
     }
-    wendigo_scene_status_begin_layout(app);
+    if (display) {
+        wendigo_scene_status_begin_layout(app);
+    }
     uint8_t attribute_count;
     uint8_t attribute_name_len;
     uint8_t attribute_value_len;
@@ -1410,12 +1412,26 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         memcpy(attribute_value, packet + offset, attribute_value_len);
         attribute_value[attribute_value_len] = '\0';
         offset += attribute_value_len;
-        /* Send the attribute off for validation and display */
-        process_and_display_status_attribute(app, attribute_name, attribute_value);
+        /* Validate & display the attribute if status view is displayed */
+        if (display) {
+            process_and_display_status_attribute(app, attribute_name,
+                attribute_value);
+        }
+        /* If the attribute specifies an interface's support, update that flag */
+        if (!strncmp(STRING_BT_CLASSIC_SUPPORTED, attribute_name, strlen(STRING_BT_CLASSIC_SUPPORTED))) {
+            app->interfaces[IF_BT_CLASSIC].supported = !strncmp(STRING_YES, attribute_value, strlen(STRING_YES));
+        } else if (!strncmp(STRING_BLE_SUPPORTED, attribute_name, strlen(STRING_BLE_SUPPORTED))) {
+            app->interfaces[IF_BLE].supported = !strncmp(STRING_YES, attribute_value, strlen(STRING_YES));
+        } else if (!strncmp(STRING_WIFI_SUPPORTED, attribute_name, strlen(STRING_WIFI_SUPPORTED))) {
+            app->interfaces[IF_WIFI].supported = !strncmp(STRING_YES, attribute_value, strlen(STRING_YES));
+        }
+        // TODO: 5GHz wifi
         free(attribute_name);
         free(attribute_value);
     }
-    wendigo_scene_status_finish_layout(app);
+    if (display) {
+        wendigo_scene_status_finish_layout(app);
+    }
 
     /* buffer + offset should now point to the end of packet sequence */
     if (memcmp(PACKET_TERM, packet + offset, PREAMBLE_LEN)) {
