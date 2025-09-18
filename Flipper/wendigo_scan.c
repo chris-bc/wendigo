@@ -1356,8 +1356,6 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         return packetLen;
     }
     wendigo_scene_status_begin_layout(app);
-    // TODO: Document the packet somewhere. Less straightforward than the
-    // Bluetooth packet because it's a dynamic size, but it needs *something*
     uint8_t attribute_count;
     uint8_t attribute_name_len;
     uint8_t attribute_value_len;

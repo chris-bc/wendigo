@@ -1241,7 +1241,6 @@ bool wendigo_scene_device_list_on_event(void *context,
     }
     consumed = true;
   } else if (event.type == SceneManagerEventTypeTick) {
-    // TODO: Up to here
     current_devices.selected_index =
         variable_item_list_get_selected_item_index(app->devices_var_item_list);
     consumed = true;
