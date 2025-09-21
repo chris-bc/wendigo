@@ -1252,12 +1252,57 @@ uint8_t wendigo_rm_channels(uint8_t *old_channels, uint8_t old_channels_count) {
  * new_channels[] is an array of length new_channels_count, with each uint8_t
  * element representing a channel to be enabled. If a specified channel is already
  * enabled no change will be made to that channel's status.
+ * Returns the number of channels that were actually added to channels[], after
+ * removing any duplicate or invalid channels.
  */
-esp_err_t wendigo_add_channels(uint8_t *new_channels, uint8_t new_channels_count) {
-    esp_err_t result = ESP_OK;
-    // TODO
-
-    return result;
+uint8_t wendigo_add_channels(uint8_t *new_channels, uint8_t new_channels_count) {
+    if (new_channels == NULL || new_channels_count == 0) {
+        return 0;
+    }
+    /* Create an array that's definitely large enough to hold all channels */
+    uint8_t *final_channels = malloc(channels_count + new_channels_count);
+    if (final_channels == NULL) {
+        if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+            ESP_LOGE(TAG,
+                "wendigo_add_channels(): Unable to allocate %d bytes to process new channels.",
+                channels_count + new_channels_count);
+        }
+        return 0;
+    }
+    /* Copy existing channels into place */
+    memcpy(final_channels, channels, channels_count);
+    uint8_t added = 0;
+    uint8_t idx;
+    /* Loop through new_channels[], adding elements to final_channels[] if they're not already in there */
+    for (uint8_t i = 0; i < new_channels_count; ++i) {
+        /* Is new_channels[i] a valid channel? */
+        if (wendigo_is_valid_channel(new_channels[i])) {
+            /* Does new_channels[i] exist in final_channels[]? */
+            idx = wendigo_index_of_int(new_channels[i], final_channels, channels_count + added);
+            if (idx == channels_count + added) {
+                /* Does not exist - Add to final_channels[] */
+                final_channels[channels_count + added++] = new_channels[i];
+            }
+        }
+    }
+    /* Only update channels[] if we successfully added to it */
+    if (added > 0) {
+        /* Replace channels[] with final_channels[] */
+        if (wendigo_set_channels(final_channels, channels_count + added) != ESP_OK) {
+            if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                ESP_LOGE(TAG, "wendigo_add_channels(): Error received from wendigo_set_channels().");
+            }
+        }
+        /* Return value aside, did it actually work? */
+        if (channels == NULL || channels_count == 0) {
+            /* We expected channels but don't have any :( */
+            ESP_LOGE("wendigo_add_channels()", "Failed to add %d new channels.", added);
+            free(final_channels);
+            return 0;
+        }
+    }
+    free(final_channels);
+    return added;
 }
 
 /** Set the channels that are to be included in channel hopping.

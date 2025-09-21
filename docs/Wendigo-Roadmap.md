@@ -32,11 +32,11 @@ This section is a running list of current priorities.
   * [ ] A new worker, running on a new thread, will wake up when an item is in the queue and this thread will parse the packet and make necessary changes to the data model.
   * [ ] This reduces the time the UART receiver is doing things other than receiving UART.
 * [ ] Finish implementation of association/reassociation packet parsers
-* [ ] Channel command overwrites enabled channels when setting channels
-  * [ ] This approach is preferable when the client is always an application, but inconvenient in interactive mode
-  * [ ] Make it possible to select/deselect a subset of channels at a time
-  * [ ] Don't change the current implementation (too much) because it's a simple integration for Flipper-Wendigo
-  * [ ] Expand channel command to c[hannel] [ SET | ADD | RM ] (Channel )*, with SET as the default if unspecified
+* [X] Channel command overwrites enabled channels when setting channels
+  * [X] This approach is preferable when the client is always an application, but inconvenient in interactive mode
+  * [X] Make it possible to select/deselect a subset of channels at a time
+  * [X] Don't change the current implementation (too much) because it's a simple integration for Flipper-Wendigo
+  * [X] Expand channel command to c[hannel] [ SET | ADD | RM | RESET ] (Channel )*, with SET as the default if unspecified
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
 * [X] BT Classic and LE device transmission from ESP32 to Flipper

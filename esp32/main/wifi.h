@@ -9,7 +9,7 @@ esp_err_t wendigo_wifi_disable();
 esp_err_t wendigo_wifi_enable();
 esp_err_t wendigo_get_channels();
 esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count);
-esp_err_t wendigo_add_channels(uint8_t *new_channels, uint8_t new_channels_count);
+uint8_t wendigo_add_channels(uint8_t *new_channels, uint8_t new_channels_count);
 uint8_t wendigo_rm_channels(uint8_t *old_channels, uint8_t old_channels_count);
 esp_err_t wendigo_reset_channels();
 bool wendigo_is_valid_channel(uint8_t channel);
