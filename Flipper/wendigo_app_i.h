@@ -213,3 +213,5 @@ bool wendigo_preamble_contains_at_index(uint8_t c, uint8_t index);
 bool wendigo_preamble_contains(uint8_t c);
 bool wendigo_preamble_matches(uint8_t *str, uint8_t len);
 void wendigo_interfaces_update(WendigoApp *app, uint8_t supportedFeatures);
+void wendigo_log(MsgType logType, char *message);
+void wendigo_log_with_packet(MsgType logType, char *message, uint8_t *packet, uint16_t packet_size);

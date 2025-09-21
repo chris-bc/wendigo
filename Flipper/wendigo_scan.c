@@ -1368,7 +1368,7 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     memcpy(&attribute_value_len, packet + offset++, sizeof(uint8_t));
     /* Update supported features variables */
     wendigo_interfaces_update(app, attribute_value_len);
-    
+
     memcpy(&attribute_count, packet + offset++, sizeof(uint8_t));
     for (uint8_t i = 0; i < attribute_count; ++i) {
         /* Parse attribute name length */
@@ -1719,56 +1719,4 @@ void wendigo_free_uart_buffer() {
         wendigo_popup_text = NULL;
     }
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_free_uart_buffer()");
-}
-
-void wendigo_log(MsgType logType, char *message) {
-    if (message == NULL) {
-        return;
-    }
-    switch (logType) {
-        case MSG_ERROR:
-            FURI_LOG_E(WENDIGO_TAG, message);
-            break;
-        case MSG_WARN:
-            FURI_LOG_W(WENDIGO_TAG, message);
-            break;
-        case MSG_INFO:
-            FURI_LOG_I(WENDIGO_TAG, message);
-            break;
-        case MSG_DEBUG:
-            FURI_LOG_D(WENDIGO_TAG, message);
-            break;
-        case MSG_TRACE:
-            FURI_LOG_T(WENDIGO_TAG, message);
-            break;
-        default:
-            break;
-    }
-}
-
-void wendigo_log_with_packet(MsgType logType, char *message, uint8_t *packet,
-                            uint16_t packet_size) {
-    if (packet == NULL || packet_size == 0) {
-        return;
-    }
-    uint16_t messageLen = 3 * packet_size;
-    uint8_t commentLen;
-    if (message == NULL) {
-        commentLen = 0;
-    } else {
-        messageLen += strlen(message) + 1;
-        commentLen = strlen(message) + 1; /* Account for the newline */
-    }
-    char *finalMessage = malloc(messageLen);
-    if (finalMessage != NULL) {
-        if (message != NULL) {
-            memcpy(finalMessage, message, strlen(message)); // Breaks when message is NULL. So do the next 2 lines
-            finalMessage[strlen(message)] = '\n';
-        }
-        bytes_to_string(packet, packet_size, finalMessage + commentLen);
-    }
-    /* Just in case my counting is out */
-    finalMessage[messageLen - 1] = '\0';
-    wendigo_log(logType, finalMessage);
-    free(finalMessage);
 }
