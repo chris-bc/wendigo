@@ -104,15 +104,9 @@ void wendigo_scene_device_list_init(void *config) {
       current_devices.devices = malloc(sizeof(wendigo_device *) * cfg->devices_count);
       current_devices.selected_option_index = malloc(sizeof(uint8_t) * cfg->devices_count);
       if (current_devices.devices == NULL || current_devices.selected_option_index == NULL) {
-        char *msg = malloc(sizeof(char) * 68);
-        if (msg == NULL) {
-          wendigo_log(MSG_ERROR, "Unable to allocate memory for DeviceListInstance initialiser.");
-        } else {
-          snprintf(msg, 68, "Unable to allocate %d bytes for DeviceListInstance initialiser.",
-            (sizeof(wendigo_device *) + 1) * cfg->devices_count); /* +1 accounts for selected_option_index */
-          wendigo_log(MSG_ERROR, msg);
-          free(msg);
-        }
+        wendigo_log(MSG_ERROR,
+          "Unable to allocate %d bytes for DeviceListInstance initialiser.",
+          (sizeof(wendigo_device *) + 1) * cfg->devices_count); /* +1 for selected_option_index */
         current_devices.devices_count = 0;
         /* Free either of the arrays if they were allocated (we know at least one failed - maybe not both)*/
         if (current_devices.devices != NULL) {
@@ -201,18 +195,9 @@ void wendigo_scene_device_list_timer_callback(void *context) {
         current_devices.devices[i]->view != NULL) {
       wendigo_scene_device_list_update_device(current_devices.devices[i]->view);
     } else {
-      // "ERROR: current_devices.devices[i] is NULL." 85 + 4
-      char *msg = malloc(sizeof(char) * 90);
-      if (msg == NULL) {
-        wendigo_log(MSG_ERROR,
-          "wendigo_scene_device_list_timer_callback() ERROR: current_devices.devices[i] is NULL.");
-      } else {
-        snprintf(msg, 90,
-          "wendigo_scene_device_list_timer_callback() ERROR: current_devices.devices[%d] is NULL.",
-          i);
-        wendigo_log(MSG_ERROR, msg);
-        free(msg);
-      }
+      wendigo_log(MSG_ERROR,
+        "wendigo_scene_device_list_timer_callback() ERROR: current_devices.devices[%d] is NULL.",
+        i);
     }
   }
 }
@@ -338,15 +323,8 @@ void wendigo_scene_device_list_set_current_devices(DeviceListInstance *deviceLis
   if ((new_devices == NULL || new_selected_option_index == NULL) &&
       deviceList->devices_count > 0) {
     /* Log error but proceed if unable to allocate memory for device array */
-    char *msg = malloc(sizeof(char) * 49);
-    if (msg == NULL) {
-      wendigo_log(MSG_ERROR, "Failed to allocate memory to store Device List.");
-    } else {
-      snprintf(msg, 49, "Failed to allocate %d bytes for Device List.",
-        sizeof(wendigo_device *) * deviceList->devices_count);
-      wendigo_log(MSG_ERROR, msg);
-      free(msg);
-    }
+    wendigo_log(MSG_ERROR, "Failed to allocate %d bytes for Device List.",
+      sizeof(wendigo_device *) * deviceList->devices_count);
     /* If we can't resize current_devices.devices[] correctly then free it
      * so that no devices are displayed. */
     if (current_devices.devices_count > 0 && current_devices.devices != NULL) {
@@ -441,17 +419,9 @@ uint16_t wendigo_scene_device_list_set_current_devices_mask(uint8_t deviceMask) 
       new_devices = malloc(sizeof(wendigo_device *) * deviceCount);
     }
     if (new_devices == NULL) {
-      char *msg = malloc(sizeof(char) * 104);
-      if (msg == NULL) {
-        wendigo_log(MSG_ERROR,
-          "Unable to allocate current_devices.devices[] for new device mask, keeping devices[] unchanged.");
-      } else {
-        snprintf(msg, 104,
-          "Unable to allocate current_devices.devices[%d] for new device mask %d, keeping devices[] unchanged.",
-          deviceCount, deviceMask);
-        wendigo_log(MSG_ERROR, msg);
-        free(msg);
-      }
+      wendigo_log(MSG_ERROR,
+        "Unable to allocate current_devices.devices[%d] for new device mask %d, keeping devices[] unchanged.",
+        deviceCount, deviceMask);
       return 0;
     }
     current_devices.devices = new_devices;
@@ -566,25 +536,17 @@ uint8_t wendigo_scene_device_list_default_option(wendigo_device *dev) {
     return WendigoOptionSTAScanType;
   }
   /* If we reach this point we have an unknown scanType */
-  char *msg = malloc(sizeof(char) * (78 + MAC_STRLEN));
   char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
-  if (msg == NULL || macStr == NULL) {
+  if (macStr == NULL) {
     wendigo_log(MSG_ERROR,
-      "wendigo_scene_device_list_default_option(): Device has unknowne scanType");
-    if (msg != NULL) {
-      free(msg);
-    }
-    if (macStr != NULL) {
-      free(macStr);
-    }
+      "wendigo_scene_device_list_default_option(): Device has unknowne scanType %d.",
+      dev->scanType);
   } else {
     bytes_to_string(dev->mac, MAC_BYTES, macStr);
-    snprintf(msg, 78 + MAC_STRLEN,
+    wendigo_log(MSG_ERROR,
       "wendigo_scene_device_list_default_option(): Device %s has unknown scanType %d.",
       macStr, dev->scanType);
-    wendigo_log(MSG_ERROR, msg);
     free(macStr);
-    free(msg);
   }
   return 0;
 }
@@ -652,24 +614,16 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
   if (dev_idx == current_devices.devices_count ||
       current_devices.selected_option_index == NULL) {
     /* Device/Option not found - Log warning & display default option */
-    char *msg = malloc(sizeof(char) * (103 + MAC_STRLEN));
     char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
-    if (msg == NULL || macStr == NULL) {
+    if (macStr == NULL) {
       wendigo_log(MSG_WARN,
         "wendigo_scene_device_list_update_device(): Device not found in cache, defaulting display to scanType.");
     } else {
       bytes_to_string(dev->mac, MAC_BYTES, macStr);
-      snprintf(msg, 103 + MAC_STRLEN,
+      wendigo_log(MSG_WARN,
         "wendigo_scene_device_list_update_device(): Device %s not found in cache, defaulting display to scanType.",
         macStr);
-      wendigo_log(MSG_WARN, msg);
-    }
-    if (msg != NULL) {
-      free(msg);
-      msg = NULL;
-    }
-    if (macStr != NULL) {
-      free(macStr);
+        free(macStr);
     }
     /* Set default option */
     optionIndex = wendigo_scene_device_list_default_option(dev);
@@ -817,16 +771,9 @@ void wendigo_scene_device_list_update(WendigoApp *app, wendigo_device *dev) {
     uint8_t *new_selected_option_index = realloc(
       current_devices.selected_option_index, current_devices.devices_count + 1);
     if (new_devices == NULL || new_selected_option_index == NULL) {
-      char *msg = malloc(sizeof(char) * 108);
-      if (msg == NULL) {
-        wendigo_log(MSG_ERROR, "wendigo_scene_device_list_update(): Failed to extend devices[] and selected_option_index[].");
-      } else {
-        snprintf(msg, 108,
-          "wendigo_scene_device_list_update(): Failed to extend devices[] and selected_option_index[] to length %d.",
-          current_devices.devices_count + 1);
-        wendigo_log(MSG_ERROR, msg);
-        free(msg);
-      }
+      wendigo_log(MSG_ERROR,
+        "wendigo_scene_device_list_update(): Failed to extend devices[] and selected_option_index[] to length %d.",
+        current_devices.devices_count + 1);
       /* If either realloc worked, shrink it back to its original size */
       if (new_devices != NULL) {
         current_devices.devices = realloc(new_devices,
@@ -996,10 +943,9 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
     bzero(current_devices.devices_msg, sizeof(current_devices.devices_msg));
     char *deviceName = malloc(sizeof(char) * (MAX_SSID_LEN + 1));
     if (deviceName == NULL) {
-      /* Not using wendigo_log() so I can include %d */
-      // TODO: Extend wendigo_log() to support variable arguments
-      FURI_LOG_E("wendigo_scene_device_list_var_list_enter_callback()",
-        "Failed to allocate deviceName[%d], proceeding without it.", MAX_SSID_LEN + 1);
+      wendigo_log(MSG_ERROR,
+        "wendigo_scene_device_list_var_list_enter_callback(): Failed to allocate deviceName[%d], proceeding without it.",
+        MAX_SSID_LEN + 1);
     } else {
       bzero(deviceName, sizeof(char) * (MAX_SSID_LEN + 1));
     }
@@ -1011,18 +957,10 @@ static void wendigo_scene_device_list_var_list_enter_callback(void *context,
       }
       if (item->radio.ap.stations_count > 0 && (current_devices.devices == NULL ||
           current_devices.selected_option_index == NULL)) {
-        char *msg = malloc(sizeof(char) * 56);
-        if (msg == NULL) {
-          wendigo_log(MSG_ERROR,
-            "Unable to allocate memory to display AP's stations.");
-        } else {
-          /* +1 below to account for selected_option_index */
-          snprintf(msg, 56,
-            "Unable to allocate %d bytes to display AP's stations.",
-            (sizeof(wendigo_device *) + 1) * item->radio.ap.stations_count);
-          wendigo_log(MSG_ERROR, msg);
-          free(msg);
-        }
+        /* +1 below to account for selected_option_index */
+        wendigo_log(MSG_ERROR,
+          "Unable to allocate %d bytes to display AP's stations.",
+          (sizeof(wendigo_device *) + 1) * item->radio.ap.stations_count);
         wendigo_display_popup(app, "Out of memory", "Unable to allocate memory for AP's stations.");
         current_devices.devices_count = 0;
         /* Check whether either were successfully allocated */
@@ -1229,14 +1167,8 @@ bool wendigo_scene_device_list_on_event(void *context,
         scene_manager_next_scene(app->scene_manager, WendigoScenePNLList);
         break;
     default:
-      char *msg = malloc(sizeof(char) * 54);
-      if (msg != NULL) {
-        snprintf(msg, 54,
-                "wendigo_scene_device_list received unknown event %ld.",
-                event.event);
-        wendigo_log(MSG_WARN, msg);
-        free(msg);
-      }
+      wendigo_log(MSG_WARN, "wendigo_scene_device_list received unknown event %ld.",
+                  event.event);
       break;
     }
     consumed = true;
