@@ -1210,12 +1210,42 @@ esp_err_t wendigo_get_channels() {
  * old_channels[] is an array of length old_channels_count, with each uint8_t
  * element representing a channel to be disabled. If a specified channel is
  * already disabled no change will be made to that channel's status.
+ * Returns the number of channels that were actually removed from channels[].
  */
-esp_err_t wendigo_rm_channels(uint8_t *old_channels, uint8_t old_channels_count) {
-    esp_err_t result = ESP_OK;
-    // TODO
-
-    return result;
+uint8_t wendigo_rm_channels(uint8_t *old_channels, uint8_t old_channels_count) {
+    uint8_t rm_count = 0;
+    uint8_t rm_idx;
+    uint8_t target_idx = 0;
+    /* Ensure channels[] has been initialised */
+    if (channels_count == 0 || channels == NULL) {
+        return 0;
+    }
+    /* Loop through channels[], checking each element to see if it's present in
+     * old_channels[] and skipping it if so. */
+    for (uint8_t i = 0; i < channels_count; ++i) {
+        rm_idx = wendigo_index_of_int(channels[i], old_channels, old_channels_count);
+        if (rm_idx == old_channels_count) {
+            /* The element is not being removed - give it a home in the future channels[] */
+            channels[target_idx++] = channels[i];
+        } else {
+            ++rm_count;
+        }
+    }
+    if (rm_count > 0) {
+        /* We've found some channels to remove. After the above loop these channels are
+         * all at the end of channels[] so we can just resize the array to chop off
+         * those elements. */
+        uint8_t *new_channels = realloc(channels, channels_count - rm_count);
+        if (new_channels == NULL) {
+            if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                ESP_LOGE(TAG, "wendigo_rm_channels(): Failed to shrink channels[].");
+            }
+        } else {
+            channels_count -= rm_count;
+            channels = new_channels;
+        }
+    }
+    return rm_count;
 }
 
 /** Add the specified channels to the existing set of channels included in hopping.

@@ -245,6 +245,18 @@ uint8_t wendigo_index_of_string(char *str, char **array, uint8_t array_len) {
     return idx;
 }
 
+/** Return the first occurrence of num in array[], which has a length of array_len.
+ * If num was not found in array[] then array_len is returned.
+ */
+uint8_t wendigo_index_of_int(uint8_t num, uint8_t *array, uint8_t array_len) {
+    if (array == NULL || array_len == 0) {
+        return array_len;
+    }
+    uint8_t idx = 0;
+    for (; idx < array_len && array[idx] != num; ++idx) { }
+    return idx;
+}
+
 /** Create and return an initialised wendigo_device pointer */
 wendigo_device *wendigo_new_device(uint8_t *mac) {
     wendigo_device *device = malloc(sizeof(wendigo_device));
