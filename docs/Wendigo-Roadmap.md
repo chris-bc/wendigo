@@ -7,7 +7,7 @@ This section is a running list of current priorities.
 * [ ] BUG: Probed SSIDs hangs the application
   * Works when scanning is stopped
   * Ready for testing - should be working now
-* [ ] Extend wendigo_log() to support variable arguments
+* [X] Extend wendigo_log() to support variable arguments
 * [X] Identify functions that should probe for available features
 * [ ] BUG: Wendigo "hangs" after several minutes of scanning
   * [ ] **Confirm this is fixed**

@@ -214,4 +214,4 @@ bool wendigo_preamble_contains(uint8_t c);
 bool wendigo_preamble_matches(uint8_t *str, uint8_t len);
 void wendigo_interfaces_update(WendigoApp *app, uint8_t supportedFeatures);
 void wendigo_log(MsgType logType, char *message, ...);
-void wendigo_log_with_packet(MsgType logType, uint8_t *packet, uint16_t packet_size, char *message);
+void wendigo_log_with_packet(MsgType logType, uint8_t *packet, uint16_t packet_size, char *message, ...);

@@ -558,28 +558,56 @@ void wendigo_log(MsgType logType, char *message, ...) {
 }
 
 void wendigo_log_with_packet(MsgType logType, uint8_t *packet,
-                            uint16_t packet_size, char *message) {
+                            uint16_t packet_size, char *message, ...) {
     if (packet == NULL || packet_size == 0) {
         return;
     }
-    uint16_t messageLen = 3 * packet_size;
-    uint8_t commentLen;
-    if (message == NULL) {
-        commentLen = 0;
-    } else {
-        messageLen += strlen(message) + 1;
-        commentLen = strlen(message) + 1; /* Account for the newline */
+
+    /* Create a string representation of the packet's bytes */
+    char *strPacket = malloc(3 * packet_size);
+    if (strPacket == NULL) {
+        wendigo_log(MSG_ERROR, "wendigo_log_with_packet(): Failed to allocate %d bytes to log packet.", 3 * packet_size);
+        return;
     }
-    char *finalMessage = malloc(messageLen);
-    if (finalMessage != NULL) {
-        if (message != NULL) {
-            memcpy(finalMessage, message, strlen(message)); // Breaks when message is NULL. So do the next 2 lines
-            finalMessage[strlen(message)] = '\n';
-        }
-        bytes_to_string(packet, packet_size, finalMessage + commentLen);
+    bytes_to_string(packet, packet_size, strPacket);
+
+    /* Send the format string and args to Furi's vprintf */
+    va_list args;
+    va_start(args, message);
+    FuriString *furiString = furi_string_alloc();
+    if (message != NULL) {
+        furi_string_vprintf(furiString, message, args);
+        furi_string_push_back(furiString, '\n');
     }
-    /* Just in case my counting is out */
-    finalMessage[messageLen - 1] = '\0';
-    wendigo_log(logType, finalMessage);
-    free(finalMessage);
+    /* Append packet */
+    furi_string_cat_str(furiString, strPacket);
+    const char *cString = furi_string_get_cstr(furiString);
+
+    /* Set log level */
+    FuriLogLevel logLevel;
+    switch (logType) {
+        case MSG_ERROR:
+            logLevel = FuriLogLevelError;
+            break;
+        case MSG_WARN:
+            logLevel = FuriLogLevelWarn;
+            break;
+        case MSG_INFO:
+            logLevel = FuriLogLevelInfo;
+            break;
+        case MSG_DEBUG:
+            logLevel = FuriLogLevelDebug;
+            break;
+        case MSG_TRACE:
+            logLevel = FuriLogLevelTrace;
+            break;
+        default:
+            logLevel = FuriLogLevelDefault;
+            break;
+    }
+    /* Output the log - format arguments, packet, and all */
+    furi_log_print_format(logLevel, WENDIGO_TAG, cString);
+    furi_string_free(furiString);
+    free(strPacket);
+    va_end(args);
 }
