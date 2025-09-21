@@ -1351,9 +1351,9 @@ uint16_t parseBufferChannels(WendigoApp *app, uint8_t *packet, uint16_t packetLe
 uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferStatus()");
     /* Don't display the packet if the status scene isn't displayed */
-    bool display = true;
-    if (app->current_view != WendigoAppViewStatus) {
-        display = false;
+    bool display = false;
+    if (app->current_view == WendigoAppViewStatus) {
+        display = true;
     }
     if (display) {
         wendigo_scene_status_begin_layout(app);
