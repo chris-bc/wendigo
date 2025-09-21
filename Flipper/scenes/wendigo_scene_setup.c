@@ -45,14 +45,9 @@ static void wendigo_scene_setup_var_list_enter_callback(void *context, uint32_t 
                 } else if (!strncmp(item->item_string, "WiFi", 4)) {
                     app->active_interface = IF_WIFI;
                 } else {
-                    char *msg = malloc(sizeof(char) * 83);
-                    if (msg != NULL) {
-                        snprintf(msg, 83,
-                            "wendigo_scene_setup_var_list_enter_callback(): Invalid selected_option_index: %d.",
-                            selected_option_index);
-                        wendigo_log(MSG_ERROR, msg);
-                        free(msg);
-                    }
+                    wendigo_log(MSG_ERROR,
+                        "wendigo_scene_setup_var_list_enter_callback(): Invalid selected_option_index: %d.",
+                        selected_option_index);
                 }
                 view_dispatcher_send_custom_event(app->view_dispatcher, Wendigo_EventMAC);
             }
@@ -88,14 +83,9 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem *item) {
                     }
                     break;
                 default:
-                    char *msg = malloc(sizeof(char) * 72);
-                    if (msg != NULL) {
-                        snprintf(msg, 72,
-                            "wendigo_scene_setup_var_list_change_callback(): Invalid item_index %d.",
-                            item_index);
-                        wendigo_log(MSG_ERROR, msg);
-                        free(msg);
-                    }
+                    wendigo_log(MSG_ERROR,
+                        "wendigo_scene_setup_var_list_change_callback(): Invalid item_index %d.",
+                        item_index);
                     break;
             }
             break;
@@ -108,14 +98,9 @@ static void wendigo_scene_setup_var_list_change_callback(VariableItem *item) {
             } else if (!strncmp(menu_item->item_string, "WiFi", 4)) {
                 app->active_interface = IF_WIFI;
             } else {
-                char *msg = malloc(sizeof(char) * 81);
-                if (msg != NULL) {
-                    snprintf(msg, 81,
-                        "wendigo_scene_setup_var_list_change_callback(): Unknown interface selected %s.",
-                        menu_item->item_string);
-                    wendigo_log(MSG_ERROR, msg);
-                    free(msg);
-                }
+                wendigo_log(MSG_ERROR,
+                    "wendigo_scene_setup_var_list_change_callback(): Unknown interface selected %s.",
+                    menu_item->item_string);
             }
             /* Mark the interface as active or inactive if "On" or "Off" is selected */
             if (item_index == RADIO_ON || item_index == RADIO_OFF) {
@@ -157,14 +142,9 @@ void wendigo_scene_setup_on_enter(void *context) {
             } else if (!strncmp(items[i].item_string, "WiFi", 4)) {
                 if_type = IF_WIFI;
             } else {
-                char *msg = malloc(sizeof(char) * 65);
-                if (msg != NULL) {
-                    snprintf(msg, 65,
-                        "wendigo_scene_setup_on_enter(): Unknown interface selected %s.",
-                        items[i].item_string);
-                    wendigo_log(MSG_ERROR, msg);
-                    free(msg);
-                }
+                wendigo_log(MSG_ERROR,
+                    "wendigo_scene_setup_on_enter(): Unknown interface selected %s.",
+                    items[i].item_string);
             }
             app->setup_selected_option_index[i] =
                 (app->interfaces[if_type].active) ? RADIO_ON : RADIO_OFF;
@@ -182,16 +162,8 @@ void wendigo_scene_setup_on_enter(void *context) {
                 app->interfaces[IF_WIFI].supported)) {
             variable_item_set_locked(item, true, WIFI_UNSUPPORTED_MSG);
         } else {
-            char *msg = malloc(sizeof(char) * 58);
-            if (msg == NULL) {
-                wendigo_log(MSG_ERROR, "wendigo_scene_setup_on_enter(): Unknown interface");
-            } else {
-                snprintf(msg, 58,
-                    "wendigo_scene_setup_on_enter(): Unknown interface %s",
-                    items[i].item_string);
-                wendigo_log(MSG_ERROR, msg);
-                free(msg);
-            }
+            wendigo_log(MSG_ERROR, "wendigo_scene_setup_on_enter(): Unknown interface %s",
+                items[i].item_string);
         }
     }
 

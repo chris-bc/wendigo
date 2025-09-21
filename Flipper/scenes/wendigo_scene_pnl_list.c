@@ -16,19 +16,11 @@ static void wendigo_scene_pnl_list_var_list_enter_callback(void *context, uint32
     WendigoApp *app = (WendigoApp *)context;
     if (index >= networks_count) {
         /* Index out of bounds - Panic and quit */
-        char *msg = malloc(sizeof(char) * 115);
-        if (msg == NULL) {
-            wendigo_log(MSG_ERROR, "wendigo_scene_pnl_list_var_list_enter_callback() called with index out of bounds.");
-            wendigo_display_popup(app, "Index out of bounds",
-                "wendigo_scene_pnl_list_var_list_enter_callback() called with index out of bounds.");
-        } else {
-            snprintf(msg, 115,
-                "wendigo_scene_pnl_list_var_list_enter_callback(): Called with index %ld which is out of bounds of networks[%d].",
-                index, networks_count);
-            wendigo_log(MSG_ERROR, msg);
-            wendigo_display_popup(app, "Index out of bounds", msg);
-            free(msg);
-        }
+        wendigo_log(MSG_ERROR,
+            "wendigo_scene_pnl_list_var_list_enter_callback(): Called with index %ld which is out of bounds of networks[%d].",
+            index, networks_count);
+        wendigo_display_popup(app, "Index out of bounds",
+            "wendigo_scene_pnl_list_var_list_enter_callback() called with index out of bounds.");
         FURI_LOG_T(WENDIGO_TAG, "End wendigo_scen_pnl_list_var_list_enter_callback() - index out of bounds.");
         return;
     }
