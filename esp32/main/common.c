@@ -670,7 +670,9 @@ uint8_t wendigo_supported_features() {
             defined(CONFIG_ESP32_WIFI_ENABLED)
         result += HW_WIFI_24_SUPPORTED;
     #endif
-    // TODO: Where is 5G defined?
+    #if defined(CONFIG_SOC_WIFI_SUPPORT_5G)
+        result += HW_WIFI_5_SUPPORTED;
+    #endif
     return result;
 }
 

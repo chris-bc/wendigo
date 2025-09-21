@@ -4,13 +4,13 @@
 
 #define NAME_MAX_LEN   (uint8_t)35
 #define VAL_MAX_LEN    (uint8_t)20
-#define ATTR_COUNT_MAX (uint8_t)13
+#define ATTR_COUNT_MAX (uint8_t)14 // TODO: Is there a reason this isn't part of the enum?
 
 char *attribute_names[] = {"Version:", "Chris Bennetts-Cash",
-    "BT UUID Dictionary?", STRING_BT_CLASSIC_SUPPORTED, STRING_BLE_SUPPORTED,
-    STRING_WIFI_SUPPORTED, "BT Classic Scanning:", "BT Low Energy Scanning:",
-    "WiFi Scanning:", STRING_BT_CLASSIC_COUNT, STRING_BLE_COUNT,
-    STRING_WIFI_STA_COUNT, STRING_WIFI_AP_COUNT};
+    STRING_BT_UUID_DICTIONARY, STRING_BT_CLASSIC_SUPPORTED, STRING_BLE_SUPPORTED,
+    STRING_WIFI_24_SUPPORTED, STRING_WIFI_5_SUPPORTED, STRING_BT_CLASSIC_SCANNING,
+    STRING_BLE_SCANNING, STRING_WIFI_SCANNING, STRING_BT_CLASSIC_COUNT,
+    STRING_BLE_COUNT, STRING_WIFI_STA_COUNT, STRING_WIFI_AP_COUNT};
 char attribute_values[ATTR_COUNT_MAX][VAL_MAX_LEN];
 
 uint16_t classicDeviceCount = 0;
@@ -24,7 +24,8 @@ enum StatusAttributes {
     ATTR_UUID_DICTIONARY,
     ATTR_BT_CLASSIC_SUPPORT,
     ATTR_BT_BLE_SUPPORT,
-    ATTR_WIFI_SUPPORT,
+    ATTR_WIFI_24_SUPPORT,
+    ATTR_WIFI_5_SUPPORT,
     ATTR_BT_CLASSIC_SCANNING,
     ATTR_BT_BLE_SCANNING,
     ATTR_WIFI_SCANNING,
@@ -36,9 +37,10 @@ enum StatusAttributes {
 
 /** Prepares data for display by the status command.
  * The function populates attribute_values[].
+ * featureMask is a combination of SupportedHardwareMask
+ * values combined with logical OR.
  */
-void initialise_status_details(bool uuidDictionarySupported, bool btClassicSupported,
-                                bool btBLESupported, bool wifiSupported) {
+void initialise_status_details(uint8_t featureMask) {
     const char github[] = "github.com/chris-bc";
 
     /* strncpy doesn't always add the terminating null byte, so start with a sequence of null bytes */
@@ -48,13 +50,31 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
 
     strncpy(attribute_values[ATTR_VERSION], WENDIGO_VERSION, strlen(WENDIGO_VERSION) + 1);
     strncpy(attribute_values[ATTR_GITHUB], github, strlen(github));
-    strncpy(attribute_values[ATTR_UUID_DICTIONARY], (uuidDictionarySupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
-    strncpy(attribute_values[ATTR_BT_CLASSIC_SUPPORT], (btClassicSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
-    strncpy(attribute_values[ATTR_BT_BLE_SUPPORT], (btBLESupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
-    strncpy(attribute_values[ATTR_WIFI_SUPPORT], (wifiSupported) ? STRING_YES : STRING_NO, VAL_MAX_LEN);
-    strncpy(attribute_values[ATTR_BT_CLASSIC_SCANNING], (scanStatus[SCAN_HCI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
-    strncpy(attribute_values[ATTR_BT_BLE_SCANNING], (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
-    strncpy(attribute_values[ATTR_WIFI_SCANNING], (scanStatus[SCAN_WIFI_AP] == ACTION_ENABLE || scanStatus[SCAN_WIFI_STA] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_UUID_DICTIONARY],
+        (featureMask & HW_BT_UUID_DICTIONARY) == HW_BT_UUID_DICTIONARY ?
+        STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_BT_CLASSIC_SUPPORT],
+        (featureMask & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED ?
+        STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_BT_BLE_SUPPORT],
+        (featureMask & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED ? STRING_YES :
+        STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_WIFI_24_SUPPORT],
+        (featureMask & HW_WIFI_24_SUPPORTED) == HW_WIFI_24_SUPPORTED ?
+        STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_WIFI_5_SUPPORT],
+        (featureMask &  HW_WIFI_5_SUPPORTED) == HW_WIFI_5_SUPPORTED ?
+        STRING_YES : STRING_NO, VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_BT_CLASSIC_SCANNING],
+        (scanStatus[SCAN_HCI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE,
+        VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_BT_BLE_SCANNING],
+        (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE,
+        VAL_MAX_LEN);
+    strncpy(attribute_values[ATTR_WIFI_SCANNING],
+        (scanStatus[SCAN_WIFI_AP] == ACTION_ENABLE ||
+            scanStatus[SCAN_WIFI_STA] == ACTION_ENABLE) ?
+        STRING_ACTIVE : STRING_IDLE, VAL_MAX_LEN);
     /* Create device counts for BT Classic, BLE, AP and STA */
     classicDeviceCount = 0;
     leDeviceCount = 0;
@@ -87,65 +107,114 @@ void initialise_status_details(bool uuidDictionarySupported, bool btClassicSuppo
 }
 
 void display_status_interactive() {
+    /* Some defines for the layout */
+    #define ROW_LEN         (53)
+    #define MARGIN_LEN      (4)
+    #define TEXT_LEN        (ROW_LEN - (2 * (MARGIN_LEN + 1)))
+
     uint8_t supported = wendigo_supported_features();
     bool uuidDictionarySupported = ((supported & HW_BT_UUID_DICTIONARY) == HW_BT_UUID_DICTIONARY);
     bool btClassicSupported = ((supported & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED);
     bool btBLESupported = ((supported & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED);
-    bool wifiSupported = ((supported & HW_WIFI_SUPPORTED) != 0);
+    bool wifi24Supported = ((supported & HW_WIFI_24_SUPPORTED) == HW_WIFI_24_SUPPORTED);
+    bool wifi5Supported = ((supported & HW_WIFI_5_SUPPORTED) == HW_WIFI_5_SUPPORTED);
     const char *uuidDictionary = (uuidDictionarySupported) ? STRING_YES : STRING_NO;
     const char *btClassicSupport = (btClassicSupported) ? STRING_YES : STRING_NO;
     const char *btBLESupport = (btBLESupported) ? STRING_YES : STRING_NO;
-    const char *wifiSupport = (wifiSupported) ? STRING_YES : STRING_NO;
+    const char *wifi24Support = (wifi24Supported) ? STRING_YES : STRING_NO;
+    const char *wifi5Support = (wifi5Supported) ? STRING_YES : STRING_NO;
+    char strDeviceCount[5]; /* Temp storage for device counts as strings */
     /* While we're not using attribute_names[] and attribute_values[], this
        function also generates device counts for different device types. */
     initialise_status_details(uuidDictionarySupported, btClassicSupported, btBLESupported, wifiSupported);
 
-    print_star(53, true);
-    print_empty_row(53);
+    print_star(ROW_LEN, true);
+    print_empty_row(ROW_LEN;
+    // TODO: Remove magic numbers from these
     print_row_start(14);
     printf("Wendigo version %7s", WENDIGO_VERSION);
     print_row_end(14);
-    print_empty_row(53);
+    print_empty_row(ROW_LEN);
     print_row_start(5);
     printf("Chris Bennetts-Cash   github.com/chris-bc");
     print_row_end(5);
-    print_empty_row(53);
-    print_empty_row(53);
-    print_row_start(4);
-    printf("Compiled with Bluetooth Dictionary: %7s", uuidDictionary);
-    print_row_end(4);
-    print_row_start(4);
-    printf("Bluetooth Classic Supported: %14s", btClassicSupport);
-    print_row_end(4);
-    print_row_start(4);
-    printf("Bluetooth Low Energy Supported: %11s", btBLESupport);
-    print_row_end(4);
-    print_row_start(4);
-    printf("WiFi Supported: %27s", wifiSupport);
-    print_row_end(4);
-    print_row_start(4);
+    print_empty_row(ROW_LEN);
+    print_empty_row(ROW_LEN);
+    print_row_start(MARGIN_LEN);
+    /* Keep track of the number of spaces needed to justify content */
+    uint8_t spaceCount = TEXT_LEN - strlen(STRING_BT_UUID_DICTIONARY) - strlen(uuidDictionary);
+    printf("%s", STRING_BT_UUID_DICTIONARY);
+    print_space(spaceCount, false);
+    printf("%s", uuidDictionary);
+    print_row_end(MARGIN_LEN);
+    print_row_start(MARGIN_LEN);
+    spaceCount = TEXT_LEN - strlen(STRING_BT_CLASSIC_SUPPORTED) - strlen(btClassicSupport);
+    printf("%s", STRING_BT_CLASSIC_SUPPORTED);
+    print_space(spaceCount, false);
+    printf("%s", btClassicSupport);
+    print_row_end(MARGIN_LEN);
+    print_row_start(MARGIN_LEN);
+    spaceCount = TEXT_LEN - strlen(STRING_BLE_SUPPORTED) - strlen(btBLESupport);
+    printf("%s", STRING_BLE_SUPPORTED);
+    print_space(spaceCount, false);
+    printf("%s", btBLESupport);
+    print_row_end(MARGIN_LEN);
+    print_row_start(MARGIN_LEN);
+    spaceCount = TEXT_LEN - strlen(STRING_WIFI_24_SUPPORTED) - strlen(wifi24Support);
+    printf("%s", STRING_WIFI_24_SUPPORTED);
+    print_space(spaceCount, false);
+    printf("%s", wifi24Support);
+    print_row_end(MARGIN_LEN);
+    print_row_start(MARGIN_LEN);
+    spaceCount = TEXT_LEN - strlen(STRING_WIFI_5_SUPPORTED) - strlen(wifi5Support);
+    printf("%s", STRING_WIFI_5_SUPPORTED);
+    print_space(spaceCount, false);
+    printf("%s", wifi5Support);
+    print_row_end(MARGIN_LEN);
+    // TODO: Update these
+    print_row_start(MARGIN_LEN);
     printf("Bluetooth Classic Scanning: %15s", (!btClassicSupported) ? STRING_NA : (scanStatus[SCAN_HCI] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
-    print_row_end(4);
-    print_row_start(4);
+    print_row_end(MARGIN_LEN);
+    print_row_start(MARGIN_LEN);
     printf("Bluetooth Low Energy Scanning: %12s", (!btBLESupported) ? STRING_NA : (scanStatus[SCAN_BLE] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
-    print_row_end(4);
-    print_row_start(4);
+    print_row_end(MARGIN_LEN);
+    print_row_start(MARGIN_LEN);
     printf("WiFi Scanning: %28s", (!wifiSupported) ? STRING_NA : (scanStatus[SCAN_WIFI_AP] == ACTION_ENABLE || scanStatus[SCAN_WIFI_STA] == ACTION_ENABLE) ? STRING_ACTIVE : STRING_IDLE);
-    print_row_end(4);
-    print_row_start(4); // 43 total
-    printf("BT Classic Devices: %23d", classicDeviceCount);
-    print_row_end(4);
-    print_row_start(4);
-    printf("BT Low Energy Devices: %20d", leDeviceCount);
-    print_row_end(4);
-    print_row_start(4);
-    printf("WiFi Access Points: %23d", wifiAPCount);
-    print_row_end(4);
-    print_row_start(4);
-    printf("WiFi Stations: %28d", wifiSTACount);
-    print_row_end(4);
-    print_empty_row(53);
-    print_star(53, true);
+    print_row_end(MARGIN_LEN);
+    print_row_start(MARGIN_LEN);
+    explicit_bzero(strDeviceCount, sizeof(strDeviceCount));
+    snprintf(strDeviceCount, sizeof(strDeviceCount), "%d", classicDeviceCount);
+    spaceCount = TEXT_LEN - strlen(STRING_BT_CLASSIC_COUNT) - strlen(strDeviceCount);
+    printf("%s", STRING_BT_CLASSIC_COUNT);
+    print_space(spaceCount, false);
+    printf("%s", strDeviceCount);
+    print_row_end(MARGIN_LEN);
+    print_row_start(MARGIN_LEN);
+    explicit_bzero(strDeviceCount, sizeof(strDeviceCount));
+    snprintf(strDeviceCount, sizeof(strDeviceCount), "%d", leDeviceCount);
+    spaceCount = TEXT_LEN - strlen(STRING_BLE_COUNT) - strlen(strDeviceCount);
+    printf("%s", STRING_BLE_COUNT);
+    print_space(spaceCount, false);
+    printf("%s", strDeviceCount);
+    print_row_end(MARGIN_LEN);
+    print_row_start(MARGIN_LEN);
+    explicit_bzero(strDeviceCount, sizeof(strDeviceCount));
+    snprintf(strDeviceCount, sizeof(strDeviceCount), "%d", wifiAPCount);
+    spaceCount = TEXT_LEN - strlen(STRING_WIFI_AP_COUNT) - strlen(strDeviceCount);
+    printf("%s", STRING_WIFI_AP_COUNT);
+    print_space(spaceCount, false);
+    printf("%s", strDeviceCount);
+    print_row_end(MARGIN_LEN);
+    print_row_start(MARGIN_LEN);
+    explicit_bzero(strDeviceCount, sizeof(strDeviceCount));
+    snprintf(strDeviceCount, sizeof(strDeviceCount), "%d", wifiSTACount);
+    spaceCount = TEXT_LEN - strlen(STRING_WIFI_STA_COUNT) - strlen(strDeviceCount);
+    printf("%s", STRING_WIFI_STA_COUNT);
+    print_space(spaceCount, false);
+    printf("%s", strDeviceCount);
+    print_row_end(MARGIN_LEN);
+    print_empty_row(ROW_LEN);
+    print_star(ROW_LEN, true);
 }
 
 /** Send status information to Flipper Zero.
