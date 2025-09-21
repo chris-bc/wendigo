@@ -50,16 +50,9 @@ void wendigo_mac_set(WendigoApp *app, InterfaceType type,
     char *cmd = malloc(sizeof(char) * 28);
     char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
     if (cmd == NULL || macStr == NULL) {
-        // Unable to allocate %d bytes for MAC and 28 bytes for a command to change MAC. 68
-        char *msg = malloc(sizeof(char) * 80);
-        if (msg == NULL) {
-            wendigo_log(MSG_ERROR, "Unable to allocate memory required to change MAC.");
-        } else {
-            snprintf(msg, 80, "Unable to allocate %d bytes for MAC and %d bytes for command to change MAC.",
+            wendigo_log(MSG_ERROR,
+                "Unable to allocate %d bytes for MAC and %d bytes for command to change MAC.",
                 sizeof(char) * (MAC_STRLEN + 1), sizeof(char) * 28);
-            wendigo_log(MSG_ERROR, msg);
-            free(msg);
-        }
         if (cmd != NULL) {
             free(cmd);
         }
@@ -566,7 +559,9 @@ void wendigo_log_with_packet(MsgType logType, uint8_t *packet,
     /* Create a string representation of the packet's bytes */
     char *strPacket = malloc(3 * packet_size);
     if (strPacket == NULL) {
-        wendigo_log(MSG_ERROR, "wendigo_log_with_packet(): Failed to allocate %d bytes to log packet.", 3 * packet_size);
+        wendigo_log(MSG_ERROR,
+            "wendigo_log_with_packet(): Failed to allocate %d bytes to log packet.",
+            3 * packet_size);
         return;
     }
     bytes_to_string(packet, packet_size, strPacket);
