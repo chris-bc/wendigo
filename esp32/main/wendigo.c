@@ -260,31 +260,98 @@ esp_err_t cmd_wifi(int argc, char **argv) {
     return ESP_OK;
 }
 
+/** Get, set or update the WiFi channels included in channel hopping.
+ * Syntax: c[hannel] [ ACTION ] (ChannelNum )*
+ * ACTION :== SET | ADD | RM | RESET
+ * If ACTION is not specified the default action is SET.
+ */
 esp_err_t cmd_channel(int argc, char **argv) {
     if (argc == 1) {
         return wendigo_get_channels();
-    } else {
-        /* Convert argv[] to a uint8_t[] (excluding argv[0]) */
-        uint8_t *channel_list = malloc(argc - 1);
-        uint8_t channel_count = 0;
-        uint8_t this_channel;
-        if (channel_list == NULL) {
-            return ESP_ERR_NO_MEM;
-        }
-        for (uint8_t i = 1; i < argc; ++i) {
-            // TODO: Is this cast always safe? Maybe I should check bounds before casting?
-            this_channel = (uint8_t)strtol(argv[i], NULL, 10);
-            if (wendigo_is_valid_channel(this_channel)) {
-                channel_list[channel_count++] = this_channel;
-            }
-        }
-        esp_err_t result = wendigo_set_channels(channel_list, channel_count);
-        free(channel_list);
-        if (result == ESP_ERR_NO_MEM) {
-            outOfMemory();
-        }
-        return result;
     }
+    /* Is an action specified? */
+    ListAction action = LIST_COUNT;
+    char *endPtr = NULL;
+    uint8_t this_channel = strtol(argv[1], &endPtr, 10);
+    if (this_channel == 0 && endPtr == argv[1]) {
+        /* argv[1] could not be parsed to a number - Treat it as an action */
+        if (!strcasecmp(argv[1], "ADD")) {
+            action = LIST_ADD;
+        } else if (!strcasecmp(argv[1], "RM")) {
+            action = LIST_RM;
+        } else if (!strcasecmp(argv[1], "SET")) {
+            action = LIST_SET;
+        } else if (!strcasecmp(argv[1], "RESET")) {
+            action = LIST_RESET;
+        } else {
+            /* Invalid action specified */
+            if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                ESP_LOGE(TAG, "ERROR: Invalid syntax. Usage: c[hannel] [ SET | ADD | RM | RESET ] (channelNum )*.");
+            }
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
+    /* Reset channels to default if RESET specified */
+    if (action == LIST_RESET) {
+        return wendigo_reset_channels();
+    }
+    /* Return an error if no channel list was provided */
+    if (argc == 2 && action != LIST_COUNT) {
+        if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+            ESP_LOGE(TAG, "Error: No channels specified. Usage: c[hannel] [ SET | ADD | RM | RESET ] (channelNum )*.");
+        }
+        return ESP_ERR_INVALID_ARG;
+    }
+    /* Convert argv[] to a uint8_t[], excluding argv[0] and only including
+     * argv[1] if it was able to be parsed to a number. */
+    uint8_t channel_len = argc - 2;
+    if (this_channel != 0) {
+        ++channel_len;
+        action = LIST_SET; /* Set the default action if not specified as an argument */
+    }
+    uint8_t *channel_list = malloc(channel_len);
+    uint8_t channel_count = 0;
+    if (channel_list == NULL) {
+        if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+            ESP_LOGE(TAG, "Failed to allocate %d bytes to store channel list.", channel_len);
+        }
+        return ESP_ERR_NO_MEM;
+    }
+    /* We've already parsed argv[1] so add it immediately if it's a channel number */
+    if (this_channel != 0) {
+        if (wendigo_is_valid_channel(this_channel)) {
+            channel_list[channel_count++] = this_channel;
+        }
+    }
+    /* Loop through the remaining arguments, adding valid channels to channel_list[] */
+    for (uint8_t i = 2; i < argc; ++i) {
+        // TODO: Is this cast always safe? Maybe I should check bounds before casting?
+        this_channel = (uint8_t)strtol(argv[i], NULL, 10);
+        if (wendigo_is_valid_channel(this_channel)) {
+            channel_list[channel_count++] = this_channel;
+        }
+    }
+    /* Call the appropriate handler in wifi.c */
+    esp_err_t result = ESP_OK;
+    switch (action) {
+        case LIST_SET:
+            result = wendigo_set_channels(channel_list, channel_count);
+            break;
+        case LIST_ADD:
+            result = wendigo_add_channels(channel_list, channel_count);
+            break;
+        case LIST_RM:
+            result = wendigo_rm_channels(channel_list, channel_count);
+            break;
+        default:
+            /* Unreachable block */
+            ESP_LOGE(TAG, "ERROR: Unreachable code reached in wendigo.c: cmd_channel().");
+    }
+    free(channel_list);
+    if (result == ESP_ERR_NO_MEM) {
+        ESP_LOGE(TAG, "ERROR: Insufficient memory to %s channels.", (action == LIST_SET) ? "set" : (action == LIST_ADD) ? "add" : "remove");
+    }
+    return result;
 }
 
 /** Get or change the MAC(s) associated with the ESP32.

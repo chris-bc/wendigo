@@ -33,6 +33,15 @@ ActionType parseCommand(int argc, char **argv);
 ActionType parse_command_tag(int argc, char **argv, esp_bd_addr_t addr);
 void wendigo_set_logging(esp_log_level_t level);
 
+/* Used by the channel command to support different actions */
+typedef enum ListAction {
+    LIST_SET,
+    LIST_ADD,
+    LIST_RM,
+    LIST_RESET,
+    LIST_COUNT,
+} ListAction;
+
 #define CMD_COUNT 20
 esp_console_cmd_t commands[CMD_COUNT] = {
     {
@@ -68,12 +77,12 @@ esp_console_cmd_t commands[CMD_COUNT] = {
     }, {
         .command = "c",
         .hint = "Set active channels",
-        .help = "The c[hannel] (num )* command sets the channels that will be hopped through.",
+        .help = "The c[hannel] [SET | ADD | RM | RESET] (num )* command sets the channels that will be hopped through.",
         .func = cmd_channel
     }, {
         .command = "channel",
         .hint = "Set active channels",
-        .help = "The c[hannel] (num )* command sets the channels that will be hopped through.",
+        .help = "The c[hannel] [SET | ADD | RM | RESET] (num )* command sets the channels that will be hopped through.",
         .func = cmd_channel
     }, {
         .command = "t",

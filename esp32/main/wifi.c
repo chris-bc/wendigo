@@ -1156,7 +1156,15 @@ bool wendigo_is_valid_channel(uint8_t channel) {
     uint8_t channelIdx;
     for (channelIdx = 0; channelIdx < WENDIGO_SUPPORTED_24_CHANNELS_COUNT &&
         WENDIGO_SUPPORTED_24_CHANNELS[channelIdx] != channel; ++channelIdx) { }
-    return (channelIdx < WENDIGO_SUPPORTED_24_CHANNELS_COUNT);
+    /* Was it a 2.4GHz channel? */
+    if (channelIdx < WENDIGO_SUPPORTED_24_CHANNELS_COUNT) {
+        return true;
+    }
+    /* No - See if it's a 5GHz channel */
+    for (channelIdx = 0; channelIdx < WENDIGO_SUPPORTED_5_CHANNELS_COUNT &&
+        WENDIGO_SUPPORTED_5_CHANNELS[channelIdx] != channel; ++channelIdx) { }
+    /* Was it a 5GHz channel? */
+    return (channelIdx < WENDIGO_SUPPORTED_5_CHANNELS_COUNT);
 }
 
 /** Display the channels that are currently included in channel hopping.
@@ -1198,8 +1206,32 @@ esp_err_t wendigo_get_channels() {
     return result;
 }
 
+/** Remove the specified channels from the set of channels included in hopping.
+ * old_channels[] is an array of length old_channels_count, with each uint8_t
+ * element representing a channel to be disabled. If a specified channel is
+ * already disabled no change will be made to that channel's status.
+ */
+esp_err_t wendigo_rm_channels(uint8_t *old_channels, uint8_t old_channels_count) {
+    esp_err_t result = ESP_OK;
+    // TODO
+
+    return result;
+}
+
+/** Add the specified channels to the existing set of channels included in hopping.
+ * new_channels[] is an array of length new_channels_count, with each uint8_t
+ * element representing a channel to be enabled. If a specified channel is already
+ * enabled no change will be made to that channel's status.
+ */
+esp_err_t wendigo_add_channels(uint8_t *new_channels, uint8_t new_channels_count) {
+    esp_err_t result = ESP_OK;
+    // TODO
+
+    return result;
+}
+
 /** Set the channels that are to be included in channel hopping.
- * channels[] is an array of length channels_count, with each
+ * new_channels[] is an array of length new_channels_count, with each
  * uint8_t element representing a channel that is to be enabled.
  */
 esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count) {
@@ -1217,6 +1249,14 @@ esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count
         channels_count = new_channels_count;
     }
     return ESP_OK;
+}
+
+/** Reset the channels included with channel hopping to the application default.
+ * This restored enabled channels to their default values, enabling all 2.4GHz
+ * channels.
+ */
+esp_err_t wendigo_reset_channels() {
+    return wendigo_set_channels((uint8_t *)WENDIGO_SUPPORTED_24_CHANNELS, (uint8_t)WENDIGO_SUPPORTED_24_CHANNELS_COUNT);
 }
 
 /** Creates and starts a background task to periodically change
