@@ -517,33 +517,48 @@ bool wendigo_preamble_contains(uint8_t c) {
     return false;
 }
 
-void wendigo_log(MsgType logType, char *message) {
+/** Wrapper to Furi logging functions to include the standard Wendigo tag
+ * in all log messages.
+ * message is a printf-like format string.
+ */
+void wendigo_log(MsgType logType, char *message, ...) {
     if (message == NULL) {
         return;
     }
+
+    va_list args;
+    va_start(args, message);
+    FuriString *furiString = furi_string_alloc_vprintf(message, args);
+    const char *cString = furi_string_get_cstr(furiString);
+
+    FuriLogLevel logLevel;
     switch (logType) {
         case MSG_ERROR:
-            FURI_LOG_E(WENDIGO_TAG, message);
+            logLevel = FuriLogLevelError;
             break;
         case MSG_WARN:
-            FURI_LOG_W(WENDIGO_TAG, message);
+            logLevel = FuriLogLevelWarn;
             break;
         case MSG_INFO:
-            FURI_LOG_I(WENDIGO_TAG, message);
+            logLevel = FuriLogLevelInfo;
             break;
         case MSG_DEBUG:
-            FURI_LOG_D(WENDIGO_TAG, message);
+            logLevel = FuriLogLevelDebug;
             break;
         case MSG_TRACE:
-            FURI_LOG_T(WENDIGO_TAG, message);
+            logLevel = FuriLogLevelTrace;
             break;
         default:
+            logLevel = FuriLogLevelDefault;
             break;
     }
+    furi_log_print_format(logLevel, WENDIGO_TAG, cString);
+    furi_string_free(furiString);
+    va_end(args);
 }
 
-void wendigo_log_with_packet(MsgType logType, char *message, uint8_t *packet,
-                            uint16_t packet_size) {
+void wendigo_log_with_packet(MsgType logType, uint8_t *packet,
+                            uint16_t packet_size, char *message) {
     if (packet == NULL || packet_size == 0) {
         return;
     }
