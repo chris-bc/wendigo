@@ -154,10 +154,23 @@ Display or set the enabled WiFi channels. On startup Wendigo defaults to enablin
 However, Wendigo cannot receive packets on one channel while it is tuned to another, and this means that Wendigo only sees one-twelfth of the traffic that occurs on any channel because Wendigo is dividing its time between 12 2.4GHz WiFi channels. Because of this, if you're doing serious work it's a good idea to restrict the channels included in channel hopping once you know which channel(s) the devices of interest are operating on.
 
 ```sh
-c[hannel] <channelNum>*
+c[hannel] [ <action> ] ( <channelNum>  )*
 ```
 
-The asterisk in this syntax indicates that ```<channelNum>``` is included zero or more times.
+The asterisk in this syntax indicates that ```<channelNum>``` is included zero or more times (separated by a space).
+
+The optional argument ```<action>``` specifies the change you wish to make to the enabled channels.
+
+```sh
+action ::= SET | ADD | RM | RESET
+```
+
+If ```<action>``` is not specified the default behaviour is ```SET```.
+
+* ```SET``` replaces the enabled channels with the specified list
+* ```ADD``` adds the specified channels to the set of enabled channels
+* ```RM``` removes the specified channels from the set of enabled channels
+* ```RESET``` resets the enabled channels to default values (enabling all 2.4GHz channels)
 
 ```<channelNum>``` must be a channel that is supported by your ESP32. Currently Wendigo only supports 2.4GHz WiFi, so:
 
