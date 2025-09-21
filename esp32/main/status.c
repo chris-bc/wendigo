@@ -6,6 +6,17 @@
 #define VAL_MAX_LEN    (uint8_t)20
 #define ATTR_COUNT_MAX (uint8_t)14 // TODO: Is there a reason this isn't part of the enum?
 
+#define STRING_BT_UUID_DICTIONARY               "BT UUID dictionary?"
+#define STRING_BT_CLASSIC_SUPPORTED             "BT Classic Support?"
+#define STRING_BLE_SUPPORTED                    "BT Low Energy Support?"
+#define STRING_WIFI_24_SUPPORTED                "WiFi 2.4GHz Support?"
+#define STRING_WIFI_5_SUPPORTED                 "WiFi 5GHz Support?"
+#define STRING_BT_CLASSIC_SCANNING              "BT Classic Scanning:"
+#define STRING_BLE_SCANNING                     "BT Low Energy Scanning:"
+#define STRING_WIFI_SCANNING                    "WiFi Scanning:"
+static const char STRING_YES[] =                "YES";
+static const char STRING_NO[] =                 "NO";
+
 char *attribute_names[] = {"Version:", "Chris Bennetts-Cash",
     STRING_BT_UUID_DICTIONARY, STRING_BT_CLASSIC_SUPPORTED, STRING_BLE_SUPPORTED,
     STRING_WIFI_24_SUPPORTED, STRING_WIFI_5_SUPPORTED, STRING_BT_CLASSIC_SCANNING,

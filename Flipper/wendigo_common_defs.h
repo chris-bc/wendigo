@@ -58,6 +58,11 @@
 #define WENDIGO_OFFSET_MAC_WIFI_MAC            (13)
 #define WENDIGO_OFFSET_MAC_TERMINATOR          (19)
 
+#define STRING_BT_CLASSIC_COUNT                 "BT Classic Devices:"
+#define STRING_BLE_COUNT                        "BT Low Energy Devices:"
+#define STRING_WIFI_STA_COUNT                   "WiFi STA Devices:"
+#define STRING_WIFI_AP_COUNT                    "WiFi APs:"
+
 #ifdef IS_FLIPPER_APP
     typedef enum {
         WIFI_AUTH_OPEN = 0,
@@ -125,7 +130,8 @@ typedef enum SupportedHardwareMask {
     HW_BT_UUID_DICTIONARY   = 16,
     /* If logical-and with the following values is non-zero they're supported */
     HW_WIFI_SUPPORTED       = 3,
-    HW_BT_SUPPORTED         = 12
+    HW_BT_SUPPORTED         = 12,
+    HW_ALL                  = 31
 } SupportedHardwareMask;
 
 /** Enum to specify MACs for retrieval and updating */

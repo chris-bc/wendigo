@@ -184,7 +184,24 @@ void wendigo_display_popup(WendigoApp *app, char *header, char *body) {
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_display_popup()");
 }
 
-/* Initialise app->interfaces - Default all radios to on */
+/** Update the supported radio flags in app->interfaces[] based on supportedFeatures.
+ * supportedFeatures is the result of combining SupportedHardwareMask values using
+ * logical OR.
+ */
+void wendigo_interfaces_update(WendigoApp *app, uint8_t supportedFeatures) {
+    FURI_LOG_T(WENDIGO_TAG, "Start wendigo_interfaces_update()");
+    app->supportedFeatures = supportedFeatures;
+    app->interfaces[IF_BT_CLASSIC].supported = ((supportedFeatures & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED);
+    app->interfaces[IF_BLE].supported = ((supportedFeatures & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED);
+    app->interfaces[IF_WIFI].supported = ((supportedFeatures & HW_WIFI_SUPPORTED) != 0);
+    FURI_LOG_T(WENDIGO_TAG, "End wendigo_interfaces_update()");
+}
+
+/** Initialise app->interfaces - Default all radios to on.
+ * This function performs initialisation of the interfaces, initially
+ * assuming that all features are enabled - a status request is sent
+ * after initialisation to obtain genuine values.
+ */
 void wendigo_interface_init(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_interface_init()");
     for (uint8_t i = 0; i < IF_COUNT; ++i) {
@@ -192,14 +209,12 @@ void wendigo_interface_init(WendigoApp *app) {
         app->interfaces[i].mutable = true;
         app->interfaces[i].scanning = false;
         app->interfaces[i].initialised = false;
-        /* By defult assume that all radios are supported - After application
-         * initialisation we'll send a status command to ESP32 and update
-         * this based on the status packet. */
-        app->interfaces[i].supported = true;
     }
     memcpy(app->interfaces[IF_WIFI].mac_bytes, nullMac, MAC_BYTES);
     memcpy(app->interfaces[IF_BT_CLASSIC].mac_bytes, nullMac, MAC_BYTES);
     memcpy(app->interfaces[IF_BLE].mac_bytes, nullMac, MAC_BYTES);
+    /* Set the interface supported flags assuming everything is supported */
+    wendigo_interfaces_update(app, HW_ALL);
     FURI_LOG_T(WENDIGO_TAG, "End wendigo_interface_init()");
 }
 

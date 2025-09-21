@@ -100,6 +100,8 @@ Bluetooth Classic and Bluetooth Low Energy devices are both represented by this 
 A status packet provides a summary of discovered device counts by device types as well as information about capabilities supported by ESP32-Wendigo. For instance, if an ESP32 running Wendigo does not support Bluetooth, such as an ```ESP32-S2```, Bluetooth features in Wendigo will be disabled. This packet type is how this information is communicated to Flipper-Wendigo.
 
 * Preamble: ```0x66, 0x65, 0x64, 0x63``` (4 bytes)
+* Binary representation of supported features (1 byte)
+  * This is the result of logical-OR-ing SupportedHardwareMask values
 * Attribute count: Number of attributes included in the packet: 1 byte (```uint8_t```)
 * **Attribute count** repetitions of:
   * Attribute name length: 1 byte (```uint8_t```)

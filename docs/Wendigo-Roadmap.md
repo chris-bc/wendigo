@@ -8,7 +8,7 @@ This section is a running list of current priorities.
   * Works when scanning is stopped
   * Ready for testing - should be working now
 * [ ] Extend wendigo_log() to support variable arguments
-* [ ] Identify functions that should probe for available features
+* [X] Identify functions that should probe for available features
 * [ ] BUG: Wendigo "hangs" after several minutes of scanning
   * [ ] **Confirm this is fixed**
   * [ ] Scanning for a short period, stopping it, and spending a long time exploring discovered devices doesn't cause any issues so this is definitely related to scanning
@@ -36,6 +36,7 @@ This section is a running list of current priorities.
   * [ ] This approach is preferable when the client is always an application, but inconvenient in interactive mode
   * [ ] Make it possible to select/deselect a subset of channels at a time
   * [ ] Don't change the current implementation (too much) because it's a simple integration for Flipper-Wendigo
+  * [ ] Expand channel command to c[hannel] [ SET | ADD | RM ] (Channel )*, with SET as the default if unspecified
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
 * [X] BT Classic and LE device transmission from ESP32 to Flipper

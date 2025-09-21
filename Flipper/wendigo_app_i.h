@@ -21,7 +21,7 @@
 
 #define IS_FLIPPER_APP           (1)
 /* TODO: Find a way to extract fap_version from application.fam */
-#define FLIPPER_WENDIGO_VERSION  "0.5.1"
+#define FLIPPER_WENDIGO_VERSION  "0.6.0"
 
 #include "wendigo_common_defs.h"
 #include "wendigo_pnl.h"
@@ -163,6 +163,7 @@ struct WendigoApp {
     WendigoRadio interfaces[IF_COUNT];
     InterfaceType active_interface;
     uint32_t last_packet;
+    uint8_t supportedFeatures; /* Bitmask of SupportedHardwareMask values */
 
     uint8_t setup_selected_menu_index;
     uint8_t setup_selected_option_index[SETUP_MENU_ITEMS];
@@ -211,3 +212,4 @@ char *furi_status_to_string(FuriStatus status, char *result, uint8_t resultLen);
 bool wendigo_preamble_contains_at_index(uint8_t c, uint8_t index);
 bool wendigo_preamble_contains(uint8_t c);
 bool wendigo_preamble_matches(uint8_t *str, uint8_t len);
+void wendigo_interfaces_update(WendigoApp *app, uint8_t supportedFeatures);

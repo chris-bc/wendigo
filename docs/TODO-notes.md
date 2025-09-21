@@ -26,7 +26,7 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
 #### Device list scene improvements
 
 * [X] AP & STA display says "1 Networks" and "1 Stations" - remove the 's'
-* [ ] Selected option is not remembered when launching a sub-view
+* [X] Selected option is not remembered when launching a sub-view
   * e.g. Selecting a STA, viewing its PNL, and returning to the device list will reset the selected option from "x Networks" to "WiFi STA"
   * Given device list views are often nested, this can't be implemented using the same technique as other views.
   * Add information to DeviceListInstance to allow the view to be fully restored
@@ -37,12 +37,12 @@ REMOVED * Fix interactive mode display bug by only updating lastSeen if the requ
       * iterate over device_var_item_list's views to see if any match dev->view (since it seems hard to trust the cached value)
     * This could be called by a timer callback, looping through all displayed devices periodically to refresh the UI
 * [X] selected_options_index updated where needed
-* Should now be completed and working, subject to testing
-* [ ] Identify functions that should probe for available features
+* [ ] Should now be completed and working, subject to testing
+* [X] Identify functions that should probe for available features
   * [X] Add supported flag to WendigoRadio
   * [X] Update wendigo_scene_start_on_enter() to set option label to "No WiFi" or "No BT" if unsupported
   * [X] Update wendigo_scene_start_var_list_enter_callback() to ignore the keypress if radio unsupported
-  * [ ] Update parseBufferStatus() to populate these flags when a packet is received but to display results only when the status view is displayed
+  * [X] Update parseBufferStatus() to populate these flags when a packet is received but to display results only when the status view is displayed
   * [X] Send a status request on application launch to obtain supported interface status
   * [X] Setup channel settings requires WiFi
   * [X] Setup WiFi radio setting requires WiFi

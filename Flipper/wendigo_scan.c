@@ -1364,18 +1364,21 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     char *attribute_name = NULL;
     char *attribute_value = NULL;
     uint16_t offset = PREAMBLE_LEN;
-    memcpy(&attribute_count, packet + offset, sizeof(uint8_t));
-    ++offset;
+    /* Store supportedFeatures somewhere temporary for processing */
+    memcpy(&attribute_value_len, packet + offset++, sizeof(uint8_t));
+    /* Update supported features variables */
+    wendigo_interfaces_update(app, attribute_value_len);
+    
+    memcpy(&attribute_count, packet + offset++, sizeof(uint8_t));
     for (uint8_t i = 0; i < attribute_count; ++i) {
         /* Parse attribute name length */
-        memcpy(&attribute_name_len, packet + offset, sizeof(uint8_t));
+        memcpy(&attribute_name_len, packet + offset++, sizeof(uint8_t));
         if (attribute_name_len == 0) {
             wendigo_log_with_packet(MSG_ERROR,
                 "Status packet contained an attribute of length 0, skipping.",
                 packet, packetLen);
             return packetLen;
         }
-        ++offset;
         /* Name */
         attribute_name = malloc(attribute_name_len + 1);
         if (attribute_name == NULL) {
@@ -1393,8 +1396,7 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         attribute_name[attribute_name_len] = '\0';
         offset += attribute_name_len;
         /* Attribute value length */
-        memcpy(&attribute_value_len, packet + offset, sizeof(uint8_t));
-        ++offset;
+        memcpy(&attribute_value_len, packet + offset++, sizeof(uint8_t));
         /* It's valid for this to have a length of 0 - attribute_value will be "" */
         attribute_value = malloc(attribute_value_len + 1);
         if (attribute_value == NULL) {
@@ -1417,15 +1419,6 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
             process_and_display_status_attribute(app, attribute_name,
                 attribute_value);
         }
-        /* If the attribute specifies an interface's support, update that flag */
-        if (!strncmp(STRING_BT_CLASSIC_SUPPORTED, attribute_name, strlen(STRING_BT_CLASSIC_SUPPORTED))) {
-            app->interfaces[IF_BT_CLASSIC].supported = !strncmp(STRING_YES, attribute_value, strlen(STRING_YES));
-        } else if (!strncmp(STRING_BLE_SUPPORTED, attribute_name, strlen(STRING_BLE_SUPPORTED))) {
-            app->interfaces[IF_BLE].supported = !strncmp(STRING_YES, attribute_value, strlen(STRING_YES));
-        } else if (!strncmp(STRING_WIFI_24_SUPPORTED, attribute_name, strlen(STRING_WIFI_24_SUPPORTED))) {
-            app->interfaces[IF_WIFI].supported = !strncmp(STRING_YES, attribute_value, strlen(STRING_YES));
-        }
-        // TODO: 5GHz wifi
         free(attribute_name);
         free(attribute_value);
     }
