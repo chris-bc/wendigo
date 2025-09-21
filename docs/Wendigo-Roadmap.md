@@ -37,6 +37,7 @@ This section is a running list of current priorities.
   * [X] Make it possible to select/deselect a subset of channels at a time
   * [X] Don't change the current implementation (too much) because it's a simple integration for Flipper-Wendigo
   * [X] Expand channel command to c[hannel] [ SET | ADD | RM | RESET ] (Channel )*, with SET as the default if unspecified
+  * [X] Implement a mutex to ensure enabled channels cannot be changed while it is being used
 * [X] Combined Bluetooth packet for BT Classic and LE devices
 * [X] Combined Bluetooth data model for Flipper
 * [X] BT Classic and LE device transmission from ESP32 to Flipper

@@ -18,6 +18,9 @@ const uint8_t PRIVACY_ON_BITS[] = {0x11, 0x11};
 const uint8_t PRIVACY_OFF_BITS[] = {0x01, 0x11};
 long hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
 TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
+/* Mutex to ensure we can't try to hop to the next supported channel while
+ * the list of supported channels is being updated. */
+SemaphoreHandle_t channelMutex = NULL;
 
 // TODO: This is duplicated for Flipper-Wendigo because the ifndef guard isn't working
 uint8_t auth_mode_strings_count = 17;
@@ -1082,6 +1085,10 @@ void wifi_pkt_rcvd(void *buf, wifi_promiscuous_pkt_type_t type) {
 }
 
 esp_err_t initialise_wifi() {
+    /* Initialise channel mutex if needed */
+    if (channelMutex == NULL) {
+        channelMutex = xSemaphoreCreateMutex();
+    }
     /* Initialise WiFi if needed */
     if (!WIFI_INITIALISED) {
         ESP_ERROR_CHECK(esp_netif_init());
@@ -1173,35 +1180,52 @@ bool wendigo_is_valid_channel(uint8_t channel) {
  */
 esp_err_t wendigo_get_channels() {
     esp_err_t result = ESP_OK;
+    /* Initialise the channel mutex if needed */
+    if (channelMutex == NULL) {
+        channelMutex = xSemaphoreCreateMutex();
+    }
     if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-        printf("%d channels included in WiFi channel hopping: ", channels_count);
-        for (uint8_t i = 0; i < channels_count; ++i) {
-            printf("%s%d", (i > 0) ? ", " : "", channels[i]);
-        }
-        putchar('\n');
-    } else {
-        /* Assemble the packet with comma-separated channels.
-           Packet size is 2*PREAMBLE_LEN + channels_count + 1
-        */
-        uint8_t packetLen = (2 * PREAMBLE_LEN) + channels_count + 1;
-        uint8_t *packet = malloc(packetLen);
-        if (packet == NULL) {
-            return outOfMemory();
-        }
-        memcpy(packet, PREAMBLE_CHANNELS, PREAMBLE_LEN);
-        memcpy(packet + WENDIGO_OFFSET_CHANNEL_COUNT, &channels_count, sizeof(uint8_t));
-        if (channels_count > 0) {
-            memcpy(packet + WENDIGO_OFFSET_CHANNELS, channels, channels_count);
-        }
-        memcpy(packet + WENDIGO_OFFSET_CHANNELS + channels_count, PACKET_TERM, PREAMBLE_LEN);
-        /* Transmit the packet */
-        if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
-            send_bytes(packet, packetLen);
-            xSemaphoreGive(uartMutex);
+        /* Get channel mutex */
+        if (xSemaphoreTake(channelMutex, portMAX_DELAY) == pdTRUE) {
+            printf("%d channels included in WiFi channel hopping: ", channels_count);
+            for (uint8_t i = 0; i < channels_count; ++i) {
+                printf("%s%d", (i > 0) ? ", " : "", channels[i]);
+            }
+            putchar('\n');
+            xSemaphoreGive(channelMutex);
         } else {
-            result = ESP_ERR_INVALID_STATE;
+            // TODO: Log error
         }
-        free(packet);
+    } else {
+        /* Get channel mutex while assembling the packet */
+        if (xSemaphoreTake(channelMutex, portMAX_DELAY) == pdTRUE) {
+            /* Assemble the packet with comma-separated channels.
+               Packet size is 2*PREAMBLE_LEN + channels_count + 1
+            */
+            uint8_t packetLen = (2 * PREAMBLE_LEN) + channels_count + 1;
+            uint8_t *packet = malloc(packetLen);
+            if (packet == NULL) {
+                xSemaphoreGive(channelMutex);
+                return outOfMemory();
+            }
+            memcpy(packet, PREAMBLE_CHANNELS, PREAMBLE_LEN);
+            memcpy(packet + WENDIGO_OFFSET_CHANNEL_COUNT, &channels_count, sizeof(uint8_t));
+            if (channels_count > 0) {
+                memcpy(packet + WENDIGO_OFFSET_CHANNELS, channels, channels_count);
+            }
+            memcpy(packet + WENDIGO_OFFSET_CHANNELS + channels_count, PACKET_TERM, PREAMBLE_LEN);
+            xSemaphoreGive(channelMutex);
+            /* Transmit the packet */
+            if (xSemaphoreTake(uartMutex, portMAX_DELAY)) {
+                send_bytes(packet, packetLen);
+                xSemaphoreGive(uartMutex);
+            } else {
+                result = ESP_ERR_INVALID_STATE;
+            }
+            free(packet);
+        } else {
+            // TODO: log error
+        }
     }
     return result;
 }
@@ -1220,30 +1244,36 @@ uint8_t wendigo_rm_channels(uint8_t *old_channels, uint8_t old_channels_count) {
     if (channels_count == 0 || channels == NULL) {
         return 0;
     }
-    /* Loop through channels[], checking each element to see if it's present in
-     * old_channels[] and skipping it if so. */
-    for (uint8_t i = 0; i < channels_count; ++i) {
-        rm_idx = wendigo_index_of_int(channels[i], old_channels, old_channels_count);
-        if (rm_idx == old_channels_count) {
-            /* The element is not being removed - give it a home in the future channels[] */
-            channels[target_idx++] = channels[i];
-        } else {
-            ++rm_count;
-        }
-    }
-    if (rm_count > 0) {
-        /* We've found some channels to remove. After the above loop these channels are
-         * all at the end of channels[] so we can just resize the array to chop off
-         * those elements. */
-        uint8_t *new_channels = realloc(channels, channels_count - rm_count);
-        if (new_channels == NULL) {
-            if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-                ESP_LOGE(TAG, "wendigo_rm_channels(): Failed to shrink channels[].");
+    /* Get the channel mutex before modifying channels[] */
+    if (xSemaphoreTake(channelMutex, portMAX_DELAY) == pdTRUE) {
+        /* Loop through channels[], checking each element to see if it's present in
+         * old_channels[] and skipping it if so. */
+        for (uint8_t i = 0; i < channels_count; ++i) {
+            rm_idx = wendigo_index_of_int(channels[i], old_channels, old_channels_count);
+            if (rm_idx == old_channels_count) {
+                /* The element is not being removed - give it a home in the future channels[] */
+                channels[target_idx++] = channels[i];
+            } else {
+                ++rm_count;
             }
-        } else {
-            channels_count -= rm_count;
-            channels = new_channels;
         }
+        if (rm_count > 0) {
+            /* We've found some channels to remove. After the above loop these channels are
+             * all at the end of channels[] so we can just resize the array to chop off
+             * those elements. */
+            uint8_t *new_channels = realloc(channels, channels_count - rm_count);
+            if (new_channels == NULL) {
+                if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                    ESP_LOGE(TAG, "wendigo_rm_channels(): Failed to shrink channels[].");
+                }
+            } else {
+                channels_count -= rm_count;
+                channels = new_channels;
+            }
+        }
+        xSemaphoreGive(channelMutex);
+    } else {
+        // TODO: Log error
     }
     return rm_count;
 }
@@ -1310,18 +1340,29 @@ uint8_t wendigo_add_channels(uint8_t *new_channels, uint8_t new_channels_count) 
  * uint8_t element representing a channel that is to be enabled.
  */
 esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count) {
-    if (channels != NULL && channels_count > 0) {
-        free(channels);
-        channels = NULL;
-        channels_count = 0;
+    /* Initialise the channels mutex if needed */
+    if (channelMutex == NULL) {
+        channelMutex = xSemaphoreCreateMutex();
     }
-    if (new_channels_count > 0) {
-        channels = malloc(new_channels_count);
-        if (channels == NULL) {
-            return ESP_ERR_NO_MEM;
+    /* Get the mutex */
+    if (xSemaphoreTake(channelMutex, portMAX_DELAY) == pdTRUE) {
+        if (channels != NULL && channels_count > 0) {
+            free(channels);
+            channels = NULL;
+            channels_count = 0;
         }
-        memcpy(channels, new_channels, new_channels_count);
-        channels_count = new_channels_count;
+        if (new_channels_count > 0) {
+            channels = malloc(new_channels_count);
+            if (channels == NULL) {
+                xSemaphoreGive(channelMutex);
+                return ESP_ERR_NO_MEM;
+            }
+            memcpy(channels, new_channels, new_channels_count);
+            channels_count = new_channels_count;
+        }
+        xSemaphoreGive(channelMutex);
+    } else {
+        // TODO: Log error
     }
     return ESP_OK;
 }
@@ -1341,6 +1382,9 @@ esp_err_t wendigo_reset_channels() {
  *  first channel in channels[].
  */
 void create_hop_task_if_needed() {
+    if (channelMutex == NULL) {
+        channelMutex = xSemaphoreCreateMutex();
+    }
     if (channelHopTask == NULL) {
         if (scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
             ESP_LOGI(WIFI_TAG, "Channel hopping task is not running, starting it now...");
@@ -1371,17 +1415,23 @@ void channelHopCallback(void *pvParameter) {
     while (true) {
         /* Delay hop_millis ms */
         vTaskDelay(hop_millis / portTICK_PERIOD_MS);
-        /* Only hop if there are channels to hop to */
-        if (channels_count > 0) {
-            ++channel_index; /* Move to next supported channel */
-            if (channel_index >= channels_count) {
-                /* We've hopped to the end, go back to the start */
-                channel_index = 0;
+        /* Get the channel mutex to ensure channels[] isn't changed while using it */
+        if (xSemaphoreTake(channelMutex, portMAX_DELAY) == pdTRUE) {
+            /* Only hop if there are channels to hop to */
+            if (channels_count > 0) {
+                ++channel_index; /* Move to next supported channel */
+                if (channel_index >= channels_count) {
+                    /* We've hopped to the end, go back to the start */
+                    channel_index = 0;
+                }
+                if (esp_wifi_set_channel(channels[channel_index], WIFI_SECOND_CHAN_NONE) != ESP_OK &&
+                        scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
+                    ESP_LOGW(WIFI_TAG, "Failed to change to channel %d", channels[channel_index]);
+                }
             }
-            if (esp_wifi_set_channel(channels[channel_index], WIFI_SECOND_CHAN_NONE) != ESP_OK &&
-                    scanStatus[SCAN_INTERACTIVE] == ACTION_ENABLE) {
-                ESP_LOGW(WIFI_TAG, "Failed to change to channel %d", channels[channel_index]);
-            }
+            xSemaphoreGive(channelMutex);
+        } else {
+            // TODO: Log error
         }
     }
 }
