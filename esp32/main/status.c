@@ -145,22 +145,18 @@ void display_status_interactive() {
 }
 
 /** Send status information to Flipper Zero.
- *  A status packet commences with 4 bytes of 0xEE followed by 4 bytes of 0xBB
+ *  A status packet commences with 4 bytes: PREAMBLE_STATUS.
  *  This is followed by 1 byte that specifies the number of attributes contained
- *  in the packet and then repeats the following pattern that number of tumes:
+ *  in the packet and then repeats the following pattern that number of times:
  *  * 1 byte specifying the length of the attribute name
- *  * The attribute name (the terminating'\0' is ommitted)
- *  * 1 byte specifying the legth of the attribute value
+ *  * The attribute name (the terminating '\0' is ommitted)
+ *  * 1 byte specifying the length of the attribute value
  *  * The attribute value (the terminating '\0' is ommitted)
- *  The packet is terminated with 4 bytes of 0xAA and 4 bytes of 0xFF.
+ *  The packet is terminated with 4 bytes: PACKET_TERM.
  */
 void display_status_uart() {
     /* Get features supported by the ESP32 chip */
     uint8_t supported = wendigo_supported_features();
-    bool uuidDictionarySupported = ((supported & HW_BT_UUID_DICTIONARY) == HW_BT_UUID_DICTIONARY);
-    bool btClassicSupported = ((supported & HW_BT_CLASSIC_SUPPORTED) == HW_BT_CLASSIC_SUPPORTED);
-    bool btBLESupported = ((supported & HW_BLE_SUPPORTED) == HW_BLE_SUPPORTED);
-    bool wifiSupported = ((supported & HW_WIFI_SUPPORTED) != 0);
     initialise_status_details(supported);
 
     if (xSemaphoreTake(uartMutex, portMAX_DELAY)) { /* Wait for the talking stick */
