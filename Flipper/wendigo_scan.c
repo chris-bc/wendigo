@@ -1452,16 +1452,8 @@ bool wendigo_clear_buffer(uint8_t *buf, uint16_t bufLen) {
     for (; idx < bufLen && result; ++idx) {
         if (wendigo_preamble_matches(buf + idx, bufLen - idx)) {
             /* Log a message when this happens, at least during testing */
-            uint8_t byteCount = (bufLen - idx);
-            char *msg = malloc(48 + (3 * byteCount));
-            if (msg == NULL) {
-                wendigo_log(MSG_INFO, "Found possible preamble in buffer, not clearing all bytes.");
-            } else {
-                snprintf(msg, 48 + (3 * byteCount), "Found potential preamble, not clearing buffer: ");
-                bytes_to_string(buf + idx, byteCount, msg + 47);
-                wendigo_log(MSG_INFO, msg);
-                free(msg);
-            }
+            wendigo_log_with_packet(MSG_INFO, buf + idx, bufLen - idx,
+                "Found possible preamble, not clearing buffer:");
             result = false;
         } else {
             buf[idx] = 0;
@@ -1530,30 +1522,15 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
         uint8_t statusLen = 29;
         char *statusStr = malloc(statusLen);
         if (statusStr == NULL) {
-            // TODO: Convert to wendigo_log() after it supports variable arguments
-            FURI_LOG_W("wendigo_scan_handle_rx_data_cb()",
-                "furi_mutex_acquire() returned %d, unable to allocate %d bytes to display a string representation.",
+            wendigo_log(MSG_WARN,
+                "wendigo_scan_handle_rx_data_cb(): furi_mutex_acquire() returned %d, unable to allocate %d bytes to display a string representation.",
                 status, statusLen);
         } else {
             furi_status_to_string(status, statusStr, statusLen);
             statusStr[statusLen - 1] = '\0'; /* Just in case */
-            // wendigo_scan_handle_rx_data_cb(): furi_mutex_acquire() returned %s. 66+strlen
-            uint8_t msgLen = 66;
-            if (statusStr != NULL) {
-                msgLen += strlen(statusStr);
-            }
-            char *msg = malloc(msgLen);
-            if (msg == NULL) {
-                FURI_LOG_W("wendigo_scan_handle_rx_data_cb()",
-                    "furi_mutex_acquire() returned %s and Wendigo was unable to allocate %d bytes for log message.",
-                    (statusStr == NULL) ? "NULL" : statusStr, msgLen);
-            } else {
-                snprintf(msg, msgLen,
-                    "wendigo_scan_handle_rx_data_cb(): furi_mutex_acquire() returned %s.",
-                    statusStr);
-                wendigo_log(MSG_WARN, msg);
-                free(msg);
-            }
+            wendigo_log(MSG_WARN,
+                "wendigo_scan_handle_rx_data_cb(): furi_mutex_acquire() returned %s.",
+                statusStr);
             free(statusStr);
         }
     }
@@ -1587,17 +1564,9 @@ void wendigo_scan_handle_rx_data_cb(uint8_t *buf, size_t len, void *context) {
             if (newBuffer == NULL) {
                 /* Out of memory */
                 // Unable to expand UART buffer to %d bytes, abandoning rx.
-                char *strMsg = malloc(59);
-                if (strMsg == NULL) {
                     wendigo_log(MSG_ERROR,
-                        "Unable to allocate memory for UART buffer.");
-                } else {
-                    snprintf(strMsg, 59,
                         "Unable to expand UART buffer to %d bytes, abandoning rx.",
                         newCapacity);
-                    wendigo_log(MSG_ERROR, strMsg);
-                    free(strMsg);
-                }
                 /* Release buffer mutex */
                 furi_mutex_release(app->bufferMutex);
                 return;
