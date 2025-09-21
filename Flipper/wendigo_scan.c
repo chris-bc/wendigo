@@ -1422,7 +1422,7 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
             app->interfaces[IF_BT_CLASSIC].supported = !strncmp(STRING_YES, attribute_value, strlen(STRING_YES));
         } else if (!strncmp(STRING_BLE_SUPPORTED, attribute_name, strlen(STRING_BLE_SUPPORTED))) {
             app->interfaces[IF_BLE].supported = !strncmp(STRING_YES, attribute_value, strlen(STRING_YES));
-        } else if (!strncmp(STRING_WIFI_SUPPORTED, attribute_name, strlen(STRING_WIFI_SUPPORTED))) {
+        } else if (!strncmp(STRING_WIFI_24_SUPPORTED, attribute_name, strlen(STRING_WIFI_24_SUPPORTED))) {
             app->interfaces[IF_WIFI].supported = !strncmp(STRING_YES, attribute_value, strlen(STRING_YES));
         }
         // TODO: 5GHz wifi

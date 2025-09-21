@@ -146,7 +146,9 @@ void display_status_interactive() {
 
 /** Send status information to Flipper Zero.
  *  A status packet commences with 4 bytes: PREAMBLE_STATUS.
- *  This is followed by 1 byte that specifies the number of attributes contained
+ *  This is followed by 1 byte SupportedHardwareMask that combines all supported
+ *  features with logical-OR.
+ *  Following this is 1 byte specifying the number of attributes contained
  *  in the packet and then repeats the following pattern that number of times:
  *  * 1 byte specifying the length of the attribute name
  *  * The attribute name (the terminating '\0' is ommitted)
@@ -161,6 +163,7 @@ void display_status_uart() {
 
     if (xSemaphoreTake(uartMutex, portMAX_DELAY)) { /* Wait for the talking stick */
         send_bytes(PREAMBLE_STATUS, PREAMBLE_LEN);
+        send_bytes(&supported, sizeof(uint8_t));
 
         uint8_t attr_count = ATTR_COUNT_MAX;
         send_bytes(&attr_count, 1);
