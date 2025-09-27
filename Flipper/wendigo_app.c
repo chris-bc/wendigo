@@ -320,8 +320,12 @@ void wendigo_app_free(WendigoApp *app) {
     FURI_LOG_T(WENDIGO_TAG, "Start wendigo_app_free()");
     furi_assert(app);
 
-    furi_timer_stop(app->scan_timer);
-    furi_timer_free(app->scan_timer);
+    if (app->scan_timer != NULL) {
+        if (furi_timer_is_running(app->scan_timer) == 1) {
+            furi_timer_stop(app->scan_timer);
+        }
+        furi_timer_free(app->scan_timer);
+    }
 
     // Views
     view_dispatcher_remove_view(app->view_dispatcher, WendigoAppViewVarItemList);

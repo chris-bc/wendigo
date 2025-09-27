@@ -3,7 +3,6 @@
 This section is a running list of current priorities.
 
 * [ ] BUG: Quitting the application without doing anything causes it to hang
-  * [ ] Identified in released v0.5.1 - may be fixed already?
 * [ ] BUG: Probed SSIDs hangs the application
   * Works when scanning is stopped
   * Ready for testing - should be working now
@@ -31,6 +30,10 @@ This section is a running list of current priorities.
   * [ ] Package the packet, along with its length, into a struct and add the struct to a message queue
   * [ ] A new worker, running on a new thread, will wake up when an item is in the queue and this thread will parse the packet and make necessary changes to the data model.
   * [ ] This reduces the time the UART receiver is doing things other than receiving UART.
+  * [ ] Implementation notes
+    * [ ] Create struct Wendigo_MSG_Packet with a uint8_t* (packet) and uint16_t (packet size)
+    * [ ] Create a task that loops continuously, blocking until furi_message_queue_get(queue, *ptr, FuriWaitForever) returns a message, passing it to parsePacket()
+    * [ ] The producer - UART rx worker - puts the packet and packet size into a new struct and calls furi_message_queue_put(queue, struct, FuriWaitForever)
 * [ ] Finish implementation of association/reassociation packet parsers
 * [X] Channel command overwrites enabled channels when setting channels
   * [X] This approach is preferable when the client is always an application, but inconvenient in interactive mode

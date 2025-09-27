@@ -1276,6 +1276,13 @@ uint16_t parseBufferChannels(WendigoApp *app, uint8_t *packet, uint16_t packetLe
  */
 uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen) {
     FURI_LOG_T(WENDIGO_TAG, "Start parseBufferStatus()");
+    /* Ensure the packet is a sane size - header, terminator,
+     * feature byte & attribute count. */
+    if (packetLen < ((2 * PREAMBLE_LEN) + 2)) {
+        wendigo_log_with_packet(MSG_ERROR, packet, packetLen, "Status packet too short");
+        return packetLen;
+    }
+
     /* Don't display the packet if the status scene isn't displayed */
     bool display = false;
     if (app->current_view == WendigoAppViewStatus) {
@@ -1295,6 +1302,7 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     /* Update supported features variables */
     wendigo_interfaces_update(app, attribute_value_len);
 
+    /* Get the number of attributes */
     memcpy(&attribute_count, packet + offset++, sizeof(uint8_t));
     for (uint8_t i = 0; i < attribute_count; ++i) {
         /* Parse attribute name length */
@@ -1302,9 +1310,15 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         if (attribute_name_len == 0) {
             wendigo_log_with_packet(MSG_ERROR, packet, packetLen,
                 "Status packet contained an attribute of length 0, skipping.");
+            continue;
+        }
+        /* Ensure we have space for the name */
+        if ((offset + attribute_name_len + PREAMBLE_LEN) > packetLen) {
+            wendigo_log_with_packet(MSG_ERROR, packet, packetLen,
+                "Status packet expects a name of length %d at offset %d, but the packet isn't long enough (%d).",
+                attribute_name_len, offset, packetLen);
             return packetLen;
         }
-        /* Name */
         attribute_name = malloc(attribute_name_len + 1);
         if (attribute_name == NULL) {
             wendigo_log_with_packet(MSG_ERROR, packet, packetLen,
@@ -1317,7 +1331,15 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
         offset += attribute_name_len;
         /* Attribute value length */
         memcpy(&attribute_value_len, packet + offset++, sizeof(uint8_t));
-        /* It's valid for this to have a length of 0 - attribute_value will be "" */
+        /* It's valid for this to have a length of 0 - attribute_value will be "",
+         * but make sure the packet is long enough. */
+        if ((offset + attribute_value_len + PREAMBLE_LEN) > packetLen) {
+            wendigo_log_with_packet(MSG_ERROR, packet, packetLen,
+                "Status packet expects a value of length %d at offset %d, but the packet isn't long enough (%d).",
+                attribute_value_len, offset, packetLen);
+            free(attribute_name);
+            return packetLen;
+        }
         attribute_value = malloc(attribute_value_len + 1);
         if (attribute_value == NULL) {
             wendigo_log_with_packet(MSG_ERROR, packet, packetLen,
@@ -1342,10 +1364,13 @@ uint16_t parseBufferStatus(WendigoApp *app, uint8_t *packet, uint16_t packetLen)
     }
 
     /* buffer + offset should now point to the end of packet sequence */
-    if (memcmp(PACKET_TERM, packet + offset, PREAMBLE_LEN)) {
+    if ((offset + PREAMBLE_LEN) > packetLen) {
+        wendigo_log_with_packet(MSG_WARN, packet, packetLen,
+            "Parsed a status packet in %d bytes, but the packet is too short (%d) to contain a terminator.",
+            offset, packetLen);
+    } else if (memcmp(PACKET_TERM, packet + offset, PREAMBLE_LEN)) {
         wendigo_log_with_packet(MSG_WARN, packet, packetLen,
             "Status packet terminator not found where expected.");
-        return packetLen;
     }
     FURI_LOG_T(WENDIGO_TAG, "End parseBufferStatus()");
     return offset + PREAMBLE_LEN;
