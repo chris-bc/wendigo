@@ -17,7 +17,15 @@ bool wendigo_is_valid_channel(uint8_t channel);
 /* Offsets for different packet types */
 uint8_t BEACON_SSID_OFFSET = 38;
 uint8_t BEACON_SEQNUM_OFFSET = 22;
-uint8_t BEACON_PRIVACY_OFFSET = 34; /* 0x31 set, 0x21 unset */
+uint8_t BEACON_PRIVACY_OFFSET = 34; /* 0x31 set, 0x21 unset ... Or is it 0x01 open 0x11 private?*/
+uint8_t BEACON_PRIVACY_OFF = 0x01;
+uint8_t BEACON_PRIVACY_ON = 0x11;
+uint8_t BEACON_TAGS_OFFSET = 36; /* Variable-length tags incl. SSID, channel, security begin here */
+const uint8_t BEACON_TAG_SSID = 0x00;
+const uint8_t BEACON_TAG_CHANNEL = 0x03;
+const uint8_t BEACON_TAG_WPA1 = 0xdd;
+const uint8_t BEACON_WPA1_TYPE[] = {0x00, 0x50, 0xF2, 0x01};
+const uint8_t BEACON_TAG_WPA2 = 0x30;
 uint8_t BEACON_PACKET_LEN = 57;
 uint8_t PROBE_SSID_OFFSET = 26;
 uint8_t PROBE_SEQNUM_OFFSET = 22;

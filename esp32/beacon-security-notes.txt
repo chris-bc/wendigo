@@ -1,0 +1,42 @@
+Open network:
+* No WPA indicators
+* Privacy flag 0 - Capabilities 0x1401 (appears 01 14 in bitstream)
+* Privacy flag 1 would be 0x1411
+
+WEP:
+* No indicators other than privacy flag 1
+
+WPA1:
+* Privacy required
+* Tag: WPA Information element from Microsoft
+unsigned char bytes[] = {0xdd, 0x16, 0x0, 0x50, 0xf2, 0x1, 0x1, 0x0, 0x0, 0x50, 0xf2, 0x4, 0x1, 0x0, 0x0, 0x50, 0xf2, 0x4, 0x1, 0x0, 0x0, 0x50, 0xf2, 0x2};
+* Tag number dd, tag length 16 not so relevant
+* OUI 00 50 f2 type 01 indicates WPA1
+
+WPA2:
+* Privacy required
+* Contains RSN information element
+* Tag number 48 - 0x30
+* Indicates WPA2/WPA3
+
+Improve parse beacon function:
+* SSID isn't necessarily at 38
+* Tagged parameters start at 36
+* SSID has an ID 0 followed by length
+* Channel has ID 3 followed by length
+* WPA1 has ID 221 0xdd, tag length byte, OUI 00:50:f2, type 0x01 WPA version 0x01 0x00
+* WPA2/3 has ID 48 0x30
+
+Check security:
+
+Check privacy flag - If off WIFI_OPEN
+Loop through tags (SSID has tag 0, all tags begin with type byte and length byte)
+Tag 48 0x30 is WIFI_WPA2_WPA3
+Tag with:
+   ??? Vendor specific 0xdd
+   Length byte
+   OUI 00:50:f2
+   Type 1
+   Possibly followed by 01:01:00
+   => WPA1
+Else WEP

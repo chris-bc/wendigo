@@ -403,23 +403,69 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     dev->scanType = SCAN_WIFI_AP;
     dev->rssi = rx_ctrl.rssi;
     dev->radio.ap.channel = rx_ctrl.channel;
-    if (dev->radio.ap.authmode == WIFI_AUTH_MAX) {
-        /* Try & get better security info */
-        uint8_t privacy;
-        memcpy(&privacy, payload + BEACON_PRIVACY_OFFSET, sizeof(uint8_t));
-        if (privacy == 0x31) {
-            /* It's a protected network. Call it WPA *shrugs* */
-            dev->radio.ap.authmode = WIFI_AUTH_WPA_PSK;
-        } else if (privacy == 0x21) {
-            dev->radio.ap.authmode = WIFI_AUTH_OPEN;
-        } else {
-            dev->radio.ap.authmode = WIFI_AUTH_MAX;
+    /* Loop through the packet's tags to get SSID and security info */
+    uint8_t offset = BEACON_TAGS_OFFSET;
+    uint8_t len;
+    while (offset < rx_ctrl.sig_len) {
+        switch (payload[offset]) {
+            case BEACON_TAG_SSID:
+                /* Extract SSID */
+                len = payload[++offset];
+                memcpy(dev->radio.ap.ssid, payload + (++offset), len);
+                dev->radio.ap.ssid[len] = '\0';
+                offset += len;
+                break;
+            case BEACON_TAG_CHANNEL:
+                /* Extract channel - Technically I suppose it's possible for an AP to advertise
+                on a different channel from what it operates on */
+                len = payload[++offset];
+                /* Bump offset for consistency */
+                ++offset;
+                if (len == 1) {
+                    dev->radio.ap.channel = payload[offset];
+                } else {
+                    // TODO: Display alert
+                }
+                offset += len;
+                break;
+            case BEACON_TAG_WPA1:
+                /* This is just a vendor-defined tag - check whether it's for WPA1 */
+                len = payload[++offset];
+                /* Bump offset for consistency */
+                ++offset;
+                if (len >= 4) {
+                    /* Looking for OUI 00:50:F2, type 01 */
+                    if (!memcmp(BEACON_WPA1_TYPE, payload + offset, 4)) {
+                        dev->radio.ap.authmode = WIFI_AUTH_WPA_PSK;
+                    }
+                }
+                offset += len;
+                break;
+            case BEACON_TAG_WPA2:
+                len = payload[++offset];
+                dev->radio.ap.authmode = WIFI_AUTH_WPA2_WPA3_PSK;
+                offset += len + 1;
+                break;
+            default:
+                /* Jump to next tag */
+                len = payload[++offset];
+                offset += len + 1;
+                break;
         }
     }
-    uint8_t ssid_len = payload[BEACON_SSID_OFFSET - 1];
-    if (ssid_len > 0) {
-        memcpy(dev->radio.ap.ssid, payload + BEACON_SSID_OFFSET, ssid_len);
+    if (dev->radio.ap.authmode == WIFI_AUTH_MAX) {
+        /* We didn't set the authmode above, is it WEP or OPEN? */
+        uint8_t privacy;
+        memcpy(&privacy, payload + BEACON_PRIVACY_OFFSET, sizeof(uint8_t));
+        if (privacy == BEACON_PRIVACY_ON) {
+            dev->radio.ap.authmode = WIFI_AUTH_WEP;
+        } else if (privacy == BEACON_PRIVACY_OFF) {
+            dev->radio.ap.authmode = WIFI_AUTH_OPEN;
+        } else {
+            // TODO: Display alert
+        }
     }
+
     esp_err_t result = ESP_OK;
     if (creating) {
         result = add_device(dev);
