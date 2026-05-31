@@ -552,7 +552,7 @@ bool wendigo_update_device(WendigoApp *app, wendigo_device *dev) {
     } else if (dev->scanType == SCAN_WIFI_AP) {
         /* Copy channel, ssid, sta_count, stations */
         target->radio.ap.channel = dev->radio.ap.channel;
-        if (dev->radio.ap.authmode != WIFI_AUTH_MAX) {
+        if (dev->radio.ap.authmode != AUTH_TYPE_COUNT) {
             target->radio.ap.authmode = dev->radio.ap.authmode;
         }
         uint8_t ssid_len = strnlen((char *)dev->radio.ap.ssid, MAX_SSID_LEN);

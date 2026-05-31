@@ -14,10 +14,8 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item);
 /** TODO: For some obscene reason the ifndef barrier isn't stopping these
  *  from showing up in every single object file. No longer shared.
  */
-char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2",
-    "WPA+WPA2", "EAP", "EAP", "WPA3", "WPA2+WPA3", "WAPI", "OWE",
-    "WPA3 Enterprise 192-bit", "WPA3 EXT", "WPA3 EXT Mixed Mode", "DPP",
-    "WPA3 Enterprise", "WPA3 Enterprise Transition", "Unknown"};
+char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA1", "WPA2/3",
+    "Unknown", "Not Found"};
 
 FuriTimer *deviceTimer = NULL;
 
@@ -697,8 +695,8 @@ void wendigo_scene_device_list_update_device(VariableItem *new_item) {
       optionIndex == WendigoOptionAPAuthMode) {
     /* Update AP authentication mode */
     uint8_t mode = dev->radio.ap.authmode;
-    if (mode > WIFI_AUTH_MAX) {
-      mode = WIFI_AUTH_MAX;
+    if (mode > AUTH_TYPE_COUNT) {
+      mode = AUTH_TYPE_COUNT;
     }
     strncpy(optionValue, wifi_auth_mode_strings[mode], sizeof(optionValue));
   } else if (dev->scanType == SCAN_WIFI_STA &&
