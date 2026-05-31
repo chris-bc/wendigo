@@ -40,3 +40,5 @@ Tag with:
    Possibly followed by 01:01:00
    => WPA1
 Else WEP
+
+Add 5gdz flag

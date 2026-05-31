@@ -24,7 +24,7 @@ SemaphoreHandle_t channelMutex = NULL;
 
 // TODO: This is duplicated for Flipper-Wendigo because the ifndef guard isn't working
 uint8_t auth_mode_strings_count = AUTH_TYPE_COUNT;
-char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2/2", "Unknown"};
+char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2/2", "Unknown", "Not Found"};
 
 bool WIFI_INITIALISED = false;
 static const char *WIFI_TAG = "WiFi@Wendigo";
@@ -161,7 +161,7 @@ esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
         print_space(4, false);
         print_star(1, true);
     }
-    // TODO: Integrate authmode in the above
+    /* Display authmode on the next line */
     print_star(1, false);
     print_space(4, false);
     if (dev->radio.ap.authmode > auth_mode_strings_count) {
