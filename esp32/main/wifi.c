@@ -12,8 +12,8 @@ uint8_t channel_index = 0;
 // TODO: Refactor to support 5GHz channels if the device supports 5GHz channels
 const uint8_t WENDIGO_SUPPORTED_24_CHANNELS_COUNT = 14;
 const uint8_t WENDIGO_SUPPORTED_24_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
-const uint8_t WENDIGO_SUPPORTED_5_CHANNELS_COUNT = 31;
-const uint8_t WENDIGO_SUPPORTED_5_CHANNELS[] = {32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
+const uint8_t WENDIGO_SUPPORTED_5_CHANNELS_COUNT = 26;
+const uint8_t WENDIGO_SUPPORTED_5_CHANNELS[] = {36, 40, 44, 48, 52, 56, 60, 64, 100, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
 const uint8_t PRIVACY_ON_BITS[] = {0x11, 0x11};
 const uint8_t PRIVACY_OFF_BITS[] = {0x01, 0x11};
 long hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
@@ -1178,10 +1178,9 @@ esp_err_t wendigo_wifi_enable() {
     if (!WIFI_INITIALISED) {
         result = initialise_wifi();
     }
-    /* Set default channels to hop through (all 2.4GHz channels) if not yet configured */
+    /* Set default channels to hop through (all supported channels) if not yet configured */
     if (channels == NULL || channels_count == 0) {
-        /* Cast the values to avoid compiler warnings about discarding const qualifiers */
-        wendigo_set_channels((uint8_t *)WENDIGO_SUPPORTED_24_CHANNELS, (uint8_t)WENDIGO_SUPPORTED_24_CHANNELS_COUNT);
+        wendigo_reset_channels();
     }
     result |= esp_wifi_set_promiscuous(true);
     create_hop_task_if_needed();

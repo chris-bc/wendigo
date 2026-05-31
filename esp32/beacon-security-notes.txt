@@ -41,4 +41,10 @@ Tag with:
    => WPA1
 Else WEP
 
-Add 5gdz flag
+Add 5ghz flag
+* Setting default channels:
+  * uint8_t supported = wendigo_supported_features();
+  * if supported & HW_WIFI_SUPPORTED add 2.4 GHz channels
+  * if supported & HW_WIFI_%_SUPPORTED add 5GHz channels
+
+* Update wifi initialise if 5ghz supported
