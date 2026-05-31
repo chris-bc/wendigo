@@ -60,10 +60,4 @@ typedef enum WiFi_Frame {
     WIFI_FRAME_COUNT = 16
 } WiFi_Frame;
 
-typedef enum PROBE_RESPONSE_AUTH_TYPE {
-    AUTH_TYPE_NONE = 1,
-    AUTH_TYPE_WEP = 2,
-    AUTH_TYPE_WPA = 4
-} PROBE_RESPONSE_AUTH_TYPE;
-
 #endif

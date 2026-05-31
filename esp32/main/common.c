@@ -287,7 +287,7 @@ wendigo_device *wendigo_new_ap(uint8_t *mac) {
     wendigo_device *result = wendigo_new_device(mac);
     if (result != NULL) {
         result->scanType = SCAN_WIFI_AP;
-        result->radio.ap.authmode = WIFI_AUTH_MAX;
+        result->radio.ap.authmode = AUTH_TYPE_COUNT;
     }
     return result;
 }

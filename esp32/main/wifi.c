@@ -23,11 +23,8 @@ TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
 SemaphoreHandle_t channelMutex = NULL;
 
 // TODO: This is duplicated for Flipper-Wendigo because the ifndef guard isn't working
-uint8_t auth_mode_strings_count = 17;
-char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2",
-    "WPA+WPA2", "EAP", "EAP", "WPA3", "WPA2+WPA3", "WAPI", "OWE",
-    "WPA3 Enterprise 192-bit", "WPA3 EXT", "WPA3 EXT Mixed Mode", "DPP",
-    "WPA3 Enterprise", "WPA3 Enterprise Transition", "Unknown"};
+uint8_t auth_mode_strings_count = AUTH_TYPE_COUNT;
+char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2/2", "Unknown"};
 
 bool WIFI_INITIALISED = false;
 static const char *WIFI_TAG = "WiFi@Wendigo";
@@ -436,14 +433,14 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
                 if (len >= 4) {
                     /* Looking for OUI 00:50:F2, type 01 */
                     if (!memcmp(BEACON_WPA1_TYPE, payload + offset, 4)) {
-                        dev->radio.ap.authmode = WIFI_AUTH_WPA_PSK;
+                        dev->radio.ap.authmode = AUTH_TYPE_WPA1;
                     }
                 }
                 offset += len;
                 break;
             case BEACON_TAG_WPA2:
                 len = payload[++offset];
-                dev->radio.ap.authmode = WIFI_AUTH_WPA2_WPA3_PSK;
+                dev->radio.ap.authmode = AUTH_TYPE_WPA2_3;
                 offset += len + 1;
                 break;
             default:
@@ -453,14 +450,14 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
                 break;
         }
     }
-    if (dev->radio.ap.authmode == WIFI_AUTH_MAX) {
+    if (dev->radio.ap.authmode == AUTH_TYPE_COUNT) {
         /* We didn't set the authmode above, is it WEP or OPEN? */
         uint8_t privacy;
         memcpy(&privacy, payload + BEACON_PRIVACY_OFFSET, sizeof(uint8_t));
         if (privacy == BEACON_PRIVACY_ON) {
-            dev->radio.ap.authmode = WIFI_AUTH_WEP;
+            dev->radio.ap.authmode = AUTH_TYPE_WEP;
         } else if (privacy == BEACON_PRIVACY_OFF) {
-            dev->radio.ap.authmode = WIFI_AUTH_OPEN;
+            dev->radio.ap.authmode = AUTH_TYPE_OPEN;
         } else {
             // TODO: Display alert
         }
@@ -1156,7 +1153,7 @@ esp_err_t initialise_wifi() {
                 .ssid_len = 12,
                 .password = "mythology",
                 .channel = 1,
-                .authmode = WIFI_AUTH_OPEN,
+                .authmode = AUTH_TYPE_OPEN,
                 .ssid_hidden = 0,
                 .max_connection = 128,
                 .beacon_interval = 5000

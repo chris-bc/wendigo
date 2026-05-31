@@ -142,6 +142,15 @@ typedef enum {
     WENDIGO_MACS_COUNT
 } WendigoMAC;
 
+typedef enum PROBE_RESPONSE_AUTH_TYPE {
+    AUTH_TYPE_OPEN = 0,
+    AUTH_TYPE_WEP = 1,
+    AUTH_TYPE_WPA1 = 2,
+    AUTH_TYPE_WPA2_3 = 3,
+    AUTH_TYPE_UNKNOWN = 4,
+    AUTH_TYPE_COUNT = 5
+} PROBE_RESPONSE_AUTH_TYPE;
+
 typedef struct {
     uint16_t uuid16;
     char name[40];
