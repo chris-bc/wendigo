@@ -24,7 +24,7 @@ SemaphoreHandle_t channelMutex = NULL;
 
 // TODO: This is duplicated for Flipper-Wendigo because the ifndef guard isn't working
 uint8_t auth_mode_strings_count = AUTH_TYPE_COUNT;
-char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2/2", "Unknown", "Not Found"};
+char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2/3", "Unknown", "Not Found"};
 
 bool WIFI_INITIALISED = false;
 static const char *WIFI_TAG = "WiFi@Wendigo";
@@ -460,6 +460,7 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
             dev->radio.ap.authmode = AUTH_TYPE_OPEN;
         } else {
             // TODO: Display alert
+            dev->radio.ap.authmode = AUTH_TYPE_UNKNOWN;
         }
     }
 
@@ -1153,7 +1154,7 @@ esp_err_t initialise_wifi() {
                 .ssid_len = 12,
                 .password = "mythology",
                 .channel = 1,
-                .authmode = AUTH_TYPE_OPEN,
+                .authmode = WIFI_AUTH_OPEN,
                 .ssid_hidden = 0,
                 .max_connection = 128,
                 .beacon_interval = 5000

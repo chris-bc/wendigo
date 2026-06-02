@@ -15,7 +15,7 @@ esp_err_t wendigo_reset_channels();
 bool wendigo_is_valid_channel(uint8_t channel);
 
 /* Offsets for different packet types */
-uint8_t BEACON_SSID_OFFSET = 38;
+uint8_t BEACON_SSID_OFFSET = 38; // TODO: Delete this
 uint8_t BEACON_SEQNUM_OFFSET = 22;
 uint8_t BEACON_PRIVACY_OFFSET = 34; /* 0x31 set, 0x21 unset ... Or is it 0x01 open 0x11 private?*/
 uint8_t BEACON_PRIVACY_OFF = 0x01;
