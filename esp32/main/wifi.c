@@ -421,7 +421,7 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
                 if (len == 1) {
                     dev->radio.ap.channel = payload[offset];
                 } else {
-                    ESP_LOGW(WIFI_TAG, "Received a beacon with unexpected channel length \d. Ignoring.", len);
+                    ESP_LOGW(WIFI_TAG, "Received a beacon with unexpected channel length %d. Ignoring.", len);
                 }
                 offset += len;
                 break;
