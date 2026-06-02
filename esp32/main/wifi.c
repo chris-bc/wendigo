@@ -421,7 +421,7 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
                 if (len == 1) {
                     dev->radio.ap.channel = payload[offset];
                 } else {
-                    // TODO: Display alert
+                    ESP_LOGW(WIFI_TAG, "Received a beacon with unexpected channel length \d. Ignoring.", len);
                 }
                 offset += len;
                 break;
@@ -459,7 +459,7 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         } else if (privacy == BEACON_PRIVACY_OFF) {
             dev->radio.ap.authmode = AUTH_TYPE_OPEN;
         } else {
-            // TODO: Display alert
+            ESP_LOGW(WIFI_TAG, "Received beacon with unknown auth mode.");
             dev->radio.ap.authmode = AUTH_TYPE_UNKNOWN;
         }
     }
@@ -1237,7 +1237,7 @@ esp_err_t wendigo_get_channels() {
             putchar('\n');
             xSemaphoreGive(channelMutex);
         } else {
-            // TODO: Log error
+            ESP_LOGE(WIFI_TAG, "Failed to obtain channel mutex, please try again.");
         }
     } else {
         /* Get channel mutex while assembling the packet */
@@ -1267,7 +1267,7 @@ esp_err_t wendigo_get_channels() {
             }
             free(packet);
         } else {
-            // TODO: log error
+            ESP_LOGE(WIFI_TAG, "Failed to get channel mutex, try again later.");
         }
     }
     return result;
@@ -1316,7 +1316,7 @@ uint8_t wendigo_rm_channels(uint8_t *old_channels, uint8_t old_channels_count) {
         }
         xSemaphoreGive(channelMutex);
     } else {
-        // TODO: Log error
+        ESP_LOGE(WIFI_TAG, "Failed to remove channel: Unable to get channel mutex.");
     }
     return rm_count;
 }
@@ -1405,7 +1405,7 @@ esp_err_t wendigo_set_channels(uint8_t *new_channels, uint8_t new_channels_count
         }
         xSemaphoreGive(channelMutex);
     } else {
-        // TODO: Log error
+        ESP_LOGE(WIFI_TAG, "Failed to set channels: Unable to get channel mutex.");
     }
     return ESP_OK;
 }
@@ -1474,7 +1474,7 @@ void channelHopCallback(void *pvParameter) {
             }
             xSemaphoreGive(channelMutex);
         } else {
-            // TODO: Log error
+            ESP_LOGE(WIFI_TAG, "Channel hop failed: Unable to get channel mutex.");
         }
     }
 }
