@@ -1,0 +1,147 @@
+Critical Rules for ESP-IDF Standard C ApplicationsIsolate via Promiscuous State: Always disable promiscuous mode using esp_wifi_set_promiscuous(false) right before executing esp_wifi_set_band_mode(). Altering the raw physical layer configurations while the sniffer engine actively pulls packets will regularly trigger hard panics or critical driver crashes.Account for Switching Latency: Shifting physical frequency bands forces the internal PLL (Phase-Locked Loop) to entirely relock to the new spectrum. This hardware event introduces a minor latency spike (typically a few milliseconds). If you use a high-frequency hopping timer task (e.g., changing channels every 100ms), factor in this transient dead time where packet reception drops entirely.Explicit Channel Filtering: When designing your automated hopping arrays inside standard FreeRTOS tasks, make sure to bypass DFS (Dynamic Frequency Selection) channels unless you specifically intend to listen to them, as some 5 GHz frequencies require longer stabilization periods.
+
+#include "esp_wifi.h"
+#include "esp_log.h"
+
+static const char *TAG = "DUAL_BAND_SNIFFER";
+
+// A safe function to handle manual cross-band channel hopping
+esp_err_t change_promiscuous_channel(uint8_t channel) 
+{
+    wifi_band_mode_t required_mode;
+
+    // 1. Determine the appropriate band based on the channel number
+    if (channel >= 1 && channel <= 14) {
+        required_mode = WIFI_BAND_MODE_2G_ONLY;
+    } else if (channel >= 32 && channel <= 177) {
+        required_mode = WIFI_BAND_MODE_5G_ONLY;
+    } else {
+        ESP_LOGE(TAG, "Unsupported or invalid Wi-Fi channel: %d", channel);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // 2. Query the current band configuration of the radio
+    wifi_band_mode_t current_mode;
+    esp_wifi_get_band_mode(&current_mode);
+
+    // 3. Actively flip the radio hardware if the band changes
+    if (current_mode != required_mode) {
+        ESP_LOGI(TAG, "Switching RF hardware band for channel %d...", channel);
+        
+        // Temporarily pause promiscuous mode to protect the RF state machine
+        esp_wifi_set_promiscuous(false);
+        
+        esp_err_t err = esp_wifi_set_band_mode(required_mode);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to switch band mode: %s", esp_err_to_name(err));
+            return err;
+        }
+        
+        // Re-enable promiscuous mode after shifting the band
+        esp_wifi_set_promiscuous(true);
+    }
+
+    // 4. Safely apply the new channel to the now-ready radio band
+    return esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+}
+
+Critical Rules for ESP-IDF Standard C ApplicationsIsolate via Promiscuous State: Always disable promiscuous mode using esp_wifi_set_promiscuous(false) right before executing esp_wifi_set_band_mode(). Altering the raw physical layer configurations while the sniffer engine actively pulls packets will regularly trigger hard panics or critical driver crashes.Account for Switching Latency: Shifting physical frequency bands forces the internal PLL (Phase-Locked Loop) to entirely relock to the new spectrum. This hardware event introduces a minor latency spike (typically a few milliseconds). If you use a high-frequency hopping timer task (e.g., changing channels every 100ms), factor in this transient dead time where packet reception drops entirely.Explicit Channel Filtering: When designing your automated hopping arrays inside standard FreeRTOS tasks, make sure to bypass DFS (Dynamic Frequency Selection) channels unless you specifically intend to listen to them, as some 5 GHz frequencies require longer stabilization periods.
+
+1. FreeRTOS Task Isolation & I/O BlockingYour application handles two highly demanding workloads simultaneously:The Promiscuous Callback: A high-priority, real-time interrupt function firing every time a Wi-Fi frame hits the antenna.The I/O Outputs: Sending serial strings to a console or encoding binary blobs to stream out to the Flipper Zero interface via UART/SPI.The Problem (Blocking):If the logic that formats the data model or handles serial/binary transmission runs inside or directly alongside your Wi-Fi channel-hopping loop, you create a bottleneck. Serial writes (like printf or UART pushes) are incredibly slow compared to RF processing. While the ESP32 is stuck waiting for a UART transmission buffer to clear, the channel-hopping timer might get delayed, or worse, packets will be dropped because the chip is busy handling I/O.The Solution:Isolate these functions using FreeRTOS Queues.Task A (Sniffer/Hopper): The promiscuous callback captures the packet, extracts the raw data, maps it into your data model, and immediately pushes that data model structure onto a FreeRTOS Queue. It then instantly returns to catch the next packet.Task B (Hopper Timer): Runs in its own low-priority thread, waking up only to execute esp_wifi_set_channel() based on your dwell settings, keeping it completely decoupled from packet data.Task C (The I/O Processor): A completely separate task that sits and blocks on the queue. Whenever a new data model object lands in the queue, Task C wakes up, packages it into a serial string or the binary Flipper Zero format, and transmits it.Because Task C handles the slow I/O separately, an input/output lag will never stall your Wi-Fi sniffer or desynchronise your channel-hopping timing.
+
+2. Bluetooth Coexistence (esp_coex)Because you are tracking both Bluetooth and Wi-Fi devices, you are asking two massive wireless systems to share a single 2.4GHz antenna. By default, the ESP32 tries to balance them, but it prioritises active connections over scanning.The Problem:When Wi-Fi promiscuous mode is on, the radio is entirely locked into listening to raw Wi-Fi layers. If Bluetooth is simultaneously active, the internal hardware RF switch will violently oscillate between the Wi-Fi and Bluetooth subsystems. This can lead to heavy packet loss on both sides: your Wi-Fi sniffer will blink out while Bluetooth scans, and your Bluetooth scanner will drop frames while Wi-Fi locks a channel.The Solution:You need to explicitly declare how they share the antenna using the ESP-IDF Coexistence APIs. By implementing:
+
+#include "esp_coexist.h"
+// ...
+esp_coex_preference_set(ESP_COEX_PREF_BALANCE); // Or ESP_COEX_PREF_WIFI / ESP_COEX_PREF_BT
+
+You can dynamically tell the chip which subsystem to give priority to. For a pure discovery application like Wendigo, you might even consider alternating them entirely: run a Wi-Fi sniff cycle for 10 seconds, pause it completely, and run a Bluetooth LE discovery cycle for 5 seconds to guarantee zero interference between the two profiles.3. Parsing Raw rx_ctrl vs. Keeping the Data ModelDo not skip your data model! Maintaining that abstraction is vital for handling your dual-output (serial console and binary Flipper Zero format) elegantly.The original suggestion was meant to optimize where and how you instantiate that model, not to remove it.The Optimization Concept:In a standard Wi-Fi packet callback, the ESP32 provides a pointer to a wifi_promiscuous_pkt_t structure. This structure contains rx_ctrl (metadata like RSSI and channel) followed by the raw payload buffer.The Slow Way (Avoid this): Copying the entire raw payload array into a temporary local buffer array inside the callback, and then passing that massive duplicated buffer to a function that reads the MAC addresses to build your AP/STA model.The Fast Way (Highly Recommended): Never copy or duplicate the payload. Leave it exactly where it sits in RAM. Instead, cast a pointer directly to the MAC address offsets inside the raw buffer provided by the driver. Populate your structured, lightweight custom C structs (AppDeviceModel) immediately from those pointer addresses, and pass only that small struct through your pipeline.
+
+If you use pointers directly into the raw packet buffer provided by the promiscuous callback, those pointers become invalid and will point to corrupted data (or cause a crash) the exact microsecond your callback function finishes executing.The ESP32 Wi-Fi driver owns that buffer. As soon as your callback returns, the driver immediately reclaims that memory to store the next incoming Wi-Fi packet.To safely optimize this without causing crashes, you need to balance memory ownership.The Strategy: Extract Only the Metadata You NeedYou do not need to copy the entire raw packet payload (which can be up to 1,500 bytes long). Instead, inside the callback, you should extract the exact, small pieces of data required to build your AppDeviceModel (like the 6-byte MAC addresses, the RSSI value, and the frame sub-type).By copying only these lightweight primitive values into a fixed-size custom C struct, you can safely pass that struct to your serial or Flipper Zero output tasks without any risk of memory corruption.Memory Safe Implementation PatternHere is the exact pattern you should use in your ESP-IDF code to parse safely and efficiently:
+
+#include "esp_wifi.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+
+// 1. Define a lightweight struct containing ONLY what your data model needs
+typedef struct {
+    uint8_t bssid[6];
+    uint8_t station_mac[6];
+    int8_t rssi;
+    uint8_t channel;
+    uint8_t frame_type;
+} wifi_event_data_t;
+
+// FreeRTOS queue handle to pass data to your I/O task
+extern QueueHandle_t wendigo_packet_queue;
+
+// 2. The Promiscuous Callback (Runs in interrupt/driver context)
+void wendigo_wifi_sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
+    wifi_promiscuous_pkt_t* pkt = (wifi_promiscuous_pkt_t*)buf;
+    
+    // Pointer to the actual 802.11 frame payload
+    uint8_t* payload = pkt->payload; 
+    
+    // Allocate a small, temporary struct on the STACK (ultra-fast)
+    wifi_event_data_t extracted_data = {0};
+    
+    // Grab metadata safely from rx_ctrl
+    extracted_data.rssi = pkt->rx_ctrl.rssi;
+    extracted_data.channel = pkt->rx_ctrl.channel;
+    
+    // 3. Cast pointers into the payload to extract MAC addresses WITHOUT copying the whole payload
+    // Example: For a standard Management Frame (Beacon/Probe Request):
+    if (payload[0] == 0x80 || payload[0] == 0x40) { 
+        extracted_data.frame_type = payload[0];
+        
+        // Directly copy just the 6-byte MAC addresses into our stack struct
+        memcpy(extracted_data.bssid, &payload[16], 6);       // Address 3 (BSSID)
+        memcpy(extracted_data.station_mac, &payload[10], 6); // Address 2 (Source MAC)
+        
+        // 4. Send the tiny struct into the FreeRTOS Queue by VALUE.
+        // This copies only ~15 bytes of data, which is completely safe.
+        // Use xQueueSendFromISR if the callback runs in an interrupt context
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        xQueueSendFromISR(wendigo_packet_queue, &extracted_data, &xHigherPriorityTaskWoken);
+        
+        if (xHigherPriorityTaskWoken) {
+            portYIELD_FROM_ISR();
+        }
+    }
+    // As soon as this function exits, 'pkt' is destroyed by the system,
+    // but our copied 'extracted_data' is safe inside the FreeRTOS Queue.
+}
+
+Queue model above, enqueued from wifi_pkt_rcvd(). Consumer:
+
+// Pre-declarations of your existing application functions
+void update_application_data_model(wifi_event_data_t *data);
+void transmit_to_flipper_zero(wifi_event_data_t *data);
+void print_to_serial_console(wifi_event_data_t *data);
+
+void wendigo_io_consumer_task(void *pvParameters) {
+    wifi_event_data_t received_packet;
+
+    ESP_LOGI(TAG, "Wendigo I/O Consumer Task Started.");
+
+    while (1) {
+        // This blocks indefinitely (portMAX_DELAY) until Task A pushes data into the queue.
+        // It unblocks instantly the millisecond a packet is copied over.
+        if (xQueueReceive(wendigo_packet_queue, &received_packet, portMAX_DELAY) == pdTRUE) {
+            
+            // 1. Update your internal state machine / data model safely here
+            update_application_data_model(&received_packet);
+
+            // 2. Format and send to the Flipper Zero binary stream
+            // If UART blocks for 2ms here, it does NOT drop Wi-Fi packets anymore!
+            transmit_to_flipper_zero(&received_packet);
+
+            // 3. Optional: Format and output to the Serial console
+            #if CONFIG_WENDIGO_DEBUG_SERIAL
+            print_to_serial_console(&received_packet);
+            #endif
+        }
+    }
+}
+
