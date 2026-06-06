@@ -10,6 +10,7 @@ uint8_t *channels = NULL;
 uint8_t channels_count = 0;
 uint8_t channel_index = 0;
 // TODO: Refactor to support 5GHz channels if the device supports 5GHz channels
+// TODO: Refactor 2.4/5GHz radios based on assessments of indivdual devices
 const uint8_t WENDIGO_SUPPORTED_24_CHANNELS_COUNT = 14;
 const uint8_t WENDIGO_SUPPORTED_24_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 const uint8_t WENDIGO_SUPPORTED_5_CHANNELS_COUNT = 26;
@@ -24,7 +25,7 @@ SemaphoreHandle_t channelMutex = NULL;
 
 // TODO: This is duplicated for Flipper-Wendigo because the ifndef guard isn't working
 uint8_t auth_mode_strings_count = AUTH_TYPE_COUNT;
-char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA", "WPA2/3", "Unknown", "Not Found"};
+char *wifi_auth_mode_strings[] = {"Open", "WEP", "WPA1", "WPA2/3", "Unknown", "Not Found"};
 
 bool WIFI_INITIALISED = false;
 static const char *WIFI_TAG = "WiFi@Wendigo";
@@ -45,6 +46,7 @@ esp_err_t display_wifi_ap_uart(wendigo_device *dev) {
     }
     /* Send dev->tagged as 1 for true, 0 for false */
     uint8_t tagged = (dev->tagged) ? 1 : 0;
+    
     /* Calculate ssid_len */
     uint8_t ssid_len = strnlen((char *)dev->radio.ap.ssid, MAX_SSID_LEN + 1);
     if (dev->radio.ap.ssid[0] == '\0') {
@@ -383,6 +385,30 @@ esp_err_t set_associated(wendigo_device *sta, wendigo_device *ap) {
     return ESP_OK;
 }
 
+/** Parse a frame and extract tagged elements to finding SSID, channel and auth mode.
+ * Currently this is used for beacon and probe response packets.
+ */
+// TODO: can I actually fit length in a uint8_t? ESP-IDF stores an unsigned int
+esp_err_t parse_tagged_wifi_parameters(uint8_t *packet, uint8_t packet_len, uint8_t tag_start, wendigo_device *dev) {
+    // TODO
+
+    /* Initial validation */
+    if (packet == NULL || packet_len == 0 || tag_start >= packet_len ||
+            dev == NULL || dev->scanType != SCAN_WIFI_AP) {
+        ESP_LOGE(TAG, "Attempt to w_pparse tagged parameters with invalid arguments.");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    /* Loop through the packet's tags from tag_start to extract interesting information */
+    uint8_t offset = tag_start;
+    uint8_t tag_len; 
+    while (offset < packet_len) {
+        //
+    }
+
+    return ESP_OK;
+}
+
 /** Parse a beacon frame and either create or update a wendigo_device for
  * the AP. As the only STA identifier we have is the MAC a STA device
  * will not be created.
@@ -401,18 +427,19 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     dev->rssi = rx_ctrl.rssi;
     dev->radio.ap.channel = rx_ctrl.channel;
     /* Loop through the packet's tags to get SSID and security info */
+    esp_err_t result = ESP_OK;
     uint8_t offset = BEACON_TAGS_OFFSET;
-    uint8_t len;
-    while (offset < rx_ctrl.sig_len) {
+    uint8_t len = rx_ctrl.sig_len;
+    while (offset < len) {
         switch (payload[offset]) {
-            case BEACON_TAG_SSID:
+            case WIFI_TAG_SSID:
                 /* Extract SSID */
                 len = payload[++offset];
-                memcpy(dev->radio.ap.ssid, payload + (++offset), len);
+                memcpy(dev->radio.ap.ssid, payload + (++offset), (len < MAX_SSID_LEN)?len:MAX_SSID_LEN);
                 dev->radio.ap.ssid[len] = '\0';
                 offset += len;
                 break;
-            case BEACON_TAG_CHANNEL:
+            case WIFI_TAG_CHANNEL:
                 /* Extract channel - Technically I suppose it's possible for an AP to advertise
                 on a different channel from what it operates on */
                 len = payload[++offset];
@@ -425,20 +452,20 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
                 }
                 offset += len;
                 break;
-            case BEACON_TAG_WPA1:
+            case WIFI_TAG_WPA1:
                 /* This is just a vendor-defined tag - check whether it's for WPA1 */
                 len = payload[++offset];
                 /* Bump offset for consistency */
                 ++offset;
                 if (len >= 4) {
                     /* Looking for OUI 00:50:F2, type 01 */
-                    if (!memcmp(BEACON_WPA1_TYPE, payload + offset, 4)) {
+                    if (!memcmp(WIFI_TAG_WPA1_TYPE, payload + offset, 4)) {
                         dev->radio.ap.authmode = AUTH_TYPE_WPA1;
                     }
                 }
                 offset += len;
                 break;
-            case BEACON_TAG_WPA2:
+            case WIFI_TAG_WPA2:
                 len = payload[++offset];
                 dev->radio.ap.authmode = AUTH_TYPE_WPA2_3;
                 offset += len + 1;
@@ -448,7 +475,9 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
                 len = payload[++offset];
                 offset += len + 1;
                 break;
-        }
+        } // up to refactoring the above - ensure WPA2 tagging is OK.
+        // Then exppand data model for 5GHz
+        // Find a way to retrieve supported channels from ESP32.
     }
     if (dev->radio.ap.authmode == AUTH_TYPE_COUNT) {
         /* We didn't set the authmode above, is it WEP or OPEN? */
@@ -1477,4 +1506,3 @@ void channelHopCallback(void *pvParameter) {
             ESP_LOGE(WIFI_TAG, "Channel hop failed: Unable to get channel mutex.");
         }
     }
-}
