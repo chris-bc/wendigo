@@ -15,27 +15,27 @@ esp_err_t wendigo_reset_channels();
 bool wendigo_is_valid_channel(uint8_t channel);
 
 /* Offsets for different packet types */
-uint8_t BEACON_SSID_OFFSET = 38; // TODO: Delete this
+uint8_t BEACON_SSID_OFFSET = 38;            // TODO: Delete this and instead loop through tagged parameters to find the SSID
+uint8_t PROBE_RESPONSE_SSID_OFFSET = 38;    // TODO: As above  
 uint8_t BEACON_SEQNUM_OFFSET = 22;
-uint8_t BEACON_PRIVACY_OFFSET = 34; /* 0x31 set, 0x21 unset ... Or is it 0x01 open 0x11 private?*/
-uint8_t BEACON_TAGS_OFFSET = 36; /* Variable-length tags incl. SSID, channel, security begin here */
-uint8_t PRIVACY_BIT = 0x10;
+uint8_t BEACON_PRIVACY_OFFSET = 34; /** AND 0x10 = 0x10 if on */
+uint8_t BEACON_PRIVACY_BIT = 0x10; /** Location of the privacy bit in the capabilities byte */
+uint8_t BEACON_TAGS_OFFSET = 36; /** Variable-length tags incl. SSID, channel, security begin here */
 const uint8_t WIFI_TAG_SSID = 0x00;
 const uint8_t WIFI_TAG_CHANNEL = 0x03;
 const uint8_t WIFI_TAG_WPA1 = 0xdd;
 const uint8_t WIFI_TAG_WPA1_TYPE[] = {0x00, 0x50, 0xF2, 0x01};
 const uint8_t WIFI_TAG_WPA2 = 0x30;
-uint8_t BEACON_PACKET_LEN = 57;
 uint8_t PROBE_SSID_OFFSET = 26;
 uint8_t PROBE_SEQNUM_OFFSET = 22;
-uint8_t PROBE_REQUEST_LEN = 42;
-uint8_t PROBE_RESPONSE_PRIVACY_OFFSET = 74; /* On if packet[74] & 0x16 == 16, off if == 0 */
-uint8_t PROBE_RESPONSE_TAGS_OFFSET = 36; /* Tagged parameters begin here */
-uint8_t PROBE_RESPONSE_SSID_OFFSET = 38;
-uint8_t PROBE_RESPONSE_GROUP_CIPHER_OFFSET = 62; /* + ssid_len */
-uint8_t PROBE_RESPONSE_PAIRWISE_CIPHER_OFFSET = 68; /* + ssid_len */
-uint8_t PROBE_RESPONSE_LEN = 173;
-uint8_t DESTADDR_80211_OFFSET = 4; /* Generic 802.11 packet offsets */
+uint8_t PROBE_TAGS_OFFSET = 62; /** Tagged parameters begin here */
+uint8_t PROBE_PRIVACY_OFFSET = 39; /** AND 0x40 == 0x40 if on */
+uint8_t PROBE_PRIVACY_BIT = 0x40; /** Location of the privacy bit in the capabilities byte */
+uint8_t PROBE_RESPONSE_PRIVACY_OFFSET = 74; /** On if packet[74] & 0x16 == 16, off if == 0 */
+uint8_t PROBE_RESPONSE_TAGS_OFFSET = 36; /** Tagged parameters begin here */
+uint8_t PROBE_RESPONSE_GROUP_CIPHER_OFFSET = 62; /** + ssid_len */
+uint8_t PROBE_RESPONSE_PAIRWISE_CIPHER_OFFSET = 68; /** + ssid_len */
+uint8_t DESTADDR_80211_OFFSET = 4; /** Generic 802.11 packet offsets */
 uint8_t SRCADDR_80211_OFFSET = 10;
 uint8_t BSSID_80211_OFFSET = 16;
 

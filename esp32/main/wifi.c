@@ -15,8 +15,6 @@ const uint8_t WENDIGO_SUPPORTED_24_CHANNELS_COUNT = 14;
 const uint8_t WENDIGO_SUPPORTED_24_CHANNELS[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 const uint8_t WENDIGO_SUPPORTED_5_CHANNELS_COUNT = 26;
 const uint8_t WENDIGO_SUPPORTED_5_CHANNELS[] = {36, 40, 44, 48, 52, 56, 60, 64, 100, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165, 169, 173, 177};
-const uint8_t PRIVACY_ON_BITS[] = {0x11, 0x11};
-const uint8_t PRIVACY_OFF_BITS[] = {0x01, 0x11};
 long hop_millis = CONFIG_DEFAULT_HOP_MILLIS;
 TaskHandle_t channelHopTask = NULL; /* Independent task for channel hopping */
 /* Mutex to ensure we can't try to hop to the next supported channel while
@@ -385,6 +383,77 @@ esp_err_t set_associated(wendigo_device *sta, wendigo_device *ap) {
     return ESP_OK;
 }
 
+/** Adds the specified SSID to the station's preferred network list if it isn't already there */
+esp_err_t wendigo_sta_add_pnl(char *ssid, uint8_t ssid_len, wendigo_device *dev) {
+    /* Initial valaidation */
+    if (dev == NULL || dev->scanType != SCAN_WIFI_STA || ssid == NULL || ssid_len == 0) {
+        ESP_LOGE(WIFI_TAG, "wendigo_sta_add_pnl() called with invalid parameters.");
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint8_t ssid_idx = wendigo_index_of_string(ssid,
+            dev->radio.sta.saved_networks, dev->radio.sta.saved_networks_count);
+    if (ssid_idx == dev->radio.sta.saved_networks_count) {
+        /* SSID not in STA's saved networks - Add it */
+        char **new_pnl = realloc(dev->radio.sta.saved_networks,
+                sizeof(char *) * (dev->radio.sta.saved_networks_count + 1));
+        if (new_pnl != NULL) {
+            new_pnl[dev->radio.sta.saved_networks_count] = malloc(sizeof(char) * (ssid_len + 1));
+            if (new_pnl[dev->radio.sta.saved_networks_count] != NULL) {
+                strncpy(new_pnl[dev->radio.sta.saved_networks_count],
+                    ssid, ssid_len);
+                new_pnl[dev->radio.sta.saved_networks_count][ssid_len] = '\0';
+                dev->radio.sta.saved_networks = new_pnl;
+                ++(dev->radio.sta.saved_networks_count);
+            }
+        }
+    }
+    return ESP_OK;
+}
+
+esp_err_t parse_tagged_sta_parameters(uint8_t *packet, unsigned int packet_len, unsigned int tag_start, WiFi_Frame type, wendigo_device *dev, char *ssid) {
+    /* Initial validation */
+    if (packet == NULL || packet_len == 0 || tag_start >= packet_len ||
+            dev == NULL || dev->scanType != SCAN_WIFI_STA) {
+        ESP_LOGE(TAG, "Attempt to w_pparse tagged parameters with invalid arguments.");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    /* Loop through the packet's tags from tag_start to extract interesting information */
+    unsigned int offset = tag_start;
+    uint8_t tag_len;
+    while (offset < packet_len) {
+        switch (packet[offset]) {
+            case WIFI_TAG_SSID:
+                /* Extract SSID */
+                tag_len = packet[++offset];
+                // Need to add it to the STAs PNL - need a function to check if a PNL exists and add it if not
+                memcpy(ssid, packet + (++offset), (tag_len < MAX_SSID_LEN)?tag_len:MAX_SSID_LEN);
+                ssid[tag_len] = '\0';
+                offset += tag_len;
+                break;
+            case WIFI_TAG_CHANNEL:
+                /* Extract channel - Technically I suppose it's possible for an AP to advertise
+                on a different channel from what it operates on */
+                tag_len = packet[++offset];
+                /* Bump offset for consistency */
+                ++offset;
+                if (tag_len == 1) {
+                    dev->radio.sta.channel = packet[offset];
+                } else {
+                    ESP_LOGW(WIFI_TAG, "Received a beacon with unexpected channel length %d. Ignoring.", tag_len);
+                }
+                offset += tag_len;
+                break;
+            default:
+                /* We don't care about other parameters, skip them */
+                tag_len = packet[++offset];
+                offset += tag_len + 1;
+                break;
+        }
+    }
+    return ESP_OK;
+}
+
 /** Parse a frame and extract tagged elements to finding SSID, channel and auth mode.
  * Currently this is used for beacon and probe response packets.
  * packet: the complete 802.11 packet
@@ -393,7 +462,7 @@ esp_err_t set_associated(wendigo_device *sta, wendigo_device *ap) {
  * type: Frame type, required to determine the privacy bit
  * wendigo_device: the device to store results in
  */
-esp_err_t parse_tagged_wifi_parameters(uint8_t *packet, unsigned int packet_len, unsigned int tag_start, WiFi_Frame type, wendigo_device *dev) {
+esp_err_t parse_tagged_ap_parameters(uint8_t *packet, unsigned int packet_len, unsigned int tag_start, WiFi_Frame type, wendigo_device *dev) {
     /* Initial validation */
     if (packet == NULL || packet_len == 0 || tag_start >= packet_len ||
             dev == NULL || dev->scanType != SCAN_WIFI_AP) {
@@ -402,7 +471,7 @@ esp_err_t parse_tagged_wifi_parameters(uint8_t *packet, unsigned int packet_len,
     }
 
     /* Loop through the packet's tags from tag_start to extract interesting information */
-    uint8_t offset = tag_start;
+    unsigned int offset = tag_start;
     uint8_t tag_len; 
     while (offset < packet_len) {
         switch (packet[offset]) {
@@ -455,15 +524,22 @@ esp_err_t parse_tagged_wifi_parameters(uint8_t *packet, unsigned int packet_len,
         /* We didn't set the authmode above, is it WEP or OPEN? */
         /* Use the packet type to find the privacy bit */
         uint8_t privacy_offset = 0;
+        uint8_t privacy_bit = 0;
         switch (type) {
             case WIFI_FRAME_BEACON:
                 privacy_offset = BEACON_PRIVACY_OFFSET;
+                privacy_bit = BEACON_PRIVACY_BIT;
                 break;
             case WIFI_FRAME_PROBE_RESP:
                 privacy_offset = PROBE_RESPONSE_PRIVACY_OFFSET;
+                privacy_bit = BEACON_PRIVACY_BIT;
+                break;
+            case WIFI_FRAME_PROBE_REQ:
+                privacy_offset = PROBE_PRIVACY_OFFSET;
+                privacy_bit = PROBE_PRIVACY_BIT;
                 break;
             default:
-                // Nothing to do
+                ESP_LOGW(WIFI_TAG, "parse_tagged_ap_parameters(): Unknown frame type %d", type);
                 break;
         }
         if (privacy_offset == 0) {
@@ -471,7 +547,7 @@ esp_err_t parse_tagged_wifi_parameters(uint8_t *packet, unsigned int packet_len,
         }
         uint8_t privacy;
         memcpy(&privacy, packet + privacy_offset, sizeof(uint8_t));
-        if ((privacy & PRIVACY_BIT) == PRIVACY_BIT) {
+        if ((privacy & privacy_bit) == privacy_bit) {
             dev->radio.ap.authmode = AUTH_TYPE_WEP;
         } else {
             dev->radio.ap.authmode = AUTH_TYPE_OPEN;
@@ -498,10 +574,10 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     dev->rssi = rx_ctrl.rssi;
     dev->radio.ap.channel = rx_ctrl.channel;
     /* Loop through the packet's tags to get SSID and security info */
-    if (parse_tagged_wifi_parameters(payload, rx_ctrl.sig_len, BEACON_TAGS_OFFSET, WIFI_FRAME_BEACON, dev) != ESP_OK) {
+    if (parse_tagged_ap_parameters(payload, rx_ctrl.sig_len, BEACON_TAGS_OFFSET, WIFI_FRAME_BEACON, dev) != ESP_OK) {
         char macStr[MAC_STRLEN + 1];
         mac_bytes_to_string(dev->mac, macStr);
-        ESP_LOGW(WIFI_TAG, "parse_tagged_wifi_parameters() did not complete successfully for %s", macStr);
+        ESP_LOGW(WIFI_TAG, "parse_tagged_ap_parameters() did not complete successfully for %s", macStr);
     }
 
     esp_err_t result = ESP_OK;
@@ -533,36 +609,29 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     dev->scanType = SCAN_WIFI_STA;
     dev->rssi = rx_ctrl.rssi;
     dev->radio.sta.channel = rx_ctrl.channel;
-    uint8_t ssid_len;
-    char *ssid;
-    memcpy(&ssid_len, payload + PROBE_SSID_OFFSET - 1, sizeof(uint8_t));
-    if (ssid_len > 0) {
-        ssid = malloc(sizeof(char) * (ssid_len + 1));
-        if (ssid != NULL) {
-            memcpy(ssid, payload + PROBE_SSID_OFFSET, ssid_len);
-            ssid[ssid_len] = '\0';
-            uint8_t ssid_idx = wendigo_index_of_string(ssid,
-                dev->radio.sta.saved_networks, dev->radio.sta.saved_networks_count);
-            if (ssid_idx == dev->radio.sta.saved_networks_count) {
-                /* SSID not in STA's saved networks - Add it */
-                char **new_pnl = realloc(dev->radio.sta.saved_networks,
-                    sizeof(char *) * (dev->radio.sta.saved_networks_count + 1));
-                if (new_pnl != NULL) {
-                    new_pnl[dev->radio.sta.saved_networks_count] = malloc(sizeof(char) * (ssid_len + 1));
-                    if (new_pnl[dev->radio.sta.saved_networks_count] != NULL) {
-                        strncpy(new_pnl[dev->radio.sta.saved_networks_count],
-                            ssid, ssid_len);
-                        new_pnl[dev->radio.sta.saved_networks_count][ssid_len] = '\0';
-                        dev->radio.sta.saved_networks = new_pnl;
-                        ++(dev->radio.sta.saved_networks_count);
-                    }
-                }
-            } else {
-                free(ssid);
-                ssid = NULL;
-            }
-        }
+    char *macStr = malloc(sizeof(char) * (MAC_STRLEN + 1));
+    if (macStr == NULL) {
+        ESP_LOGE(WIFI_TAG, "Unable to allocate memory to store MAC, exiting");
+        return ESP_ERR_NO_MEM;
     }
+    mac_bytes_to_string(dev->mac, macStr);
+    char *probe_ssid = malloc((MAX_SSID_LEN + 1) * sizeof(char));
+    if (probe_ssid == NULL) {
+        ESP_LOGW(WIFI_TAG, "Unable to allocate memory to retrieve SSID for %s", macStr);
+        free(macStr);
+        return ESP_ERR_NO_MEM;
+    }
+    if (parse_tagged_sta_parameters(payload, rx_ctrl.sig_len, PROBE_TAGS_OFFSET, WIFI_FRAME_PROBE_REQ, dev, probe_ssid) != ESP_OK) {
+        ESP_LOGW(WIFI_TAG, "Unable to retrieve tagged parameters for %s", macStr);
+    }
+
+    if (wendigo_sta_add_pnl(probe_ssid, strlen(probe_ssid), dev) != ESP_OK) {
+        ESP_LOGW(WIFI_TAG, "Failed to add \"%s\" to the PNL for %s.", probe_ssid, macStr);
+    }
+
+    free(probe_ssid);
+    free(macStr);
+
     esp_err_t result = ESP_OK;
     if (creating) {
         result = add_device(dev);
@@ -578,7 +647,6 @@ esp_err_t parse_probe_req(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
 
 /** Parse a probe response packet, creating or updating a wendigo_device
  * for both the source (AP) and destination (STA).
- // TODO: Fix ap->radio.ap.authmode
  */
 esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     wendigo_device *ap = retrieve_by_mac(payload + BSSID_80211_OFFSET);
@@ -624,7 +692,7 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->radio.ap.ssid, payload + PROBE_RESPONSE_SSID_OFFSET, ssid_len);
     }
     /* Authentication mode */
-    if (parse_tagged_wifi_parameters(payload, rx_ctrl.sig_len, PROBE_RESPONSE_TAGS_OFFSET, WIFI_FRAME_PROBE_RESP, ap) != ESP_OK) {
+    if (parse_tagged_ap_parameters(payload, rx_ctrl.sig_len, PROBE_RESPONSE_TAGS_OFFSET, WIFI_FRAME_PROBE_RESP, ap) != ESP_OK) {
         char macStr[MAC_STRLEN + 1];
         mac_bytes_to_string(ap->mac, macStr);
         ESP_LOGW(WIFI_TAG, "Failed to parse tags in probe response from %s", macStr);
@@ -1197,7 +1265,7 @@ esp_err_t initialise_wifi() {
                 .ssid = "Wendigo WiFi",
                 .ssid_len = 12,
                 .password = "mythology",
-                .channel = 1,
+                .channel = 6,
                 .authmode = WIFI_AUTH_OPEN,
                 .ssid_hidden = 0,
                 .max_connection = 128,
