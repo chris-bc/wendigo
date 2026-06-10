@@ -18,9 +18,8 @@ bool wendigo_is_valid_channel(uint8_t channel);
 uint8_t BEACON_SSID_OFFSET = 38; // TODO: Delete this
 uint8_t BEACON_SEQNUM_OFFSET = 22;
 uint8_t BEACON_PRIVACY_OFFSET = 34; /* 0x31 set, 0x21 unset ... Or is it 0x01 open 0x11 private?*/
-uint8_t BEACON_PRIVACY_OFF = 0x01;
-uint8_t BEACON_PRIVACY_ON = 0x11;
 uint8_t BEACON_TAGS_OFFSET = 36; /* Variable-length tags incl. SSID, channel, security begin here */
+uint8_t PRIVACY_BIT = 0x10;
 const uint8_t WIFI_TAG_SSID = 0x00;
 const uint8_t WIFI_TAG_CHANNEL = 0x03;
 const uint8_t WIFI_TAG_WPA1 = 0xdd;
@@ -30,12 +29,11 @@ uint8_t BEACON_PACKET_LEN = 57;
 uint8_t PROBE_SSID_OFFSET = 26;
 uint8_t PROBE_SEQNUM_OFFSET = 22;
 uint8_t PROBE_REQUEST_LEN = 42;
-uint8_t PROBE_RESPONSE_PRIVACY_OFFSET = 34; /* On {0x11, 0x11} Off {0x01, 0x11}*/
+uint8_t PROBE_RESPONSE_PRIVACY_OFFSET = 74; /* On if packet[74] & 0x16 == 16, off if == 0 */
 uint8_t PROBE_RESPONSE_TAGS_OFFSET = 36; /* Tagged parameters begin here */
 uint8_t PROBE_RESPONSE_SSID_OFFSET = 38;
 uint8_t PROBE_RESPONSE_GROUP_CIPHER_OFFSET = 62; /* + ssid_len */
 uint8_t PROBE_RESPONSE_PAIRWISE_CIPHER_OFFSET = 68; /* + ssid_len */
-uint8_t PROBE_RESPONSE_AUTH_TYPE_OFFSET = 74; /* + ssid_len | AUTH_TYPE */
 uint8_t PROBE_RESPONSE_LEN = 173;
 uint8_t DESTADDR_80211_OFFSET = 4; /* Generic 802.11 packet offsets */
 uint8_t SRCADDR_80211_OFFSET = 10;

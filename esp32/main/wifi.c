@@ -387,11 +387,13 @@ esp_err_t set_associated(wendigo_device *sta, wendigo_device *ap) {
 
 /** Parse a frame and extract tagged elements to finding SSID, channel and auth mode.
  * Currently this is used for beacon and probe response packets.
+ * packet: the complete 802.11 packet
+ * packet_len: legth of the packet
+ * tag_start: index of the first byte of the tags
+ * type: Frame type, required to determine the privacy bit
+ * wendigo_device: the device to store results in
  */
-// TODO: can I actually fit length in a uint8_t? ESP-IDF stores an unsigned int
-esp_err_t parse_tagged_wifi_parameters(uint8_t *packet, uint8_t packet_len, uint8_t tag_start, wendigo_device *dev) {
-    // TODO
-
+esp_err_t parse_tagged_wifi_parameters(uint8_t *packet, unsigned int packet_len, unsigned int tag_start, WiFi_Frame type, wendigo_device *dev) {
     /* Initial validation */
     if (packet == NULL || packet_len == 0 || tag_start >= packet_len ||
             dev == NULL || dev->scanType != SCAN_WIFI_AP) {
@@ -403,9 +405,78 @@ esp_err_t parse_tagged_wifi_parameters(uint8_t *packet, uint8_t packet_len, uint
     uint8_t offset = tag_start;
     uint8_t tag_len; 
     while (offset < packet_len) {
-        //
+        switch (packet[offset]) {
+            case WIFI_TAG_SSID:
+                /* Extract SSID */
+                tag_len = packet[++offset];
+                memcpy(dev->radio.ap.ssid, packet + (++offset), (tag_len < MAX_SSID_LEN)?tag_len:MAX_SSID_LEN);
+                dev->radio.ap.ssid[tag_len] = '\0';
+                offset += tag_len;
+                break;
+            case WIFI_TAG_CHANNEL:
+                /* Extract channel - Technically I suppose it's possible for an AP to advertise
+                on a different channel from what it operates on */
+                tag_len = packet[++offset];
+                /* Bump offset for consistency */
+                ++offset;
+                if (tag_len == 1) {
+                    dev->radio.ap.channel = packet[offset];
+                } else {
+                    ESP_LOGW(WIFI_TAG, "Received a beacon with unexpected channel length %d. Ignoring.", tag_len);
+                }
+                offset += tag_len;
+                break;
+            case WIFI_TAG_WPA1:
+                /* This is just a vendor-defined tag - check whether it's for WPA1 */
+                tag_len = packet[++offset];
+                /* Bump offset for consistency */
+                ++offset;
+                if (tag_len >= 4) {
+                    /* Looking for OUI 00:50:F2, type 01 */
+                    if (!memcmp(WIFI_TAG_WPA1_TYPE, packet + offset, 4)) {
+                        dev->radio.ap.authmode = AUTH_TYPE_WPA1;
+                    }
+                }
+                offset += tag_len;
+                break;
+            case WIFI_TAG_WPA2:
+                tag_len = packet[++offset];
+                dev->radio.ap.authmode = AUTH_TYPE_WPA2_3;
+                offset += tag_len + 1;
+                break;
+            default:
+                /* Jump to next tag */
+                tag_len = packet[++offset];
+                offset += tag_len + 1;
+                break;
+        }
     }
-
+    if (dev->radio.ap.authmode == AUTH_TYPE_COUNT) {
+        /* We didn't set the authmode above, is it WEP or OPEN? */
+        /* Use the packet type to find the privacy bit */
+        uint8_t privacy_offset = 0;
+        switch (type) {
+            case WIFI_FRAME_BEACON:
+                privacy_offset = BEACON_PRIVACY_OFFSET;
+                break;
+            case WIFI_FRAME_PROBE_RESP:
+                privacy_offset = PROBE_RESPONSE_PRIVACY_OFFSET;
+                break;
+            default:
+                // Nothing to do
+                break;
+        }
+        if (privacy_offset == 0) {
+            ESP_LOGW(WIFI_TAG, "Unknown privacy offset for frame type %d", type);
+        }
+        uint8_t privacy;
+        memcpy(&privacy, packet + privacy_offset, sizeof(uint8_t));
+        if ((privacy & PRIVACY_BIT) == PRIVACY_BIT) {
+            dev->radio.ap.authmode = AUTH_TYPE_WEP;
+        } else {
+            dev->radio.ap.authmode = AUTH_TYPE_OPEN;
+        }
+    }
     return ESP_OK;
 }
 
@@ -427,70 +498,10 @@ esp_err_t parse_beacon(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     dev->rssi = rx_ctrl.rssi;
     dev->radio.ap.channel = rx_ctrl.channel;
     /* Loop through the packet's tags to get SSID and security info */
-    esp_err_t result = ESP_OK;
-    uint8_t offset = BEACON_TAGS_OFFSET;
-    uint8_t len = rx_ctrl.sig_len;
-    while (offset < len) {
-        switch (payload[offset]) {
-            case WIFI_TAG_SSID:
-                /* Extract SSID */
-                len = payload[++offset];
-                memcpy(dev->radio.ap.ssid, payload + (++offset), (len < MAX_SSID_LEN)?len:MAX_SSID_LEN);
-                dev->radio.ap.ssid[len] = '\0';
-                offset += len;
-                break;
-            case WIFI_TAG_CHANNEL:
-                /* Extract channel - Technically I suppose it's possible for an AP to advertise
-                on a different channel from what it operates on */
-                len = payload[++offset];
-                /* Bump offset for consistency */
-                ++offset;
-                if (len == 1) {
-                    dev->radio.ap.channel = payload[offset];
-                } else {
-                    ESP_LOGW(WIFI_TAG, "Received a beacon with unexpected channel length %d. Ignoring.", len);
-                }
-                offset += len;
-                break;
-            case WIFI_TAG_WPA1:
-                /* This is just a vendor-defined tag - check whether it's for WPA1 */
-                len = payload[++offset];
-                /* Bump offset for consistency */
-                ++offset;
-                if (len >= 4) {
-                    /* Looking for OUI 00:50:F2, type 01 */
-                    if (!memcmp(WIFI_TAG_WPA1_TYPE, payload + offset, 4)) {
-                        dev->radio.ap.authmode = AUTH_TYPE_WPA1;
-                    }
-                }
-                offset += len;
-                break;
-            case WIFI_TAG_WPA2:
-                len = payload[++offset];
-                dev->radio.ap.authmode = AUTH_TYPE_WPA2_3;
-                offset += len + 1;
-                break;
-            default:
-                /* Jump to next tag */
-                len = payload[++offset];
-                offset += len + 1;
-                break;
-        } // up to refactoring the above - ensure WPA2 tagging is OK.
-        // Then exppand data model for 5GHz
-        // Find a way to retrieve supported channels from ESP32.
-    }
-    if (dev->radio.ap.authmode == AUTH_TYPE_COUNT) {
-        /* We didn't set the authmode above, is it WEP or OPEN? */
-        uint8_t privacy;
-        memcpy(&privacy, payload + BEACON_PRIVACY_OFFSET, sizeof(uint8_t));
-        if (privacy == BEACON_PRIVACY_ON) {
-            dev->radio.ap.authmode = AUTH_TYPE_WEP;
-        } else if (privacy == BEACON_PRIVACY_OFF) {
-            dev->radio.ap.authmode = AUTH_TYPE_OPEN;
-        } else {
-            ESP_LOGW(WIFI_TAG, "Received beacon with unknown auth mode.");
-            dev->radio.ap.authmode = AUTH_TYPE_UNKNOWN;
-        }
+    if (parse_tagged_wifi_parameters(payload, rx_ctrl.sig_len, BEACON_TAGS_OFFSET, WIFI_FRAME_BEACON, dev) != ESP_OK) {
+        char macStr[MAC_STRLEN + 1];
+        mac_bytes_to_string(dev->mac, macStr);
+        ESP_LOGW(WIFI_TAG, "parse_tagged_wifi_parameters() did not complete successfully for %s", macStr);
     }
 
     esp_err_t result = ESP_OK;
@@ -613,7 +624,11 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
         memcpy(ap->radio.ap.ssid, payload + PROBE_RESPONSE_SSID_OFFSET, ssid_len);
     }
     /* Authentication mode */
-    memcpy(&(ap->radio.ap.authmode), payload + ssid_len + PROBE_RESPONSE_AUTH_TYPE_OFFSET, sizeof(uint8_t));
+    if (parse_tagged_wifi_parameters(payload, rx_ctrl.sig_len, PROBE_RESPONSE_TAGS_OFFSET, WIFI_FRAME_PROBE_RESP, ap) != ESP_OK) {
+        char macStr[MAC_STRLEN + 1];
+        mac_bytes_to_string(ap->mac, macStr);
+        ESP_LOGW(WIFI_TAG, "Failed to parse tags in probe response from %s", macStr);
+    }
     
     if (creatingAp) {
         result |= add_device(ap);
@@ -1506,3 +1521,4 @@ void channelHopCallback(void *pvParameter) {
             ESP_LOGE(WIFI_TAG, "Channel hop failed: Unable to get channel mutex.");
         }
     }
+}
