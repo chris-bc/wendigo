@@ -132,8 +132,8 @@ esp_err_t display_wifi_ap_interactive(wendigo_device *dev) {
            - I want 3 equal blocks of spaces, which should be (BANNER_WIDTH - 10 - 28) / 3.
         */
         space_left = (BANNER_WIDTH - 38) / 3; /* Check length of final block in case of rounding */
-        print_space(4 + space_left, false);
-        printf("Ch. %2d", dev->radio.ap.channel); // TODO: Make space for an additional character, for 5GHz channels
+        print_space(3 + space_left, false);
+        printf("Ch. %3d", dev->radio.ap.channel);
         print_space(space_left, false);
         printf("%3d Stations Connected", dev->radio.ap.stations_count);
         row_len = 38 + (2 * space_left);
@@ -266,9 +266,9 @@ esp_err_t display_wifi_sta_interactive(wendigo_device *dev) {
     /* Calculate size of space blocks - 2 equally-sized block */
     uint8_t space_len = (BANNER_WIDTH - strlen(radioShortNames[dev->scanType]) - MAC_STRLEN - 28) / 2;
     print_space(space_len, false);
-    printf("Ch. %2d", dev->radio.sta.channel); // TODO: Make space for an additional character, for 5GHz channels
+    printf("Ch. %3d", dev->radio.sta.channel);
     /* Cater for rounding in space_len */
-    uint8_t row_len = strlen(radioShortNames[dev->scanType]) + MAC_STRLEN + 28 + space_len;
+    uint8_t row_len = strlen(radioShortNames[dev->scanType]) + MAC_STRLEN + 29 + space_len;
     print_space(BANNER_WIDTH - row_len, false);
     printf("RSSI: %4d", dev->rssi);
     print_space(4, false);
