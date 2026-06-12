@@ -687,11 +687,8 @@ esp_err_t parse_probe_resp(uint8_t *payload, wifi_pkt_rx_ctrl_t rx_ctrl) {
     ap->scanType = SCAN_WIFI_AP;
     ap->rssi = rx_ctrl.rssi;
     ap->radio.ap.channel = rx_ctrl.channel;
-    uint8_t ssid_len = payload[PROBE_RESPONSE_SSID_OFFSET - 1];
-    if (ssid_len > 0) {
-        memcpy(ap->radio.ap.ssid, payload + PROBE_RESPONSE_SSID_OFFSET, ssid_len);
-    }
-    /* Authentication mode */
+
+    /* Get tagged parameters (SSID, auth mode, advertised channel) */
     if (parse_tagged_ap_parameters(payload, rx_ctrl.sig_len, PROBE_RESPONSE_TAGS_OFFSET, WIFI_FRAME_PROBE_RESP, ap) != ESP_OK) {
         char macStr[MAC_STRLEN + 1];
         mac_bytes_to_string(ap->mac, macStr);
